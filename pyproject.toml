@@ -1,0 +1,62 @@
+[project]
+name = "t3api-python-utils"
+version = "0.1.0"
+description = "Utility functions and helpers for the T3 API ecosystem"
+authors = [{ name = "Matt Frisbie", email = "matt@classvsoftware.com" }]
+readme = "README.md"
+license = { text = "GPL-3.0-only" }
+requires-python = ">=3.8"
+dependencies = [
+    "t3api >=0.3.0",
+    "certifi >=2023.7.22",
+    "python-dotenv >=1.0.0",
+    "rich >=13.0.0",
+    "questionary >=2.0.0",
+    "typer >=0.16.0"
+]
+
+keywords = ["t3", "metrc", "utils", "helpers", "track and trace"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Operating System :: OS Independent",
+]
+
+[project.optional-dependencies]
+dev = ["pytest >=7.0"]
+
+[project.urls]
+Homepage = "https://github.com/classvsoftware/t3api-python-utils"
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.mypy]
+files = ["t3api_utils", "tests"]
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+strict_equality = true
+extra_checks = true
+check_untyped_defs = true
+disallow_subclassing_any = true
+disallow_untyped_decorators = true
+disallow_any_generics = true
+
+[[tool.mypy.overrides]]
+module = ["t3api_python_utils.*"]
+warn_unused_ignores = true
+strict_equality = true
+extra_checks = true
+check_untyped_defs = true
+disallow_subclassing_any = true
+disallow_untyped_decorators = true
+disallow_any_generics = true
+disallow_untyped_calls = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+no_implicit_reexport = true
+warn_return_any = true
