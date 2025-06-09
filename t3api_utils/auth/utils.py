@@ -5,8 +5,7 @@ from t3api import (ApiClient, AuthenticationApi, Configuration,
                    V2AuthCredentialsPostRequest)
 from t3api.exceptions import ApiException
 
-from t3api_utils.exceptions import \
-    AuthenticationError  # ← now imported from your module
+from t3api_utils.exceptions import AuthenticationError
 
 
 def create_credentials_authenticated_client_or_error(

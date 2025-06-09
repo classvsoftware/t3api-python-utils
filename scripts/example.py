@@ -1,15 +1,12 @@
 from rich import print
 from t3api.api.packages_api import PackagesApi
 
-from t3api_utils.main.utils import get_authenticated_client, pick_license
+from t3api_utils.main.utils import (get_authenticated_client_or_error,
+                                    pick_license)
 
 
 def main():
-    try:
-        api_client = get_authenticated_client()
-        print("[bold green]✅ Authenticated successfully.[/bold green]")
-    except Exception as e:
-        print(f"[bold red]❌ Authentication failed: {e}[/bold red]")
+    api_client = get_authenticated_client_or_error()
 
     license = pick_license(api_client=api_client)
     

@@ -1,6 +1,6 @@
 [project]
 name = "t3api-utils"
-version = "0.1.1"
+version = "0.2.0"
 description = "Utility functions and helpers for the T3 API ecosystem"
 authors = [{ name = "Matt Frisbie", email = "matt@classvsoftware.com" }]
 readme = "README.md"
