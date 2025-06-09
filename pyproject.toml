@@ -24,8 +24,11 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
-[project.optional-dependencies]
-dev = ["pytest >=7.0"]
+[dependency-groups]
+dev = [
+    "mypy>=1.14.1",
+    "pytest>=8.3.5",
+]
 
 [project.urls]
 Homepage = "https://github.com/classvsoftware/t3api-python-utils"

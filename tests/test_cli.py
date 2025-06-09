@@ -39,15 +39,15 @@ def test_is_env_file_complete_missing_key(mock_exists, mock_load_dotenv, mock_ge
         EnvKeys.METRC_PASSWORD: "pass",
     },
 )
-def test_load_credentials_from_env():
-    creds = utils.load_credentials_from_env()
+def test_load_credentials_from_env_or_error():
+    creds = utils.load_credentials_from_env_or_error()
     assert creds == {"hostname": "mo.metrc.com", "username": "user", "password": "pass"}
 
 
 @patch("typer.prompt")
 def test_prompt_for_credentials_with_otp(mock_prompt):
     mock_prompt.side_effect = ["mi.metrc.com", "user", "pass", "123456"]
-    result = utils.prompt_for_credentials()
+    result = utils.prompt_for_credentials_or_error()
     assert result == {
         "hostname": "mi.metrc.com",
         "username": "user",
@@ -59,7 +59,7 @@ def test_prompt_for_credentials_with_otp(mock_prompt):
 @patch("typer.prompt")
 def test_prompt_for_credentials_without_otp(mock_prompt):
     mock_prompt.side_effect = ["somewhere.com", "user", "pass"]
-    result = utils.prompt_for_credentials()
+    result = utils.prompt_for_credentials_or_error()
     assert result == {
         "hostname": "somewhere.com",
         "username": "user",
@@ -77,10 +77,10 @@ def test_offer_to_save_credentials(mock_set_key, mock_confirm):
 
 
 @patch("t3api_utils.cli.utils.is_env_file_complete", return_value=True)
-@patch("t3api_utils.cli.utils.load_credentials_from_env")
+@patch("t3api_utils.cli.utils.load_credentials_from_env_or_error")
 def test_resolve_auth_inputs_from_env(mock_load, mock_check):
     mock_load.return_value = {"hostname": "x", "username": "y", "password": "z"}
-    result = utils.resolve_auth_inputs()
+    result = utils.resolve_auth_inputs_or_error()
     assert result["hostname"] == "x"
     mock_load.assert_called_once()
 
@@ -95,6 +95,6 @@ def test_resolve_auth_inputs_from_prompt(mock_save, mock_prompt, mock_check):
         "password": "z",
         "otp": None,
     }
-    result = utils.resolve_auth_inputs()
+    result = utils.resolve_auth_inputs_or_error()
     assert result["hostname"] == "x"
     mock_save.assert_called_once()

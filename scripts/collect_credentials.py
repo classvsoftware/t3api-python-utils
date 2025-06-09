@@ -1,6 +1,7 @@
 from rich import print
 
-from t3api_utils.auth.utils import get_authenticated_client
+from t3api_utils.main.utils import get_authenticated_client
+
 
 def main():
     try:
@@ -8,6 +9,7 @@ def main():
         print("[bold green]✅ Authenticated successfully.[/bold green]")
     except Exception as e:
         print(f"[bold red]❌ Authentication failed: {e}[/bold red]")
+
 
 if __name__ == "__main__":
     main()

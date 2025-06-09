@@ -5,6 +5,10 @@ def test_import_t3api_utils():
     import t3api_utils  # Ensure the top-level package is importable
 
 
+def test_import_main_module():
+    from t3api_utils.main import utils
+
+
 def test_import_cli_module():
     from t3api_utils.cli import utils
 

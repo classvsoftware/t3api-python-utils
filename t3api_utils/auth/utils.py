@@ -9,19 +9,9 @@ from t3api import (
 )
 from t3api.exceptions import ApiException
 
-from t3api_utils.cli.utils import resolve_auth_inputs
 from t3api_utils.exceptions import (
     AuthenticationError,
 )  # ← now imported from your module
-
-
-def get_authenticated_client():
-    """
-    High-level method to return an authenticated client.
-    Handles CLI prompts, .env, and validation internally.
-    """
-    inputs = resolve_auth_inputs()  # prompts if needed
-    return create_credentials_authenticated_client(**inputs)
 
 
 def create_credentials_authenticated_client(
