@@ -1,4 +1,3 @@
-import logging
 import os
 from typing import Dict
 
@@ -13,14 +12,9 @@ from t3api_utils.logging import get_logger
 logger = get_logger(__name__)
 
 
-
 def load_credentials_from_env() -> Dict[str, str]:
     """
     Load credential values from the environment file (.env).
-
-    Returns:
-        A dictionary containing any available keys ("hostname", "username", "password")
-        that were found and are non-empty in the environment.
     """
     load_dotenv(dotenv_path=DEFAULT_ENV_PATH)
 
@@ -41,13 +35,7 @@ def load_credentials_from_env() -> Dict[str, str]:
 
 def offer_to_save_credentials(*, credentials: T3Credentials) -> None:
     """
-    Offers to save new or updated credentials to the environment file.
-
-    If the environment file does not exist, it prompts to create it.
-    If it exists but has different values than what was just entered, it prompts to update.
-
-    Args:
-        credentials: A dictionary of credential values to potentially save.
+    Offer to save credentials to the .env file if it's missing or out-of-date.
     """
     load_dotenv(dotenv_path=DEFAULT_ENV_PATH)
     env_exists = os.path.exists(DEFAULT_ENV_PATH)
@@ -62,17 +50,17 @@ def offer_to_save_credentials(*, credentials: T3Credentials) -> None:
 
     if not env_exists:
         if typer.confirm(
-            f"No credentials file found. Save these values to {DEFAULT_ENV_PATH}?", default=True
+            f"No credentials file found. Save these values to [bold]{DEFAULT_ENV_PATH}[/]?", default=True
         ):
-            logger.info("Saving credentials to new environment file.")
+            logger.info("[green]Saving credentials to new environment file.[/green]")
             set_key(DEFAULT_ENV_PATH, EnvKeys.METRC_HOSTNAME.value, credentials["hostname"])
             set_key(DEFAULT_ENV_PATH, EnvKeys.METRC_USERNAME.value, credentials["username"])
             set_key(DEFAULT_ENV_PATH, EnvKeys.METRC_PASSWORD.value, credentials["password"])
     elif hostname_differs or username_differs or password_differs:
         if typer.confirm(
-            f"Some credential values differ from those in {DEFAULT_ENV_PATH}. Update them?", default=True
+            f"Some credential values differ from those in [bold]{DEFAULT_ENV_PATH}[/]. Update them?", default=True
         ):
-            logger.info("Updating credentials in environment file.")
+            logger.info("[cyan]Updating credentials in environment file.[/cyan]")
             set_key(DEFAULT_ENV_PATH, EnvKeys.METRC_HOSTNAME.value, credentials["hostname"])
             set_key(DEFAULT_ENV_PATH, EnvKeys.METRC_USERNAME.value, credentials["username"])
             set_key(DEFAULT_ENV_PATH, EnvKeys.METRC_PASSWORD.value, credentials["password"])
@@ -80,33 +68,24 @@ def offer_to_save_credentials(*, credentials: T3Credentials) -> None:
 
 def prompt_for_credentials_or_error(**kwargs) -> T3Credentials:
     """
-    Prompt the user for any missing credentials. Use provided values when available.
-
-    Args:
-        kwargs: Optional pre-filled values for hostname, username, and password.
-
-    Returns:
-        A complete T3Credentials dictionary with validated values.
-
-    Raises:
-        AuthenticationError: If any required field is missing or invalid.
+    Prompt for any missing credentials, using provided values if available.
     """
     hostname = kwargs.get("hostname")
     username = kwargs.get("username")
     password = kwargs.get("password")
 
     if hostname:
-        logger.info(f"Using stored value for hostname: {hostname}")
+        logger.info(f"[blue]Using stored value for hostname:[/] {hostname}")
     else:
         hostname = typer.prompt("Enter Metrc hostname (e.g., mo.metrc.com)")
 
     if username:
-        logger.info(f"Using stored value for username: {username}")
+        logger.info(f"[blue]Using stored value for username:[/] {username}")
     else:
         username = typer.prompt("Enter T3 API username")
 
     if password:
-        logger.info("Using stored value for password.")
+        logger.info("[blue]Using stored value for password.[/]")
     else:
         password = typer.prompt("Enter T3 API password", hide_input=True)
 
@@ -120,13 +99,13 @@ def prompt_for_credentials_or_error(**kwargs) -> T3Credentials:
     if hostname in OTP_WHITELIST:
         otp = typer.prompt("Enter 6-digit T3 OTP")
         if not otp or len(otp) != 6 or not otp.isdigit():
-            logger.error("Invalid OTP entered.")
+            logger.error("[red]Invalid OTP entered.[/red]")
             raise AuthenticationError(f"Invalid OTP: {otp}")
         credentials["otp"] = otp
 
     for key, value in credentials.items():
         if key != "otp" and (not isinstance(value, str) or not value.strip()):
-            logger.error(f"Missing or empty credential: {key}")
+            logger.error(f"[red]Missing or empty credential:[/] {key}")
             raise AuthenticationError(f"Missing or empty credential: {key}")
 
     return credentials
@@ -134,12 +113,7 @@ def prompt_for_credentials_or_error(**kwargs) -> T3Credentials:
 
 def resolve_auth_inputs_or_error() -> T3Credentials:
     """
-    Resolve authentication input by checking the environment first,
-    prompting the user for any missing values, and offering to save
-    the final result.
-
-    Returns:
-        A fully populated and validated T3Credentials dictionary.
+    Resolve authentication credentials from env and/or prompt and offer to save.
     """
     stored_credentials = load_credentials_from_env()
     credentials = prompt_for_credentials_or_error(**stored_credentials)

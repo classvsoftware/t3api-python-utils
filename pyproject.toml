@@ -10,9 +10,9 @@ dependencies = [
     "t3api >=0.3.0",
     "certifi >=2023.7.22",
     "python-dotenv >=1.0.0",
-    "rich >=13.0.0",
+    "rich>=13.0.0",
     "questionary >=2.0.0",
-    "typer >=0.16.0"
+    "typer >=0.16.0",
 ]
 
 keywords = ["t3", "metrc", "utils", "helpers", "track and trace"]
