@@ -1,13 +1,7 @@
-from typing import TypedDict, Optional
+from typing import Optional, TypedDict
 
 
-class T3StoredCredentials(TypedDict):
-    hostname: str
-    username: str
-    password: str
-    
-    
-class T3Credentials(T3StoredCredentials):
+class T3Credentials(TypedDict):
     hostname: str
     username: str
     password: str

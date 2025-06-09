@@ -2,7 +2,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from t3api_utils.auth.utils import create_credentials_authenticated_client
+from t3api_utils.auth.utils import \
+    create_credentials_authenticated_client_or_error
 from t3api_utils.exceptions import AuthenticationError
 
 
@@ -21,7 +22,7 @@ def test_successful_authentication(mock_config, mock_api_client, mock_auth_api):
     mock_auth_instance.v2_auth_credentials_post.return_value = mock_response
     mock_auth_api.return_value = mock_auth_instance
 
-    client = create_credentials_authenticated_client(
+    client = create_credentials_authenticated_client_or_error(
         host="https://api.test.com",
         hostname="ca.metrc.com",
         username="user",
@@ -49,7 +50,7 @@ def test_authentication_api_exception(mock_config, mock_api_client, mock_auth_ap
     with pytest.raises(
         AuthenticationError, match="T3 API authentication failed: invalid credentials"
     ):
-        create_credentials_authenticated_client(
+        create_credentials_authenticated_client_or_error(
             host="https://api.test.com",
             hostname="ca.metrc.com",
             username="baduser",
@@ -69,7 +70,7 @@ def test_unexpected_exception(mock_config, mock_api_client, mock_auth_api):
     with pytest.raises(
         AuthenticationError, match="Unexpected authentication error: boom"
     ):
-        create_credentials_authenticated_client(
+        create_credentials_authenticated_client_or_error(
             host="https://api.test.com",
             hostname="ca.metrc.com",
             username="x",

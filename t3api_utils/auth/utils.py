@@ -1,20 +1,15 @@
 from typing import Optional
 
 import certifi
-from t3api import (
-    ApiClient,
-    AuthenticationApi,
-    Configuration,
-    V2AuthCredentialsPostRequest,
-)
+from t3api import (ApiClient, AuthenticationApi, Configuration,
+                   V2AuthCredentialsPostRequest)
 from t3api.exceptions import ApiException
 
-from t3api_utils.exceptions import (
-    AuthenticationError,
-)  # ← now imported from your module
+from t3api_utils.exceptions import \
+    AuthenticationError  # ← now imported from your module
 
 
-def create_credentials_authenticated_client(
+def create_credentials_authenticated_client_or_error(
     *,
     hostname: str,
     username: str,
@@ -43,6 +38,7 @@ def create_credentials_authenticated_client(
         "password": password,
     }
 
+    # Only send OTP if it is needed, otherwise omit
     if otp is not None:
         request_data_args["otp"] = otp
 
