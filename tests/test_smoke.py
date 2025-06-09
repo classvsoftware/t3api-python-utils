@@ -6,11 +6,11 @@ def test_import_t3api_utils():
 
 
 def test_import_cli_module():
-    from t3api_utils import cli
+    from t3api_utils.cli import utils
 
 
-def test_import_decoratorss_module():
-    from t3api_utils import decorators
+def test_import_auth_module():
+    from t3api_utils.auth import utils
 
 
 class DummyPrompt:

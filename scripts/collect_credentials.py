@@ -1,6 +1,6 @@
 from rich import print
 
-from t3api_utils.auth import get_authenticated_client
+from t3api_utils.auth.utils import get_authenticated_client
 
 def main():
     try:

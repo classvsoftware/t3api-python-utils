@@ -2,13 +2,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from t3api_utils.auth import create_credentials_authenticated_client
+from t3api_utils.auth.utils import create_credentials_authenticated_client
 from t3api_utils.exceptions import AuthenticationError
 
 
-@patch("t3api_utils.auth.AuthenticationApi")
-@patch("t3api_utils.auth.ApiClient")
-@patch("t3api_utils.auth.Configuration")
+@patch("t3api_utils.auth.utils.AuthenticationApi")
+@patch("t3api_utils.auth.utils.ApiClient")
+@patch("t3api_utils.auth.utils.Configuration")
 def test_successful_authentication(mock_config, mock_api_client, mock_auth_api):
     mock_config_instance = MagicMock()
     mock_config.return_value = mock_config_instance
@@ -33,9 +33,9 @@ def test_successful_authentication(mock_config, mock_api_client, mock_auth_api):
     assert mock_config_instance.access_token == "abc123"
 
 
-@patch("t3api_utils.auth.AuthenticationApi")
-@patch("t3api_utils.auth.ApiClient")
-@patch("t3api_utils.auth.Configuration")
+@patch("t3api_utils.auth.utils.AuthenticationApi")
+@patch("t3api_utils.auth.utils.ApiClient")
+@patch("t3api_utils.auth.utils.Configuration")
 def test_authentication_api_exception(mock_config, mock_api_client, mock_auth_api):
     mock_auth_instance = MagicMock()
     mock_auth_api.return_value = mock_auth_instance
@@ -57,9 +57,9 @@ def test_authentication_api_exception(mock_config, mock_api_client, mock_auth_ap
         )
 
 
-@patch("t3api_utils.auth.AuthenticationApi")
-@patch("t3api_utils.auth.ApiClient")
-@patch("t3api_utils.auth.Configuration")
+@patch("t3api_utils.auth.utils.AuthenticationApi")
+@patch("t3api_utils.auth.utils.ApiClient")
+@patch("t3api_utils.auth.utils.Configuration")
 def test_unexpected_exception(mock_config, mock_api_client, mock_auth_api):
     mock_auth_instance = MagicMock()
     mock_auth_api.return_value = mock_auth_instance

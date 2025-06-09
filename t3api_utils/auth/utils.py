@@ -9,7 +9,7 @@ from t3api import (
 )
 from t3api.exceptions import ApiException
 
-from t3api_utils.cli import resolve_auth_inputs
+from t3api_utils.cli.utils import resolve_auth_inputs
 from t3api_utils.exceptions import (
     AuthenticationError,
 )  # ← now imported from your module
