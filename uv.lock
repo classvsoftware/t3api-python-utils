@@ -691,7 +691,7 @@ wheels = [
 ]
 
 [[package]]
-name = "t3api-python-utils"
+name = "t3api-utils"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

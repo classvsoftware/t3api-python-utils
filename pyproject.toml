@@ -1,5 +1,5 @@
 [project]
-name = "t3api-python-utils"
+name = "t3api-utils"
 version = "0.1.0"
 description = "Utility functions and helpers for the T3 API ecosystem"
 authors = [{ name = "Matt Frisbie", email = "matt@classvsoftware.com" }]
