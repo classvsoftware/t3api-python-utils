@@ -9,37 +9,17 @@ from t3api_utils.cli.consts import REQUIRED_ENV_KEYS, EnvKeys
 from t3api_utils.exceptions import AuthenticationError
 
 
-@patch("os.path.exists", return_value=False)
-def test_is_env_file_complete_missing_env_file(mock_exists):
-    assert not cli.is_env_file_complete()
-
-
-@patch("os.path.exists", return_value=True)
-@patch("t3api_utils.cli.utils.load_dotenv")
-@patch("os.getenv", side_effect=lambda k: "value" if k in [e.value for e in REQUIRED_ENV_KEYS] else None)
-def test_is_env_file_complete_success(mock_getenv, mock_load_dotenv, mock_exists):
-    assert cli.is_env_file_complete()
-
-
-@patch("t3api_utils.cli.utils.os.getenv", side_effect=lambda k: None if k == EnvKeys.METRC_USERNAME.value else "value")
-@patch("t3api_utils.cli.utils.load_dotenv")
-@patch("t3api_utils.cli.utils.os.path.exists", return_value=True)
-def test_is_env_file_complete_missing_key(mock_exists, mock_load_dotenv, mock_getenv):
-    assert not cli.is_env_file_complete()
-
-
 @patch.dict(os.environ, {
     EnvKeys.METRC_HOSTNAME.value: "mo.metrc.com",
     EnvKeys.METRC_USERNAME.value: "user",
     EnvKeys.METRC_PASSWORD.value: "pass",
 })
-def test_load_credentials_from_env_or_error():
-    credentials = cli.load_credentials_from_env_or_error()
+def test_load_credentials_from_env():
+    credentials = cli.load_credentials_from_env()
     assert credentials == {
         "hostname": "mo.metrc.com",
         "username": "user",
         "password": "pass",
-        "otp": None,
     }
 
 

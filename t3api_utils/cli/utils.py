@@ -1,5 +1,5 @@
 import os
-from typing import cast
+from typing import Dict, Optional, cast
 
 import typer
 from dotenv import load_dotenv, set_key
@@ -10,65 +10,71 @@ from t3api_utils.cli.consts import (DEFAULT_ENV_PATH, OTP_WHITELIST,
 from t3api_utils.exceptions import AuthenticationError
 
 
-def is_env_file_complete() -> bool:
-    if not os.path.exists(DEFAULT_ENV_PATH):
-        return False
-
+def load_credentials_from_env() -> Dict[str, str]:
     load_dotenv(dotenv_path=DEFAULT_ENV_PATH)
 
-    for key in REQUIRED_ENV_KEYS:
-        if not os.getenv(key):
-            return False
-
-    return True
-
-
-def load_credentials_from_env_or_error() -> T3Credentials:
+    creds = {}
     hostname = (os.getenv(EnvKeys.METRC_HOSTNAME.value) or "").strip()
     username = (os.getenv(EnvKeys.METRC_USERNAME.value) or "").strip()
     password = (os.getenv(EnvKeys.METRC_PASSWORD.value) or "").strip()
 
-    if not hostname:
-        raise AuthenticationError("Missing or empty environment variable: METRC_HOSTNAME")
-    if not username:
-        raise AuthenticationError("Missing or empty environment variable: METRC_USERNAME")
-    if not password:
-        raise AuthenticationError("Missing or empty environment variable: METRC_PASSWORD")
+    if hostname:
+        creds["hostname"] = hostname
+    if username:
+        creds["username"] = username
+    if password:
+        creds["password"] = password
 
-    return {
-        "hostname": hostname,
-        "username": username,
-        "password": password,
-        "otp": None
-    }
+    return creds
 
 
 def offer_to_save_credentials(*, credentials: T3Credentials) -> None:
-    if not typer.confirm(
-        f"Save these values to {DEFAULT_ENV_PATH} for future use?", default=True
-    ):
-        return
+    load_dotenv(dotenv_path=DEFAULT_ENV_PATH)
+    env_exists = os.path.exists(DEFAULT_ENV_PATH)
 
-    set_key(DEFAULT_ENV_PATH, EnvKeys.METRC_HOSTNAME, credentials["hostname"])
-    set_key(DEFAULT_ENV_PATH, EnvKeys.METRC_USERNAME, credentials["username"])
-    set_key(DEFAULT_ENV_PATH, EnvKeys.METRC_PASSWORD, credentials["password"])
+    current_hostname = os.getenv(EnvKeys.METRC_HOSTNAME.value, "").strip()
+    current_username = os.getenv(EnvKeys.METRC_USERNAME.value, "").strip()
+    current_password = os.getenv(EnvKeys.METRC_PASSWORD.value, "").strip()
+
+    hostname_differs = credentials["hostname"] != current_hostname
+    username_differs = credentials["username"] != current_username
+    password_differs = credentials["password"] != current_password
+
+    if not env_exists:
+        if typer.confirm(
+            f"No credentials file found. Save these values to {DEFAULT_ENV_PATH}?", default=True
+        ):
+            set_key(DEFAULT_ENV_PATH, EnvKeys.METRC_HOSTNAME.value, credentials["hostname"])
+            set_key(DEFAULT_ENV_PATH, EnvKeys.METRC_USERNAME.value, credentials["username"])
+            set_key(DEFAULT_ENV_PATH, EnvKeys.METRC_PASSWORD.value, credentials["password"])
+    elif hostname_differs or username_differs or password_differs:
+        if typer.confirm(
+            f"Some credential values differ from those in {DEFAULT_ENV_PATH}. Update them?", default=True
+        ):
+            set_key(DEFAULT_ENV_PATH, EnvKeys.METRC_HOSTNAME.value, credentials["hostname"])
+            set_key(DEFAULT_ENV_PATH, EnvKeys.METRC_USERNAME.value, credentials["username"])
+            set_key(DEFAULT_ENV_PATH, EnvKeys.METRC_PASSWORD.value, credentials["password"])
 
 
+def prompt_for_credentials_or_error(**kwargs) -> T3Credentials:
+    hostname = kwargs.get("hostname")
+    username = kwargs.get("username")
+    password = kwargs.get("password")
 
-def prompt_for_credentials_or_error() -> T3Credentials:
-    hostname = typer.prompt(
-        "Enter Metrc hostname (e.g., mo.metrc.com)",
-        default=os.getenv(EnvKeys.METRC_HOSTNAME, "").strip() or None,
-    )
-    username = typer.prompt(
-        "Enter T3 API username",
-        default=os.getenv(EnvKeys.METRC_USERNAME, "").strip() or None,
-    )
-    password = typer.prompt(
-        "Enter T3 API password",
-        default=os.getenv(EnvKeys.METRC_PASSWORD, "").strip() or None,
-        hide_input=True,
-    )
+    if hostname:
+        typer.echo(f"Using stored value for hostname: {hostname}")
+    else:
+        hostname = typer.prompt("Enter Metrc hostname (e.g., mo.metrc.com)")
+
+    if username:
+        typer.echo(f"Using stored value for username: {username}")
+    else:
+        username = typer.prompt("Enter T3 API username")
+
+    if password:
+        typer.echo(f"Using stored value for password.")
+    else:
+        password = typer.prompt("Enter T3 API password", hide_input=True)
 
     credentials: T3Credentials = {
         "hostname": hostname,
@@ -93,7 +99,9 @@ def prompt_for_credentials_or_error() -> T3Credentials:
 
 
 def resolve_auth_inputs_or_error() -> T3Credentials:
-    credentials = prompt_for_credentials_or_error()
+    stored_credentials = load_credentials_from_env()
+    
+    credentials = prompt_for_credentials_or_error(**stored_credentials)
     
     offer_to_save_credentials(credentials=credentials)
     
