@@ -4,7 +4,6 @@ from typing import (Callable, Generic, Iterable, List, ParamSpec, Protocol,
 
 P = ParamSpec("P")
 R = TypeVar("R")
-T = TypeVar("T")
 
 def parallel_load_collection(
     method: Callable[P, R],
@@ -45,7 +44,7 @@ def parallel_load_collection(
     responses[0] = first_response
 
     def fetch_page(page_number: int) -> tuple[int, R]:
-        response = method(*args, **kwargs, page=page_number + 1)
+        response = method(*args, **kwargs, page=page_number + 1) # type: ignore
         return page_number, response
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
