@@ -17,6 +17,10 @@ def test_import_auth_module():
     from t3api_utils.auth import utils
 
 
+def test_import_collection_module():
+    from t3api_utils.collection import utils
+
+
 class DummyPrompt:
     def __init__(self, value: str):
         self.value = value
