@@ -29,10 +29,11 @@ def flatten_and_extract(
         parent_model = record.get(MODEL_KEY)
 
         for key, value in record.items():
-            if _is_nested_dict(value):
-                _extract_nested_dict(value, flat_record, extracted_tables)
+            # if _is_nested_dict(value):
+            #     _extract_nested_dict(value, flat_record, extracted_tables)
 
-            elif (
+            # elif
+            if (
                 _is_list_of_nested_dicts(value)
                 and parent_id is not None
                 and parent_model is not None

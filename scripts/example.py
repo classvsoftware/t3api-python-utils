@@ -1,11 +1,14 @@
 from typing import List
 
+import duckdb
 from t3api.api.packages_api import PackagesApi
 from t3api.models.metrc_package import MetrcPackage
 
+from t3api_utils.db.utils import export_duckdb_schema
 from t3api_utils.main.utils import (
     get_authenticated_client_or_error,
     load_collection,
+    load_db,
     pick_license,
     save_collection_to_csv,
     save_collection_to_json,
@@ -21,6 +24,12 @@ def main():
         method=PackagesApi(api_client=api_client).v2_packages_active_get,
         license_number=license.license_number,
     )
+    
+    con = duckdb.connect()
+
+    load_db(con, [x.to_dict() for x in all_active_packages])
+    
+    print(export_duckdb_schema(con))
 
     save_collection_to_csv(
         all_active_packages, open_after=True, strip_empty_columns=True
