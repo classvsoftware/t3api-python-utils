@@ -15,6 +15,7 @@ from t3api_utils.auth.interfaces import T3Credentials
 from t3api_utils.auth.utils import create_credentials_authenticated_client_or_error
 from t3api_utils.cli.utils import resolve_auth_inputs_or_error
 from t3api_utils.collection.utils import extract_data, parallel_load_collection
+from t3api_utils.db.utils import create_table_from_data, flatten_and_extract
 from t3api_utils.exceptions import AuthenticationError
 from t3api_utils.file.utils import (
     collection_to_dicts,
@@ -162,3 +163,41 @@ def save_collection_to_csv(
         open_file(file_path)
 
     return file_path
+
+
+from collections import defaultdict
+from typing import Any, Dict, List
+
+import duckdb
+
+
+def load_db(con: duckdb.DuckDBPyConnection, data: List[Dict[str, Any]]) -> None:
+    """
+    Loads a list of nested dictionaries into DuckDB, creating separate tables
+    for each distinct data_model found within nested objects or arrays.
+
+    This function:
+    - Flattens top-level records
+    - Extracts nested dicts and lists into separate tables
+    - Deduplicates extracted entries by their ID
+    - Automatically names tables based on the `data_model` key
+
+    Args:
+        con: An active DuckDB connection.
+        data: A list of structured dictionaries representing input records.
+
+    Raises:
+        ValueError: If table creation fails due to missing or malformed data.
+    """
+    # Storage for extracted nested tables, keyed by table name then ID
+    extracted_tables: Dict[str, Dict[Any, Dict[str, Any]]] = defaultdict(dict)
+
+    # Flatten top-level data and extract nested tables
+    flat_data = flatten_and_extract(data, extracted_tables)
+
+    # Create main/root table from the flattened top-level data
+    create_table_from_data(con, flat_data)
+
+    # Create one table per nested data_model
+    for table_name, data_dict in extracted_tables.items():
+        create_table_from_data(con, data_dict)
