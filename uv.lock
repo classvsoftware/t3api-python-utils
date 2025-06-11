@@ -867,7 +867,7 @@ wheels = [
 
 [[package]]
 name = "t3api"
-version = "0.4.0"
+version = "0.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic", version = "2.10.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
@@ -878,18 +878,14 @@ dependencies = [
     { name = "urllib3", version = "2.2.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "urllib3", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/41/42/cbe6ab239757fff6fb6c80e33485aa406b2fe3ebb7cf02ea6b0690a16811/t3api-0.4.0.tar.gz", hash = "sha256:47715e8ed3c31bb65dc0d133b5a8a0798a4170c07e676a3e9b37389b45bc92ea", size = 473311 }
+sdist = { url = "https://files.pythonhosted.org/packages/82/88/e6ea730d8dacee016651f36e8705841bf23a371623c72dc8e40e1d62a891/t3api-0.5.0.tar.gz", hash = "sha256:a81a49e4ccf2c388a222ede7ec60aa49c5056c6f192d21e71fccf0f4ebf846b2", size = 473081 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c4/83/28aff0198b405e8ed606ee3f19980b6b54937e985ea9fabeb3a38a195f97/t3api-0.4.0-py3-none-any.whl", hash = "sha256:4f9102a7620052cd5001f1aa49c1e31892aa35073d60ebdcd618f37e996ca420", size = 1225525 },
+    { url = "https://files.pythonhosted.org/packages/b6/27/6c005dc5739b07df20dbd182a0a5089a246a385e68384cbda2266bc5381b/t3api-0.5.0-py3-none-any.whl", hash = "sha256:ec50dbf010305b70421601e1949f40aa4b039c5e88c47a434c6fb7c1394008a0", size = 1225376 },
 ]
 
 [[package]]
 name = "t3api-utils"
-<<<<<<< Updated upstream
-version = "0.1.0"
-=======
 version = "0.3.0"
->>>>>>> Stashed changes
 source = { editable = "." }
 dependencies = [
     { name = "certifi" },
@@ -920,7 +916,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "questionary", specifier = ">=2.0.0" },
     { name = "rich", specifier = ">=13.0.0" },
-    { name = "t3api", specifier = ">=0.4.0" },
+    { name = "t3api", specifier = ">=0.5.0" },
     { name = "typer", specifier = ">=0.16.0" },
 ]
 

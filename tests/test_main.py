@@ -1,11 +1,11 @@
 from unittest.mock import MagicMock, patch
 
-from t3api_utils.main.utils import get_authenticated_client
+from t3api_utils.main.utils import get_authenticated_client_or_error
 
 
 @patch("t3api_utils.main.utils.create_credentials_authenticated_client_or_error")
 @patch("t3api_utils.main.utils.resolve_auth_inputs_or_error")
-def test_get_authenticated_client(mock_resolve, mock_create_client):
+def test_get_authenticated_client_or_error(mock_resolve, mock_create_client):
     fake_inputs = {
         "hostname": "mo.metrc.com",
         "username": "user",
@@ -16,7 +16,7 @@ def test_get_authenticated_client(mock_resolve, mock_create_client):
     mock_create_client.return_value = mock_client
 
     # Act
-    result = get_authenticated_client()
+    result = get_authenticated_client_or_error()
 
     # Assert
     mock_resolve.assert_called_once()

@@ -10,16 +10,38 @@ from t3api_utils.auth.interfaces import T3Credentials
 from t3api_utils.auth.utils import \
     create_credentials_authenticated_client_or_error
 from t3api_utils.cli.utils import resolve_auth_inputs_or_error
+from t3api_utils.exceptions import AuthenticationError
+from t3api_utils.logging import get_logger
 
 console = Console()
 
-def get_authenticated_client() -> ApiClient:
+logger = get_logger(__name__)
+
+def get_authenticated_client_or_error() -> ApiClient:
     """
     High-level method to return an authenticated client.
     Handles CLI prompts, .env, and validation internally.
+    Raises AuthenticationError or generic Exception on failure.
     """
-    inputs: T3Credentials = resolve_auth_inputs_or_error()
-    return create_credentials_authenticated_client_or_error(**inputs)
+    try:
+        credentials: T3Credentials = resolve_auth_inputs_or_error()
+    except AuthenticationError as e:
+        logger.error(f"Authentication input error: {e}")
+        raise
+    except Exception as e:
+        logger.exception("Unexpected error while resolving authentication inputs.")
+        raise
+
+    try:
+        api_client = create_credentials_authenticated_client_or_error(**credentials)
+        logger.info("[bold green]Successfully authenticated with T3 API.[/]")
+        return api_client
+    except AuthenticationError as e:
+        logger.error(f"Authentication failed: {e}")
+        raise
+    except Exception as e:
+        logger.exception("Unexpected error while creating authenticated client.")
+        raise
 
 
 def pick_license(*, api_client: ApiClient) -> V2LicensesGet200ResponseInner:
