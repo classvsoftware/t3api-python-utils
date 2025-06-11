@@ -1,5 +1,5 @@
 
-from typing import List, ParamSpec, Protocol, TypeVar, runtime_checkable
+from typing import Any, Dict, List, ParamSpec, Protocol, TypeVar, runtime_checkable
 
 
 P = ParamSpec("P")
@@ -13,3 +13,15 @@ class HasData(Protocol[T]):
     """
 
     data: List[T]
+    
+    
+@runtime_checkable
+class SerializableObject(Protocol):
+    """
+    Protocol defining the required structure for objects to be serialized.
+    Each object must have an `index` (str), `license_number` (str), and a `to_dict()` method.
+    """
+    index: str
+    license_number: str
+
+    def to_dict(self) -> Dict[str, Any]: ...

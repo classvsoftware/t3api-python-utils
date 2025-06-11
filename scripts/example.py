@@ -1,14 +1,14 @@
 from typing import List
 
-from rich import print
 from t3api.api.packages_api import PackagesApi
 from t3api.models.metrc_package import MetrcPackage
 
-from t3api_utils.collection.utils import extract_data, parallel_load_collection
 from t3api_utils.main.utils import (
     get_authenticated_client_or_error,
     load_collection,
     pick_license,
+    save_collection_to_csv,
+    save_collection_to_json,
 )
 
 
@@ -22,7 +22,9 @@ def main():
         license_number=license.license_number,
     )
 
-    print(len(all_active_packages))
+    save_collection_to_csv(
+        all_active_packages, open_after=True, strip_empty_columns=True
+    )
 
 
 if __name__ == "__main__":

@@ -1,4 +1,8 @@
-from typing import Callable, List, ParamSpec, TypeVar
+import os
+import subprocess
+import sys
+from pathlib import Path
+from typing import Callable, List, Optional, ParamSpec, TypeVar
 
 import typer
 from rich.console import Console
@@ -12,7 +16,13 @@ from t3api_utils.auth.utils import create_credentials_authenticated_client_or_er
 from t3api_utils.cli.utils import resolve_auth_inputs_or_error
 from t3api_utils.collection.utils import extract_data, parallel_load_collection
 from t3api_utils.exceptions import AuthenticationError
-from t3api_utils.interfaces import P, T, HasData
+from t3api_utils.file.utils import (
+    collection_to_dicts,
+    open_file,
+    save_dicts_to_csv,
+    save_dicts_to_json,
+)
+from t3api_utils.interfaces import HasData, P, SerializableObject, T
 from t3api_utils.logging import get_logger
 
 console = Console()
@@ -94,3 +104,61 @@ def load_collection(
     """
     all_responses = parallel_load_collection(method, max_workers, *args, **kwargs)
     return extract_data(all_responses)
+
+
+def save_collection_to_json(
+    objects: List[SerializableObject],
+    output_dir: str = "output",
+    open_after: bool = False,
+    filename_override: Optional[str] = None,
+) -> Path:
+    """
+    Converts and saves a SerializableObject collection to a JSON file.
+    Optionally opens the file after saving.
+    Returns the path to the saved file.
+    """
+    if not objects:
+        raise ValueError("Cannot serialize an empty list of objects")
+
+    dicts = collection_to_dicts(objects)
+    file_path = save_dicts_to_json(
+        dicts,
+        model_name=filename_override or objects[0].index,
+        license_number=objects[0].license_number,
+        output_dir=output_dir,
+    )
+
+    if open_after:
+        open_file(file_path)
+
+    return file_path
+
+
+def save_collection_to_csv(
+    objects: List[SerializableObject],
+    output_dir: str = "output",
+    open_after: bool = False,
+    filename_override: Optional[str] = None,
+    strip_empty_columns: bool = False,
+) -> Path:
+    """
+    Converts and saves a SerializableObject collection to a CSV file.
+    Optionally opens the file after saving.
+    Returns the path to the saved file.
+    """
+    if not objects:
+        raise ValueError("Cannot serialize an empty list of objects")
+
+    dicts = collection_to_dicts(objects)
+    file_path = save_dicts_to_csv(
+        dicts,
+        model_name=filename_override or objects[0].index,
+        license_number=objects[0].license_number,
+        output_dir=output_dir,
+        strip_empty_columns=strip_empty_columns,
+    )
+
+    if open_after:
+        open_file(file_path)
+
+    return file_path
