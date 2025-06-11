@@ -17,6 +17,10 @@ def test_import_auth_module():
     from t3api_utils.auth import utils
 
 
+def test_import_file_module():
+    from t3api_utils.file import utils
+
+
 def test_import_collection_module():
     from t3api_utils.collection import utils
 
