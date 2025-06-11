@@ -50,20 +50,34 @@ def offer_to_save_credentials(*, credentials: T3Credentials) -> None:
 
     if not env_exists:
         if typer.confirm(
-            f"No credentials file found. Save these values to [bold]{DEFAULT_ENV_PATH}[/]?", default=True
+            f"No credentials file found. Save these values to [bold]{DEFAULT_ENV_PATH}[/]?",
+            default=True,
         ):
             logger.info("[green]Saving credentials to new environment file.[/green]")
-            set_key(DEFAULT_ENV_PATH, EnvKeys.METRC_HOSTNAME.value, credentials["hostname"])
-            set_key(DEFAULT_ENV_PATH, EnvKeys.METRC_USERNAME.value, credentials["username"])
-            set_key(DEFAULT_ENV_PATH, EnvKeys.METRC_PASSWORD.value, credentials["password"])
+            set_key(
+                DEFAULT_ENV_PATH, EnvKeys.METRC_HOSTNAME.value, credentials["hostname"]
+            )
+            set_key(
+                DEFAULT_ENV_PATH, EnvKeys.METRC_USERNAME.value, credentials["username"]
+            )
+            set_key(
+                DEFAULT_ENV_PATH, EnvKeys.METRC_PASSWORD.value, credentials["password"]
+            )
     elif hostname_differs or username_differs or password_differs:
         if typer.confirm(
-            f"Some credential values differ from those in [bold]{DEFAULT_ENV_PATH}[/]. Update them?", default=True
+            f"Some credential values differ from those in [bold]{DEFAULT_ENV_PATH}[/]. Update them?",
+            default=True,
         ):
             logger.info("[cyan]Updating credentials in environment file.[/cyan]")
-            set_key(DEFAULT_ENV_PATH, EnvKeys.METRC_HOSTNAME.value, credentials["hostname"])
-            set_key(DEFAULT_ENV_PATH, EnvKeys.METRC_USERNAME.value, credentials["username"])
-            set_key(DEFAULT_ENV_PATH, EnvKeys.METRC_PASSWORD.value, credentials["password"])
+            set_key(
+                DEFAULT_ENV_PATH, EnvKeys.METRC_HOSTNAME.value, credentials["hostname"]
+            )
+            set_key(
+                DEFAULT_ENV_PATH, EnvKeys.METRC_USERNAME.value, credentials["username"]
+            )
+            set_key(
+                DEFAULT_ENV_PATH, EnvKeys.METRC_PASSWORD.value, credentials["password"]
+            )
 
 
 def prompt_for_credentials_or_error(**kwargs) -> T3Credentials:
@@ -82,12 +96,12 @@ def prompt_for_credentials_or_error(**kwargs) -> T3Credentials:
     if username:
         logger.info(f"[blue]Using stored value for username:[/] {username}")
     else:
-        username = typer.prompt("Enter T3 API username")
+        username = typer.prompt("Enter Metrc username")
 
     if password:
         logger.info("[blue]Using stored value for password.[/]")
     else:
-        password = typer.prompt("Enter T3 API password", hide_input=True)
+        password = typer.prompt("Enter Metrc password", hide_input=True)
 
     credentials: T3Credentials = {
         "hostname": hostname,
@@ -97,10 +111,10 @@ def prompt_for_credentials_or_error(**kwargs) -> T3Credentials:
     }
 
     if hostname in OTP_WHITELIST:
-        otp = typer.prompt("Enter 6-digit T3 OTP")
+        otp = typer.prompt("Enter 6-digit Metrc 2-factor authentication code")
         if not otp or len(otp) != 6 or not otp.isdigit():
-            logger.error("[red]Invalid OTP entered.[/red]")
-            raise AuthenticationError(f"Invalid OTP: {otp}")
+            logger.error("[red]Invalid 2-factor authentication entered.[/red]")
+            raise AuthenticationError(f"Invalid 2-factor authentication: {otp}")
         credentials["otp"] = otp
 
     for key, value in credentials.items():

@@ -53,7 +53,7 @@ def test_prompt_for_credentials_without_otp(mock_offer, mock_prompt):
 @patch("t3api_utils.cli.utils.offer_to_save_credentials")
 def test_prompt_for_credentials_invalid_otp_raises(mock_offer, mock_prompt):
     mock_prompt.side_effect = ["mi.metrc.com", "user", "pass", "abc"]
-    with pytest.raises(AuthenticationError, match="Invalid OTP"):
+    with pytest.raises(AuthenticationError, match="Invalid 2-factor authentication"):
         cli.prompt_for_credentials_or_error()
 
 

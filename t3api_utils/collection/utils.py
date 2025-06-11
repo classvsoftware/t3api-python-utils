@@ -1,9 +1,10 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import (Callable, Generic, Iterable, List, ParamSpec, Protocol,
-                    TypeVar)
+from typing import Callable, List, ParamSpec, Protocol, TypeVar, runtime_checkable
 
 P = ParamSpec("P")
 R = TypeVar("R")
+T = TypeVar("T")
+
 
 def parallel_load_collection(
     method: Callable[P, R],
@@ -44,7 +45,7 @@ def parallel_load_collection(
     responses[0] = first_response
 
     def fetch_page(page_number: int) -> tuple[int, R]:
-        response = method(*args, **kwargs, page=page_number + 1) # type: ignore
+        response = method(*args, **kwargs, page=page_number + 1)  # type: ignore
         return page_number, response
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -55,3 +56,31 @@ def parallel_load_collection(
 
     return [r for r in responses if r is not None]
 
+
+@runtime_checkable
+class HasData(Protocol[T]):
+    """
+    A protocol representing any object that exposes a `data` attribute
+    containing a list of items of type `T`.
+    """
+
+    data: List[T]
+
+
+def extract_data(responses: List[HasData[T]]) -> List[T]:
+    """
+    Flatten a list of response-like objects that each have a `.data` property
+    into a single list of data items, preserving their type.
+
+    Args:
+        responses (List[HasData[T]]): A list of objects that each implement the HasData protocol.
+
+    Returns:
+        List[T]: A flattened list of all items from the `.data` attributes.
+
+    Example:
+        >>> extract_data([Response1(data=[1, 2]), Response2(data=[3])])
+        [1, 2, 3]
+    """
+    # Use nested list comprehension to flatten all `.data` lists into one
+    return [item for response in responses for item in response.data]
