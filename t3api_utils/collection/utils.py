@@ -1,17 +1,15 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Callable, List, ParamSpec, Protocol, TypeVar, runtime_checkable
+from typing import Callable, List
 
-P = ParamSpec("P")
-R = TypeVar("R")
-T = TypeVar("T")
+from t3api_utils.interfaces import P, T, HasData
 
 
 def parallel_load_collection(
-    method: Callable[P, R],
+    method: Callable[P, T],
     max_workers: int | None = None,
     *args: P.args,
     **kwargs: P.kwargs,
-) -> List[R]:
+) -> List[T]:
     """
     Fetches paginated responses in parallel using a thread pool.
 
@@ -30,7 +28,7 @@ def parallel_load_collection(
         raise ValueError("Response missing required `total` attribute.")
 
     total = first_response.total
-    responses: List[R | None] = [None] * 1  # seed with first response
+    responses: List[T | None] = [None] * 1  # seed with first response
 
     # Try to infer page size from response object (if possible)
     page_size = getattr(first_response, "page_size", None)
@@ -44,7 +42,7 @@ def parallel_load_collection(
     responses = [None] * num_pages
     responses[0] = first_response
 
-    def fetch_page(page_number: int) -> tuple[int, R]:
+    def fetch_page(page_number: int) -> tuple[int, T]:
         response = method(*args, **kwargs, page=page_number + 1)  # type: ignore
         return page_number, response
 
@@ -55,16 +53,6 @@ def parallel_load_collection(
             responses[page_number] = response
 
     return [r for r in responses if r is not None]
-
-
-@runtime_checkable
-class HasData(Protocol[T]):
-    """
-    A protocol representing any object that exposes a `data` attribute
-    containing a list of items of type `T`.
-    """
-
-    data: List[T]
 
 
 def extract_data(responses: List[HasData[T]]) -> List[T]:

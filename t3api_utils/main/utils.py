@@ -1,21 +1,24 @@
+from typing import Callable, List, ParamSpec, TypeVar
+
 import typer
 from rich.console import Console
 from rich.table import Table
 from t3api import ApiClient
 from t3api.api.licenses_api import LicensesApi
-from t3api.models.v2_licenses_get200_response_inner import \
-    V2LicensesGet200ResponseInner
+from t3api.models.v2_licenses_get200_response_inner import V2LicensesGet200ResponseInner
 
 from t3api_utils.auth.interfaces import T3Credentials
-from t3api_utils.auth.utils import \
-    create_credentials_authenticated_client_or_error
+from t3api_utils.auth.utils import create_credentials_authenticated_client_or_error
 from t3api_utils.cli.utils import resolve_auth_inputs_or_error
+from t3api_utils.collection.utils import extract_data, parallel_load_collection
 from t3api_utils.exceptions import AuthenticationError
+from t3api_utils.interfaces import P, T, HasData
 from t3api_utils.logging import get_logger
 
 console = Console()
 
 logger = get_logger(__name__)
+
 
 def get_authenticated_client_or_error() -> ApiClient:
     """
@@ -69,3 +72,25 @@ def pick_license(*, api_client: ApiClient) -> V2LicensesGet200ResponseInner:
 
     selected_license = response[choice - 1]
     return selected_license
+
+
+def load_collection(
+    method: Callable[P, HasData[T]],
+    max_workers: int | None = None,
+    *args: P.args,
+    **kwargs: P.kwargs,
+) -> List[T]:
+    """
+    Loads and flattens a full paginated collection in parallel, preserving type safety.
+
+    Args:
+        method: A callable that fetches a single page and returns an object with a `.data: List[T]` attribute.
+        max_workers: Optional max number of threads to use.
+        *args: Positional arguments for the method.
+        **kwargs: Keyword arguments for the method.
+
+    Returns:
+        List[T]: A flattened list of all items across all pages.
+    """
+    all_responses = parallel_load_collection(method, max_workers, *args, **kwargs)
+    return extract_data(all_responses)
