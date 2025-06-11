@@ -4,11 +4,7 @@ from typing import Any, Dict, List, Tuple, Union
 import duckdb
 import pyarrow as pa
 
-# Constants
-SCHEMA_NAME = "main"
-ID_SUFFIX = "_id"
-ID_KEY = "id"
-MODEL_KEY = "data_model"
+from t3api_utils.db.consts import ID_KEY, ID_SUFFIX, MODEL_KEY, SCHEMA_NAME
 
 
 def flatten_and_extract(
