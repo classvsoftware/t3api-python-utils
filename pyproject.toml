@@ -4,12 +4,11 @@ version = "0.3.0"
 description = "Utility functions and helpers for the T3 API ecosystem"
 authors = [{ name = "Matt Frisbie", email = "matt@classvsoftware.com" }]
 readme = "README.md"
-license = { text = "GPL-3.0-only" }
+license = "GPL-3.0-only"
 requires-python = ">=3.8"
 keywords = ["t3", "metrc", "utils", "helpers", "track and trace"]
 classifiers = [
     "Development Status :: 3 - Alpha",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
     "Operating System :: OS Independent",
@@ -37,6 +36,10 @@ Homepage = "https://github.com/classvsoftware/t3api-python-utils"
 [build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["t3api_utils*"]
+exclude = ["tests*", "tmp*", "output*", "interfaces*"]
 
 [tool.mypy]
 files = ["t3api_utils", "tests"]

@@ -1,39 +1,65 @@
-from typing import List
+#!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.8"
+# dependencies = [
+#     "duckdb",
+#     "httpx",
+#     "typer",
+#     "rich",
+#     "pyarrow"
+# ]
+# ///
+
+from typing import List, Dict, Any
 
 import duckdb
-from t3api.api.packages_api import PackagesApi
-from t3api.models.metrc_package import MetrcPackage
 
+from t3api_utils.api.parallel import load_all_data_sync
 from t3api_utils.db.utils import export_duckdb_schema
+from t3api_utils.file.utils import save_dicts_to_csv, open_file
 from t3api_utils.main.utils import (
     get_authenticated_client_or_error,
-    load_collection,
     load_db,
     pick_license,
-    save_collection_to_csv,
-    save_collection_to_json,
 )
 
 
 def main():
+    # Get authenticated httpx-based client
     api_client = get_authenticated_client_or_error()
 
+    # Pick a license interactively
     license = pick_license(api_client=api_client)
 
-    all_active_packages: List[MetrcPackage] = load_collection(
-        method=PackagesApi(api_client=api_client).v2_packages_active_get,
-        license_number=license.license_number,
+    # Load all packages for the selected license using the new parallel loading
+    all_packages: List[Dict[str, Any]] = load_all_data_sync(
+        client=api_client,
+        method_name="get_packages",
+        license_number=license["licenseNumber"],
     )
-    
-    con = duckdb.connect()
 
-    load_db(con, [x.to_dict() for x in all_active_packages])
-    
+    # Load data into DuckDB
+    con = duckdb.connect()
+    load_db(con, all_packages)
+
+    # Export and print database schema
     print(export_duckdb_schema(con))
 
-    save_collection_to_csv(
-        all_active_packages, open_after=True, strip_empty_columns=True
-    )
+    # Save packages to CSV using the direct file utility
+    if all_packages:
+        csv_path = save_dicts_to_csv(
+            all_packages,
+            model_name="packages",
+            license_number=license["licenseNumber"],
+            output_dir="output",
+            strip_empty_columns=True
+        )
+        print(f"Saved {len(all_packages)} packages to {csv_path}")
+
+        # Optionally open the file
+        open_file(csv_path)
+    else:
+        print("No packages found for this license.")
 
 
 if __name__ == "__main__":
