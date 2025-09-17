@@ -15,6 +15,7 @@ def create_credentials_authenticated_client_or_error(
     password: str,
     host: str = "https://api.trackandtrace.tools",
     otp: Optional[str] = None,
+    email: Optional[str] = None,
 ) -> ApiClient:
     """
     Authenticates with the T3 API using credentials and optional OTP.
@@ -40,6 +41,10 @@ def create_credentials_authenticated_client_or_error(
     # Only send OTP if it is needed, otherwise omit
     if otp is not None:
         request_data_args["otp"] = otp
+        
+    # Only send OTP if it is needed, otherwise omit
+    if email is not None:
+        request_data_args["email"] = email
 
     request_data = V2AuthCredentialsPostRequest(**request_data_args)
     try:

@@ -6,3 +6,4 @@ class T3Credentials(TypedDict):
     username: str
     password: str
     otp: Optional[str]
+    email: Optional[str]
