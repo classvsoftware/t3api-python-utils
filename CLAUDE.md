@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Strategy
+
+- The data returned from Metrc collection API endpoints may slightly change over time. Extra fields may be added. Don't write python classes that assume an exact data shape, they should fall back gracefully. 
+
 ## Development Environment Setup
 
 This project uses `uv` for Python package management:
@@ -24,6 +28,18 @@ uv pip install -e .[dev]
 ```bash
 pytest                    # Run all tests
 pytest tests/specific/    # Run specific test directory
+```
+
+### Type Generation
+```bash
+# Update TypedDict definitions from OpenAPI spec
+python bin/generate_types.py
+
+# Or use the wrapper script
+./bin/update-types
+
+# Specify custom spec URL or output directory
+python bin/generate_types.py --spec-url https://api.example.com/spec --output-dir custom_interfaces
 ```
 
 ### Type Checking
@@ -87,6 +103,26 @@ client = create_credentials_authenticated_client_or_error(hostname="...", userna
 - **Enhanced Error Handling**: Better error messages and retry policies with exponential backoff
 - **Batching**: Process large datasets in configurable batch sizes
 - **Parallel Loading**: Improved parallel data fetching with `load_all_licenses()`, `load_all_packages()`, etc.
+
+### Auto-Generated TypedDict Interfaces
+
+The `interfaces/` directory contains auto-generated TypedDict definitions from the OpenAPI specification:
+
+```python
+# Import specific types
+from interfaces import MetrcLicense, MetrcPackage, SearchResponse
+
+# Use in type annotations
+def process_licenses(licenses: List[MetrcLicense]) -> None:
+    for license in licenses:
+        print(license["legalName"])  # Full type safety with dict access
+```
+
+**Key Benefits:**
+- **Always up-to-date**: Generated from live OpenAPI spec
+- **Complete coverage**: All API schemas included
+- **Type safety**: Full MyPy support with TypedDict
+- **Flexible**: Handles optional fields with `NotRequired[]`
 
 ### Data Flow Pattern
 1. **Authentication** (`auth/`) - Create authenticated httpx-based API clients

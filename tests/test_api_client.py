@@ -4,7 +4,7 @@ from unittest.mock import Mock, patch, MagicMock
 import httpx
 
 from t3api_utils.api.client import T3APIClient, AsyncT3APIClient
-from t3api_utils.api.models import AuthResponse, LicensesResponse, PackagesResponse
+from t3api_utils.api.models import AuthResponseData, MetrcCollectionResponse
 from t3api_utils.http.utils import T3HTTPError, HTTPConfig, RetryPolicy
 
 
@@ -99,11 +99,11 @@ class TestT3APIClient:
         }
 
         # Verify the response
-        assert isinstance(result, AuthResponse)
-        assert result.access_token == "test_access_token"
-        assert result.refresh_token == "test_refresh_token"
-        assert result.expires_in == 3600
-        assert result.token_type == "Bearer"
+        assert isinstance(result, dict)
+        assert result["access_token"] == "test_access_token"
+        assert result["refresh_token"] == "test_refresh_token"
+        assert result["expires_in"] == 3600
+        assert result["token_type"] == "Bearer"
 
         # Verify client state
         assert client.is_authenticated
@@ -133,9 +133,9 @@ class TestT3APIClient:
         }
 
         # Verify response handling
-        assert result.access_token == "test_access_token"
-        assert result.refresh_token is None
-        assert result.token_type == "Bearer"  # default value
+        assert result["access_token"] == "test_access_token"
+        assert result.get("refresh_token") is None
+        assert result.get("token_type") is None  # not provided in minimal response
 
     @patch('t3api_utils.api.client.request_json')
     def test_authenticate_with_credentials_failure(self, mock_request):
@@ -184,9 +184,9 @@ class TestT3APIClient:
         assert call_args[1]["params"] == {"page": 1, "pageSize": 100}
 
         # Verify the response
-        assert isinstance(result, LicensesResponse)
-        assert len(result.data) == 1
-        assert result.data[0].license_number == "LIC-001"
+        assert isinstance(result, dict)
+        assert len(result["data"]) == 1
+        assert result["data"][0]["licenseNumber"] == "LIC-001"
 
     @patch('t3api_utils.api.client.request_json')
     def test_get_licenses_with_params(self, mock_request):
@@ -258,9 +258,9 @@ class TestT3APIClient:
         assert call_args[1]["params"] == expected_params
 
         # Verify the response
-        assert isinstance(result, PackagesResponse)
-        assert len(result.data) == 1
-        assert result.data[0].license_number == "LIC-001"
+        assert isinstance(result, dict)
+        assert len(result["data"]) == 1
+        assert result["data"][0]["licenseNumber"] == "LIC-001"
 
     def test_get_packages_not_authenticated(self):
         """Test packages retrieval without authentication."""
@@ -343,8 +343,8 @@ class TestAsyncT3APIClient:
         assert call_args[1]["url"] == "/v2/auth/credentials"
 
         # Verify the response
-        assert isinstance(result, AuthResponse)
-        assert result.access_token == "test_access_token"
+        assert isinstance(result, dict)
+        assert result["access_token"] == "test_access_token"
         assert client.is_authenticated
 
     @pytest.mark.asyncio
@@ -377,8 +377,8 @@ class TestAsyncT3APIClient:
         assert call_args[1]["url"] == "/v2/licenses"
 
         # Verify the response
-        assert isinstance(result, LicensesResponse)
-        assert len(result.data) == 1
+        assert isinstance(result, dict)
+        assert len(result["data"]) == 1
 
     @pytest.mark.asyncio
     async def test_get_licenses_not_authenticated(self):
@@ -420,8 +420,8 @@ class TestAsyncT3APIClient:
         assert call_args[1]["url"] == "/v2/packages"
 
         # Verify the response
-        assert isinstance(result, PackagesResponse)
-        assert len(result.data) == 1
+        assert isinstance(result, dict)
+        assert len(result["data"]) == 1
 
     @pytest.mark.asyncio
     async def test_get_packages_not_authenticated(self):

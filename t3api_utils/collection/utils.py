@@ -4,14 +4,14 @@ This module provides both legacy and enhanced parallel loading capabilities,
 supporting both the original t3api-based functions and new httpx-based clients.
 """
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Callable, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional
 
 from t3api_utils.interfaces import HasData, P, T
 from t3api_utils.logging import get_logger
 
 # Import enhanced parallel utilities
 from t3api_utils.api.client import T3APIClient, AsyncT3APIClient
-from t3api_utils.api.models import License, Package
+from t3api_utils.api.models import MetrcObject
 from t3api_utils.api.parallel import (
     load_all_data_sync,
     load_all_data_async,
@@ -75,7 +75,7 @@ def load_all_licenses(
     max_workers: Optional[int] = None,
     rate_limit: Optional[float] = 10.0,
     **kwargs: object,
-) -> List[License]:
+) -> List[Dict[str, Any]]:
     """
     Load all licenses using the new httpx-based client with parallel loading.
 
@@ -86,7 +86,7 @@ def load_all_licenses(
         **kwargs: Additional arguments to pass to get_licenses
 
     Returns:
-        List of all License objects across all pages
+        List of all license objects across all pages
     """
     return load_all_data_sync(
         client=client,
@@ -103,7 +103,7 @@ def load_all_packages(
     max_workers: Optional[int] = None,
     rate_limit: Optional[float] = 10.0,
     **kwargs: object,
-) -> List[Package]:
+) -> List[Dict[str, Any]]:
     """
     Load all packages for a license using the new httpx-based client.
 
@@ -115,7 +115,7 @@ def load_all_packages(
         **kwargs: Additional arguments to pass to get_packages
 
     Returns:
-        List of all Package objects across all pages
+        List of all package objects across all pages
     """
     return load_all_data_sync(
         client=client,
@@ -133,7 +133,7 @@ async def load_all_licenses_async(
     rate_limit: Optional[float] = 10.0,
     batch_size: Optional[int] = None,
     **kwargs: object,
-) -> List[License]:
+) -> List[Dict[str, Any]]:
     """
     Load all licenses asynchronously using the new httpx-based client.
 
@@ -145,7 +145,7 @@ async def load_all_licenses_async(
         **kwargs: Additional arguments to pass to get_licenses
 
     Returns:
-        List of all License objects across all pages
+        List of all license objects across all pages
     """
     return await load_all_data_async(
         client=client,
@@ -164,7 +164,7 @@ async def load_all_packages_async(
     rate_limit: Optional[float] = 10.0,
     batch_size: Optional[int] = None,
     **kwargs: object,
-) -> List[Package]:
+) -> List[Dict[str, Any]]:
     """
     Load all packages for a license asynchronously using the new httpx-based client.
 
@@ -177,7 +177,7 @@ async def load_all_packages_async(
         **kwargs: Additional arguments to pass to get_packages
 
     Returns:
-        List of all Package objects across all pages
+        List of all package objects across all pages
     """
     return await load_all_data_async(
         client=client,

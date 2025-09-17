@@ -18,17 +18,18 @@ from typing import (
     Optional,
     TypeVar,
     Union,
+    cast,
 )
 
 from t3api_utils.api.client import T3APIClient, AsyncT3APIClient
-from t3api_utils.api.models import PaginatedResponse
+from t3api_utils.api.models import MetrcCollectionResponse
 from t3api_utils.interfaces import HasData
 from t3api_utils.logging import get_logger
 
 logger = get_logger(__name__)
 
 T = TypeVar("T")
-PaginatedT = TypeVar("PaginatedT", bound=PaginatedResponse[Any])
+PaginatedT = TypeVar("PaginatedT", bound=MetrcCollectionResponse)
 
 
 class RateLimiter:
@@ -116,11 +117,11 @@ def parallel_load_paginated_sync(
 
     first_response = method(page=1, **method_kwargs)
 
-    if not hasattr(first_response, 'total') or not hasattr(first_response, 'page_size'):
-        raise ValueError("Response must have 'total' and 'page_size' attributes")
+    if 'total' not in first_response or 'pageSize' not in first_response:
+        raise ValueError("Response must have 'total' and 'pageSize' fields")
 
-    total_records = first_response.total
-    page_size = first_response.page_size
+    total_records = first_response["total"]
+    page_size = first_response["pageSize"]
     num_pages = (total_records + page_size - 1) // page_size
 
     logger.info(f"Total records: {total_records}, page size: {page_size}, pages: {num_pages}")
@@ -199,11 +200,11 @@ async def parallel_load_paginated_async(
 
     first_response = await method(page=1, **method_kwargs)
 
-    if not hasattr(first_response, 'total') or not hasattr(first_response, 'page_size'):
-        raise ValueError("Response must have 'total' and 'page_size' attributes")
+    if 'total' not in first_response or 'pageSize' not in first_response:
+        raise ValueError("Response must have 'total' and 'pageSize' fields")
 
-    total_records = first_response.total
-    page_size = first_response.page_size
+    total_records = first_response["total"]
+    page_size = first_response["pageSize"]
     num_pages = (total_records + page_size - 1) // page_size
 
     logger.info(f"Total records: {total_records}, page size: {page_size}, pages: {num_pages}")
@@ -294,7 +295,7 @@ def load_all_data_sync(
     Returns:
         Flattened list of all data items across all pages
     """
-    responses: List[PaginatedResponse[T]] = parallel_load_paginated_sync(
+    responses: List[MetrcCollectionResponse] = parallel_load_paginated_sync(
         client=client,
         method_name=method_name,
         max_workers=max_workers,
@@ -303,9 +304,9 @@ def load_all_data_sync(
     )
 
     # Extract all data items
-    all_data = []
+    all_data: List[T] = []
     for response in responses:
-        all_data.extend(response.data)
+        all_data.extend(cast(List[T], response["data"]))
 
     return all_data
 
@@ -335,7 +336,7 @@ async def load_all_data_async(
     Returns:
         Flattened list of all data items across all pages
     """
-    responses: List[PaginatedResponse[T]] = await parallel_load_paginated_async(
+    responses: List[MetrcCollectionResponse] = await parallel_load_paginated_async(
         client=client,
         method_name=method_name,
         max_concurrent=max_concurrent,
@@ -345,9 +346,9 @@ async def load_all_data_async(
     )
 
     # Extract all data items
-    all_data = []
+    all_data: List[T] = []
     for response in responses:
-        all_data.extend(response.data)
+        all_data.extend(cast(List[T], response["data"]))
 
     return all_data
 
@@ -385,17 +386,20 @@ def parallel_load_collection_enhanced(
 
     first_response = method(page=1, **method_kwargs)
 
-    if not hasattr(first_response, "total") or first_response.total is None:
-        raise ValueError("Response missing required `total` attribute.")
+    if "total" not in first_response or first_response["total"] is None:
+        raise ValueError("Response missing required `total` field.")
 
-    total = first_response.total
+    total = first_response["total"]
 
-    page_size = getattr(first_response, "page_size", None)
+    page_size = first_response.get("pageSize")
     if page_size is None:
-        page_size = len(first_response) if hasattr(first_response, "__len__") else None
+        data = first_response.get("data", [])
+        page_size = len(cast(List[Any], data)) if data is not None else 0
     if page_size is None or page_size == 0:
         raise ValueError("Unable to determine page size from first response.")
 
+    # Type assertion since we know page_size is int at this point
+    assert isinstance(page_size, int)
     num_pages = (total + page_size - 1) // page_size
     logger.info(f"Total records: {total}, page size: {page_size}, total pages: {num_pages}")
 

@@ -8,7 +8,7 @@ from t3api_utils.api.auth import (
     authenticate_and_get_response,
 )
 from t3api_utils.api.client import T3APIClient
-from t3api_utils.api.models import AuthResponse
+from t3api_utils.api.models import AuthResponseData
 from t3api_utils.exceptions import AuthenticationError
 from t3api_utils.http.utils import T3HTTPError, HTTPConfig
 
@@ -21,7 +21,7 @@ class TestCreateCredentialsAuthenticatedClientOrError:
         """Test successful authentication returns authenticated client."""
         # Mock the client instance and authentication response
         mock_client = MagicMock(spec=T3APIClient)
-        mock_auth_response = AuthResponse(access_token="test_token")
+        mock_auth_response = {"access_token": "test_token"}
         mock_client.authenticate_with_credentials.return_value = mock_auth_response
         mock_client_class.return_value = mock_client
 
@@ -57,7 +57,7 @@ class TestCreateCredentialsAuthenticatedClientOrError:
     def test_custom_host(self, mock_client_class):
         """Test authentication with custom host."""
         mock_client = MagicMock(spec=T3APIClient)
-        mock_auth_response = AuthResponse(access_token="test_token")
+        mock_auth_response = {"access_token": "test_token"}
         mock_client.authenticate_with_credentials.return_value = mock_auth_response
         mock_client_class.return_value = mock_client
 
@@ -77,7 +77,7 @@ class TestCreateCredentialsAuthenticatedClientOrError:
     def test_minimal_parameters(self, mock_client_class):
         """Test authentication with minimal required parameters."""
         mock_client = MagicMock(spec=T3APIClient)
-        mock_auth_response = AuthResponse(access_token="test_token")
+        mock_auth_response = {"access_token": "test_token"}
         mock_client.authenticate_with_credentials.return_value = mock_auth_response
         mock_client_class.return_value = mock_client
 
@@ -199,12 +199,12 @@ class TestAuthenticateAndGetResponse:
         """Test successful authentication response retrieval."""
         # Mock the client and authentication response
         mock_client = MagicMock(spec=T3APIClient)
-        mock_auth_response = AuthResponse(
-            access_token="test_token",
-            refresh_token="refresh_token",
-            expires_in=3600,
-            token_type="Bearer"
-        )
+        mock_auth_response = {
+            "access_token": "test_token",
+            "refresh_token": "refresh_token",
+            "expires_in": 3600,
+            "token_type": "Bearer"
+        }
         mock_client.authenticate_with_credentials.return_value = mock_auth_response
 
         # Mock context manager
@@ -240,14 +240,14 @@ class TestAuthenticateAndGetResponse:
 
         # Verify the response is returned
         assert result == mock_auth_response
-        assert result.access_token == "test_token"
-        assert result.refresh_token == "refresh_token"
+        assert result["access_token"] == "test_token"
+        assert result["refresh_token"] == "refresh_token"
 
     @patch('t3api_utils.api.auth.T3APIClient')
     def test_custom_host_response(self, mock_client_class):
         """Test authentication response with custom host."""
         mock_client = MagicMock(spec=T3APIClient)
-        mock_auth_response = AuthResponse(access_token="test_token")
+        mock_auth_response = {"access_token": "test_token"}
         mock_client.authenticate_with_credentials.return_value = mock_auth_response
 
         # Mock context manager

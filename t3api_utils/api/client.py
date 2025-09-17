@@ -1,7 +1,7 @@
 """T3 API client built on httpx."""
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Union, cast
 
 import httpx
 
@@ -18,9 +18,8 @@ from t3api_utils.http.utils import (
     clear_bearer_token,
 )
 from t3api_utils.api.models import (
-    AuthResponse,
-    LicensesResponse,
-    PackagesResponse,
+    AuthResponseData,
+    MetrcCollectionResponse,
 )
 
 
@@ -109,7 +108,7 @@ class T3APIClient:
         password: str,
         otp: Optional[str] = None,
         email: Optional[str] = None,
-    ) -> AuthResponse:
+    ) -> AuthResponseData:
         """Authenticate with T3 API using credentials.
 
         Args:
@@ -120,7 +119,7 @@ class T3APIClient:
             email: Optional email address
 
         Returns:
-            AuthResponse containing access token and metadata
+            AuthResponseData containing access token and metadata
 
         Raises:
             T3HTTPError: If authentication fails
@@ -149,18 +148,10 @@ class T3APIClient:
                 expected_status=200,
             )
 
-            # Parse response
-            auth_response = AuthResponse(
-                access_token=response_data["access_token"],
-                refresh_token=response_data.get("refresh_token"),
-                expires_in=response_data.get("expires_in"),
-                token_type=response_data.get("token_type", "Bearer"),
-            )
-
             # Set the token for future requests
-            self.set_access_token(auth_response.access_token)
+            self.set_access_token(response_data["access_token"])
 
-            return auth_response
+            return cast(AuthResponseData, response_data)
 
         except T3HTTPError as e:
             # Re-raise with more context
@@ -172,7 +163,7 @@ class T3APIClient:
         page: int = 1,
         page_size: int = 100,
         **kwargs: Any,
-    ) -> LicensesResponse:
+    ) -> MetrcCollectionResponse:
         """Get licenses from the T3 API.
 
         Args:
@@ -181,7 +172,7 @@ class T3APIClient:
             **kwargs: Additional query parameters
 
         Returns:
-            LicensesResponse containing license data
+            MetrcCollectionResponse containing license data
 
         Raises:
             T3HTTPError: If request fails or user not authenticated
@@ -206,7 +197,7 @@ class T3APIClient:
                 expected_status=200,
             )
 
-            return LicensesResponse.from_dict(response_data)
+            return cast(MetrcCollectionResponse, response_data)
 
         except T3HTTPError as e:
             raise T3HTTPError(f"Failed to get licenses: {e}", response=e.response) from e
@@ -218,7 +209,7 @@ class T3APIClient:
         page: int = 1,
         page_size: int = 100,
         **kwargs: Any,
-    ) -> PackagesResponse:
+    ) -> MetrcCollectionResponse:
         """Get packages for a specific license.
 
         Args:
@@ -228,7 +219,7 @@ class T3APIClient:
             **kwargs: Additional query parameters
 
         Returns:
-            PackagesResponse containing package data
+            MetrcCollectionResponse containing package data
 
         Raises:
             T3HTTPError: If request fails or user not authenticated
@@ -254,7 +245,7 @@ class T3APIClient:
                 expected_status=200,
             )
 
-            return PackagesResponse.from_dict(response_data)
+            return cast(MetrcCollectionResponse, response_data)
 
         except T3HTTPError as e:
             raise T3HTTPError(f"Failed to get packages: {e}", response=e.response) from e
@@ -345,7 +336,7 @@ class AsyncT3APIClient:
         password: str,
         otp: Optional[str] = None,
         email: Optional[str] = None,
-    ) -> AuthResponse:
+    ) -> AuthResponseData:
         """Authenticate with T3 API using credentials.
 
         Args:
@@ -356,7 +347,7 @@ class AsyncT3APIClient:
             email: Optional email address
 
         Returns:
-            AuthResponse containing access token and metadata
+            AuthResponseData containing access token and metadata
 
         Raises:
             T3HTTPError: If authentication fails
@@ -385,18 +376,10 @@ class AsyncT3APIClient:
                 expected_status=200,
             )
 
-            # Parse response
-            auth_response = AuthResponse(
-                access_token=response_data["access_token"],
-                refresh_token=response_data.get("refresh_token"),
-                expires_in=response_data.get("expires_in"),
-                token_type=response_data.get("token_type", "Bearer"),
-            )
-
             # Set the token for future requests
-            self.set_access_token(auth_response.access_token)
+            self.set_access_token(response_data["access_token"])
 
-            return auth_response
+            return cast(AuthResponseData, response_data)
 
         except T3HTTPError as e:
             # Re-raise with more context
@@ -408,7 +391,7 @@ class AsyncT3APIClient:
         page: int = 1,
         page_size: int = 100,
         **kwargs: Any,
-    ) -> LicensesResponse:
+    ) -> MetrcCollectionResponse:
         """Get licenses from the T3 API.
 
         Args:
@@ -417,7 +400,7 @@ class AsyncT3APIClient:
             **kwargs: Additional query parameters
 
         Returns:
-            LicensesResponse containing license data
+            MetrcCollectionResponse containing license data
 
         Raises:
             T3HTTPError: If request fails or user not authenticated
@@ -442,7 +425,7 @@ class AsyncT3APIClient:
                 expected_status=200,
             )
 
-            return LicensesResponse.from_dict(response_data)
+            return cast(MetrcCollectionResponse, response_data)
 
         except T3HTTPError as e:
             raise T3HTTPError(f"Failed to get licenses: {e}", response=e.response) from e
@@ -454,7 +437,7 @@ class AsyncT3APIClient:
         page: int = 1,
         page_size: int = 100,
         **kwargs: Any,
-    ) -> PackagesResponse:
+    ) -> MetrcCollectionResponse:
         """Get packages for a specific license.
 
         Args:
@@ -464,7 +447,7 @@ class AsyncT3APIClient:
             **kwargs: Additional query parameters
 
         Returns:
-            PackagesResponse containing package data
+            MetrcCollectionResponse containing package data
 
         Raises:
             T3HTTPError: If request fails or user not authenticated
@@ -490,7 +473,7 @@ class AsyncT3APIClient:
                 expected_status=200,
             )
 
-            return PackagesResponse.from_dict(response_data)
+            return cast(MetrcCollectionResponse, response_data)
 
         except T3HTTPError as e:
             raise T3HTTPError(f"Failed to get packages: {e}", response=e.response) from e

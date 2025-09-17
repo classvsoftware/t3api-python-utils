@@ -3,14 +3,14 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Callable, List, Optional, ParamSpec, TypeVar, cast
+from typing import Any, Callable, Dict, List, Optional, ParamSpec, TypeVar, cast
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
 from t3api_utils.api.client import T3APIClient
-from t3api_utils.api.models import License, LicensesResponse
+from t3api_utils.api.models import MetrcCollectionResponse, MetrcObject
 from t3api_utils.api.parallel import load_all_data_sync, parallel_load_collection_enhanced
 from t3api_utils.auth.interfaces import T3Credentials
 from t3api_utils.auth.utils import create_credentials_authenticated_client_or_error
@@ -63,7 +63,7 @@ def get_authenticated_client_or_error() -> T3APIClient:
         raise
 
 
-def pick_license(*, api_client: T3APIClient) -> License:
+def pick_license(*, api_client: T3APIClient) -> Dict[str, Any]:
     """
     Interactive license picker using httpx-based T3 API client.
 
@@ -71,13 +71,13 @@ def pick_license(*, api_client: T3APIClient) -> License:
         api_client: T3APIClient instance
 
     Returns:
-        Selected License object
+        Selected license object
 
     Raises:
         typer.Exit: If no licenses found or invalid selection
     """
     licenses_response = api_client.get_licenses()
-    licenses = licenses_response.data
+    licenses = licenses_response["data"]
 
     if not licenses:
         typer.echo("No licenses found.")
@@ -89,7 +89,7 @@ def pick_license(*, api_client: T3APIClient) -> License:
     table.add_column("License Number", style="green")
 
     for idx, license in enumerate(licenses, start=1):
-        table.add_row(str(idx), license.legal_name, license.license_number)
+        table.add_row(str(idx), license["legalName"], license["licenseNumber"])
 
     console.print(table)
 
@@ -100,7 +100,7 @@ def pick_license(*, api_client: T3APIClient) -> License:
         raise typer.Exit(code=1)
 
     selected_license = licenses[choice - 1]
-    return cast(License, selected_license)
+    return cast(Dict[str, Any], selected_license)
 
 
 def load_collection(

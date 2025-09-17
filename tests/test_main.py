@@ -35,12 +35,17 @@ def test_get_authenticated_client_or_error(mock_resolve, mock_create_client):
 @patch("t3api_utils.main.utils.console.print")
 @patch("t3api_utils.main.utils.typer.prompt")
 def test_pick_license_valid_choice(mock_prompt, mock_console):
-    from t3api_utils.api.models import License, LicensesResponse
+    from t3api_utils.api.models import MetrcCollectionResponse
 
     mock_client = MagicMock()
-    license1 = License(id="1", license_number="123", legal_name="Alpha")
-    license2 = License(id="2", license_number="456", legal_name="Beta")
-    mock_response = LicensesResponse(data=[license1, license2], total=2, page=1, page_size=100)
+    license1 = {"id": "1", "licenseNumber": "123", "legalName": "Alpha"}
+    license2 = {"id": "2", "licenseNumber": "456", "legalName": "Beta"}
+    mock_response: MetrcCollectionResponse = {
+        "data": [license1, license2],
+        "total": 2,
+        "page": 1,
+        "pageSize": 100
+    }
     mock_client.get_licenses.return_value = mock_response
     mock_prompt.return_value = 2
 
@@ -50,10 +55,15 @@ def test_pick_license_valid_choice(mock_prompt, mock_console):
 
 @patch("t3api_utils.main.utils.typer.echo")
 def test_pick_license_empty_list(mock_echo):
-    from t3api_utils.api.models import LicensesResponse
+    from t3api_utils.api.models import MetrcCollectionResponse
 
     mock_client = MagicMock()
-    mock_response = LicensesResponse(data=[], total=0, page=1, page_size=100)
+    mock_response: MetrcCollectionResponse = {
+        "data": [],
+        "total": 0,
+        "page": 1,
+        "pageSize": 100
+    }
     mock_client.get_licenses.return_value = mock_response
 
     with pytest.raises(Exit):

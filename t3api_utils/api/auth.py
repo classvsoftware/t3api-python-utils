@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Optional
 
 from t3api_utils.api.client import T3APIClient
-from t3api_utils.api.models import AuthResponse
+from t3api_utils.api.models import AuthResponseData
 from t3api_utils.exceptions import AuthenticationError
 from t3api_utils.http.utils import T3HTTPError, HTTPConfig
 
@@ -117,7 +117,7 @@ def authenticate_and_get_response(
     host: str = "https://api.trackandtrace.tools",
     otp: Optional[str] = None,
     email: Optional[str] = None,
-) -> AuthResponse:
+) -> AuthResponseData:
     """
     Authenticate and return the full authentication response.
 
@@ -133,7 +133,7 @@ def authenticate_and_get_response(
         email: Optional email address
 
     Returns:
-        AuthResponse: The complete authentication response
+        AuthResponseData: The complete authentication response
 
     Raises:
         AuthenticationError: If authentication fails
