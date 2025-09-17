@@ -6,6 +6,14 @@ authors = [{ name = "Matt Frisbie", email = "matt@classvsoftware.com" }]
 readme = "README.md"
 license = { text = "GPL-3.0-only" }
 requires-python = ">=3.8"
+keywords = ["t3", "metrc", "utils", "helpers", "track and trace"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Operating System :: OS Independent",
+]
 dependencies = [
     "certifi >=2023.7.22",
     "python-dotenv >=1.0.0",
@@ -17,16 +25,7 @@ dependencies = [
     "httpx>=0.25.0",
 ]
 
-keywords = ["t3", "metrc", "utils", "helpers", "track and trace"]
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Operating System :: OS Independent",
-]
-
-[dependency-groups]
+[project.optional-dependencies]
 dev = [
     "mypy>=1.14.1",
     "pytest>=8.3.5",
@@ -52,7 +51,7 @@ disallow_untyped_decorators = true
 disallow_any_generics = true
 
 [[tool.mypy.overrides]]
-module = ["t3api_python_utils.*"]
+module = "t3api_utils.*"
 warn_unused_ignores = true
 strict_equality = true
 extra_checks = true

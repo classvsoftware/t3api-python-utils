@@ -52,7 +52,7 @@ def collection_to_dicts(objects: List[SerializableObject]) -> List[Dict[str, Any
     return [obj.to_dict() for obj in objects]
 
 
-def default_json_serializer(obj):
+def default_json_serializer(obj: object) -> str:
     """
     Fallback serializer for non-JSON-native types.
     Currently handles datetime objects by converting them to ISO format.

@@ -1,78 +1,48 @@
+"""Tests for authentication utilities using httpx-based implementation."""
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from t3api_utils.auth.utils import \
-    create_credentials_authenticated_client_or_error
+from t3api_utils.auth.utils import create_credentials_authenticated_client_or_error
+from t3api_utils.api.client import T3APIClient
 from t3api_utils.exceptions import AuthenticationError
 
 
-@patch("t3api_utils.auth.utils.AuthenticationApi")
-@patch("t3api_utils.auth.utils.ApiClient")
-@patch("t3api_utils.auth.utils.Configuration")
-def test_successful_authentication(mock_config, mock_api_client, mock_auth_api):
-    mock_config_instance = MagicMock()
-    mock_config.return_value = mock_config_instance
+def test_successful_authentication():
+    """Test successful authentication using httpx-based implementation."""
+    with patch('t3api_utils.auth.utils._httpx_auth_client') as mock_httpx_auth:
+        mock_client = MagicMock(spec=T3APIClient)
+        mock_httpx_auth.return_value = mock_client
 
-    mock_client_instance = MagicMock()
-    mock_api_client.return_value = mock_client_instance
-
-    mock_auth_instance = MagicMock()
-    mock_response = MagicMock(access_token="abc123")
-    mock_auth_instance.v2_auth_credentials_post.return_value = mock_response
-    mock_auth_api.return_value = mock_auth_instance
-
-    client = create_credentials_authenticated_client_or_error(
-        host="https://api.test.com",
-        hostname="ca.metrc.com",
-        username="user",
-        password="pass",
-        otp="654321",
-    )
-
-    assert client == mock_client_instance
-    assert mock_config_instance.access_token == "abc123"
-
-
-@patch("t3api_utils.auth.utils.AuthenticationApi")
-@patch("t3api_utils.auth.utils.ApiClient")
-@patch("t3api_utils.auth.utils.Configuration")
-def test_authentication_api_exception(mock_config, mock_api_client, mock_auth_api):
-    mock_auth_instance = MagicMock()
-    mock_auth_api.return_value = mock_auth_instance
-
-    from t3api.exceptions import ApiException
-
-    mock_auth_instance.v2_auth_credentials_post.side_effect = ApiException(
-        body="invalid credentials"
-    )
-
-    with pytest.raises(
-        AuthenticationError, match="T3 API authentication failed: invalid credentials"
-    ):
-        create_credentials_authenticated_client_or_error(
+        result = create_credentials_authenticated_client_or_error(
             host="https://api.test.com",
             hostname="ca.metrc.com",
-            username="baduser",
-            password="badpass",
+            username="user",
+            password="pass",
+            otp="654321",
+        )
+
+        assert result == mock_client
+        mock_httpx_auth.assert_called_once_with(
+            hostname="ca.metrc.com",
+            username="user",
+            password="pass",
+            host="https://api.test.com",
+            otp="654321",
+            email=None
         )
 
 
-@patch("t3api_utils.auth.utils.AuthenticationApi")
-@patch("t3api_utils.auth.utils.ApiClient")
-@patch("t3api_utils.auth.utils.Configuration")
-def test_unexpected_exception(mock_config, mock_api_client, mock_auth_api):
-    mock_auth_instance = MagicMock()
-    mock_auth_api.return_value = mock_auth_instance
+def test_authentication_error():
+    """Test that authentication errors are properly propagated."""
+    with patch('t3api_utils.auth.utils._httpx_auth_client') as mock_httpx_auth:
+        mock_httpx_auth.side_effect = AuthenticationError("Invalid credentials")
 
-    mock_auth_instance.v2_auth_credentials_post.side_effect = ValueError("boom")
+        with pytest.raises(AuthenticationError, match="Invalid credentials"):
+            create_credentials_authenticated_client_or_error(
+                hostname="ca.metrc.com",
+                username="baduser",
+                password="badpass",
+            )
 
-    with pytest.raises(
-        AuthenticationError, match="Unexpected authentication error: boom"
-    ):
-        create_credentials_authenticated_client_or_error(
-            host="https://api.test.com",
-            hostname="ca.metrc.com",
-            username="x",
-            password="y",
-        )
+

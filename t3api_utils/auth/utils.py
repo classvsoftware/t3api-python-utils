@@ -1,11 +1,8 @@
+"""Authentication utilities for T3 API using httpx-based client."""
 from typing import Optional
 
-import certifi
-from t3api import (ApiClient, AuthenticationApi, Configuration,
-                   V2AuthCredentialsPostRequest)
-from t3api.exceptions import ApiException
-
-from t3api_utils.exceptions import AuthenticationError
+from t3api_utils.api.auth import create_credentials_authenticated_client_or_error as _httpx_auth_client
+from t3api_utils.api.client import T3APIClient
 
 
 def create_credentials_authenticated_client_or_error(
@@ -16,43 +13,29 @@ def create_credentials_authenticated_client_or_error(
     host: str = "https://api.trackandtrace.tools",
     otp: Optional[str] = None,
     email: Optional[str] = None,
-) -> ApiClient:
+) -> T3APIClient:
     """
     Authenticates with the T3 API using credentials and optional OTP.
 
+    Args:
+        hostname: The hostname for authentication
+        username: Username
+        password: Password
+        host: API host URL (defaults to production)
+        otp: Optional one-time password
+        email: Optional email address
+
     Returns:
-        ApiClient: An authenticated client instance.
+        T3APIClient: An authenticated httpx-based client instance
 
     Raises:
-        AuthenticationError: If authentication fails.
+        AuthenticationError: If authentication fails
     """
-    config = Configuration(host=host)
-    config.ssl_ca_cert = certifi.where()
-
-    client = ApiClient(configuration=config)
-    auth_api = AuthenticationApi(api_client=client)
-
-    request_data_args = {
-        "hostname": hostname,
-        "username": username,
-        "password": password,
-    }
-
-    # Only send OTP if it is needed, otherwise omit
-    if otp is not None:
-        request_data_args["otp"] = otp
-        
-    # Only send OTP if it is needed, otherwise omit
-    if email is not None:
-        request_data_args["email"] = email
-
-    request_data = V2AuthCredentialsPostRequest(**request_data_args)
-    try:
-        response = auth_api.v2_auth_credentials_post(request_data)
-        config.access_token = response.access_token
-        return client
-
-    except ApiException as e:
-        raise AuthenticationError(f"T3 API authentication failed: {e.body}") from e
-    except Exception as e:
-        raise AuthenticationError(f"Unexpected authentication error: {str(e)}") from e
+    return _httpx_auth_client(
+        hostname=hostname,
+        username=username,
+        password=password,
+        host=host,
+        otp=otp,
+        email=email,
+    )

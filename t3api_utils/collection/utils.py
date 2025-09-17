@@ -1,8 +1,24 @@
+"""Collection utilities for parallel API data loading.
+
+This module provides both legacy and enhanced parallel loading capabilities,
+supporting both the original t3api-based functions and new httpx-based clients.
+"""
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Callable, List
+from typing import Callable, List, Optional, Union
 
 from t3api_utils.interfaces import HasData, P, T
 from t3api_utils.logging import get_logger
+
+# Import enhanced parallel utilities
+from t3api_utils.api.client import T3APIClient, AsyncT3APIClient
+from t3api_utils.api.models import License, Package
+from t3api_utils.api.parallel import (
+    load_all_data_sync,
+    load_all_data_async,
+    parallel_load_paginated_sync,
+    parallel_load_paginated_async,
+    parallel_load_collection_enhanced,
+)
 
 logger = get_logger(__name__)
 
@@ -50,6 +66,128 @@ def parallel_load_collection(
 
     logger.info("Finished loading all pages")
     return [r for r in responses if r is not None]
+
+
+# Enhanced functions for httpx-based API clients
+
+def load_all_licenses(
+    client: T3APIClient,
+    max_workers: Optional[int] = None,
+    rate_limit: Optional[float] = 10.0,
+    **kwargs: object,
+) -> List[License]:
+    """
+    Load all licenses using the new httpx-based client with parallel loading.
+
+    Args:
+        client: Authenticated T3APIClient instance
+        max_workers: Maximum number of threads to use
+        rate_limit: Requests per second limit (None to disable)
+        **kwargs: Additional arguments to pass to get_licenses
+
+    Returns:
+        List of all License objects across all pages
+    """
+    return load_all_data_sync(
+        client=client,
+        method_name="get_licenses",
+        max_workers=max_workers,
+        rate_limit=rate_limit,
+        **kwargs,
+    )
+
+
+def load_all_packages(
+    client: T3APIClient,
+    license_number: str,
+    max_workers: Optional[int] = None,
+    rate_limit: Optional[float] = 10.0,
+    **kwargs: object,
+) -> List[Package]:
+    """
+    Load all packages for a license using the new httpx-based client.
+
+    Args:
+        client: Authenticated T3APIClient instance
+        license_number: License number to get packages for
+        max_workers: Maximum number of threads to use
+        rate_limit: Requests per second limit (None to disable)
+        **kwargs: Additional arguments to pass to get_packages
+
+    Returns:
+        List of all Package objects across all pages
+    """
+    return load_all_data_sync(
+        client=client,
+        method_name="get_packages",
+        license_number=license_number,
+        max_workers=max_workers,
+        rate_limit=rate_limit,
+        **kwargs,
+    )
+
+
+async def load_all_licenses_async(
+    client: AsyncT3APIClient,
+    max_concurrent: Optional[int] = 10,
+    rate_limit: Optional[float] = 10.0,
+    batch_size: Optional[int] = None,
+    **kwargs: object,
+) -> List[License]:
+    """
+    Load all licenses asynchronously using the new httpx-based client.
+
+    Args:
+        client: Authenticated AsyncT3APIClient instance
+        max_concurrent: Maximum number of concurrent requests
+        rate_limit: Requests per second limit (None to disable)
+        batch_size: Process requests in batches of this size
+        **kwargs: Additional arguments to pass to get_licenses
+
+    Returns:
+        List of all License objects across all pages
+    """
+    return await load_all_data_async(
+        client=client,
+        method_name="get_licenses",
+        max_concurrent=max_concurrent,
+        rate_limit=rate_limit,
+        batch_size=batch_size,
+        **kwargs,
+    )
+
+
+async def load_all_packages_async(
+    client: AsyncT3APIClient,
+    license_number: str,
+    max_concurrent: Optional[int] = 10,
+    rate_limit: Optional[float] = 10.0,
+    batch_size: Optional[int] = None,
+    **kwargs: object,
+) -> List[Package]:
+    """
+    Load all packages for a license asynchronously using the new httpx-based client.
+
+    Args:
+        client: Authenticated AsyncT3APIClient instance
+        license_number: License number to get packages for
+        max_concurrent: Maximum number of concurrent requests
+        rate_limit: Requests per second limit (None to disable)
+        batch_size: Process requests in batches of this size
+        **kwargs: Additional arguments to pass to get_packages
+
+    Returns:
+        List of all Package objects across all pages
+    """
+    return await load_all_data_async(
+        client=client,
+        method_name="get_packages",
+        license_number=license_number,
+        max_concurrent=max_concurrent,
+        rate_limit=rate_limit,
+        batch_size=batch_size,
+        **kwargs,
+    )
 
 
 def extract_data(responses: List[HasData[T]]) -> List[T]:

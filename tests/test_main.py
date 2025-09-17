@@ -34,28 +34,30 @@ def test_get_authenticated_client_or_error(mock_resolve, mock_create_client):
 
 @patch("t3api_utils.main.utils.console.print")
 @patch("t3api_utils.main.utils.typer.prompt")
-@patch("t3api_utils.main.utils.LicensesApi")
-def test_pick_license_valid_choice(mock_api_class, mock_prompt, mock_console):
-    mock_api = MagicMock()
-    mock_api_class.return_value = mock_api
-    license1 = MagicMock(license_name="Alpha", license_number="123")
-    license2 = MagicMock(license_name="Beta", license_number="456")
-    mock_api.v2_licenses_get.return_value = [license1, license2]
+def test_pick_license_valid_choice(mock_prompt, mock_console):
+    from t3api_utils.api.models import License, LicensesResponse
+
+    mock_client = MagicMock()
+    license1 = License(id="1", license_number="123", legal_name="Alpha")
+    license2 = License(id="2", license_number="456", legal_name="Beta")
+    mock_response = LicensesResponse(data=[license1, license2], total=2, page=1, page_size=100)
+    mock_client.get_licenses.return_value = mock_response
     mock_prompt.return_value = 2
 
-    result = pick_license(api_client=MagicMock())
+    result = pick_license(api_client=mock_client)
     assert result == license2
 
 
 @patch("t3api_utils.main.utils.typer.echo")
-@patch("t3api_utils.main.utils.LicensesApi")
-def test_pick_license_empty_list(mock_api_class, mock_echo):
-    mock_api = MagicMock()
-    mock_api_class.return_value = mock_api
-    mock_api.v2_licenses_get.return_value = []
+def test_pick_license_empty_list(mock_echo):
+    from t3api_utils.api.models import LicensesResponse
+
+    mock_client = MagicMock()
+    mock_response = LicensesResponse(data=[], total=0, page=1, page_size=100)
+    mock_client.get_licenses.return_value = mock_response
 
     with pytest.raises(Exit):
-        pick_license(api_client=MagicMock())
+        pick_license(api_client=mock_client)
 
     mock_echo.assert_called_once_with("No licenses found.")
 

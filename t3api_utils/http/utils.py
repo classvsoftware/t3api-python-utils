@@ -39,9 +39,10 @@ import logging
 import random
 import time
 from dataclasses import dataclass, field
-from typing import (Any, Dict, Iterable, Mapping, Optional, Sequence, Tuple,
+from typing import (Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple,
                     Union)
 
+import ssl
 import certifi
 import httpx
 
@@ -65,6 +66,15 @@ DEFAULT_TIMEOUT = 30.0  # seconds
 DEFAULT_USER_AGENT = "t3api-utils/py (unknown-version)"
 
 
+def _create_ssl_context(verify: Union[bool, str]) -> Union[bool, ssl.SSLContext]:
+    """Create proper SSL context for httpx to avoid deprecation warnings."""
+    if isinstance(verify, bool):
+        return verify
+    if isinstance(verify, str):
+        return ssl.create_default_context(cafile=verify)
+    return verify
+
+
 @dataclass(frozen=True)
 class HTTPConfig:
     """Base HTTP client configuration (no routes)."""
@@ -74,6 +84,11 @@ class HTTPConfig:
     verify_ssl: Union[bool, str] = certifi.where()
     base_headers: Mapping[str, str] = field(default_factory=lambda: {"User-Agent": DEFAULT_USER_AGENT})
     proxies: Optional[Union[str, Mapping[str, str]]] = None
+
+    @property
+    def ssl_context(self) -> Union[bool, ssl.SSLContext]:
+        """Get proper SSL context for httpx."""
+        return _create_ssl_context(self.verify_ssl)
 
 
 @dataclass(frozen=True)
@@ -104,7 +119,7 @@ class LoggingHooks:
 
     enabled: bool = False
 
-    def as_hooks(self, *, async_client: bool = False) -> Optional[Dict[str, list]]:
+    def as_hooks(self, *, async_client: bool = False) -> Optional[Dict[str, Any]]:
         """Return httpx event_hooks mapping or None."""
         if not self.enabled:
             return None
@@ -176,9 +191,9 @@ def build_client(
     return httpx.Client(
         base_url=cfg.host.rstrip("/"),
         timeout=cfg.timeout,
-        verify=cfg.verify_ssl,
+        verify=cfg.ssl_context,
         headers=merged_headers,
-        proxy=cfg.proxies,
+        proxy=cfg.proxies,  # type: ignore[arg-type]
         http2=False,
         event_hooks=(hooks.as_hooks(async_client=False) if hooks else None),
     )
@@ -197,9 +212,9 @@ def build_async_client(
     return httpx.AsyncClient(
         base_url=cfg.host.rstrip("/"),
         timeout=cfg.timeout,
-        verify=cfg.verify_ssl,
+        verify=cfg.ssl_context,
         headers=merged_headers,
-        proxy=cfg.proxies,
+        proxy=cfg.proxies,  # type: ignore[arg-type]
         http2=False,
         event_hooks=(hooks.as_hooks(async_client=True) if hooks else None),
     )

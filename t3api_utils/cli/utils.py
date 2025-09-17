@@ -9,6 +9,8 @@ from t3api_utils.cli.consts import DEFAULT_ENV_PATH, OTP_WHITELIST, EnvKeys
 from t3api_utils.exceptions import AuthenticationError
 from t3api_utils.logging import get_logger
 
+__all__ = ["DEFAULT_ENV_PATH", "load_credentials_from_env", "offer_to_save_credentials", "prompt_for_credentials_or_error", "resolve_auth_inputs_or_error"]
+
 logger = get_logger(__name__)
 
 
@@ -80,13 +82,13 @@ def offer_to_save_credentials(*, credentials: T3Credentials) -> None:
             )
 
 
-def prompt_for_credentials_or_error(**kwargs) -> T3Credentials:
+def prompt_for_credentials_or_error(**kwargs: object) -> T3Credentials:
     """
     Prompt for any missing credentials, using provided values if available.
     """
-    hostname = kwargs.get("hostname")
-    username = kwargs.get("username")
-    password = kwargs.get("password")
+    hostname = str(kwargs.get("hostname", "")) if kwargs.get("hostname") else None
+    username = str(kwargs.get("username", "")) if kwargs.get("username") else None
+    password = str(kwargs.get("password", "")) if kwargs.get("password") else None
 
     if hostname:
         logger.info(f"[blue]Using stored value for hostname:[/] {hostname}")
@@ -104,10 +106,11 @@ def prompt_for_credentials_or_error(**kwargs) -> T3Credentials:
         password = typer.prompt("Enter Metrc password", hide_input=True)
 
     credentials: T3Credentials = {
-        "hostname": hostname,
-        "username": username,
-        "password": password,
+        "hostname": hostname or "",
+        "username": username or "",
+        "password": password or "",
         "otp": None,
+        "email": None,
     }
 
     if hostname in OTP_WHITELIST:
@@ -118,7 +121,7 @@ def prompt_for_credentials_or_error(**kwargs) -> T3Credentials:
         credentials["otp"] = otp
 
     for key, value in credentials.items():
-        if key != "otp" and (not isinstance(value, str) or not value.strip()):
+        if key not in ("otp", "email") and (not isinstance(value, str) or not value.strip()):
             logger.error(f"[red]Missing or empty credential:[/] {key}")
             raise AuthenticationError(f"Missing or empty credential: {key}")
 

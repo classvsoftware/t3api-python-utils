@@ -33,6 +33,7 @@ def test_prompt_for_credentials_with_otp(mock_offer, mock_prompt):
         "username": "user",
         "password": "pass",
         "otp": "123456",
+        "email": None,
     }
 
 
@@ -46,6 +47,7 @@ def test_prompt_for_credentials_without_otp(mock_offer, mock_prompt):
         "username": "user",
         "password": "pass",
         "otp": None,
+        "email": None,
     }
 
 
@@ -65,6 +67,7 @@ def test_offer_to_save_credentials(mock_set_key, mock_confirm):
         "username": "user",
         "password": "pass",
         "otp": None,
+        "email": None,
     }
     cli.offer_to_save_credentials(credentials=credentials)
     assert mock_set_key.call_count == 3

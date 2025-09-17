@@ -55,23 +55,42 @@ The `t3api_utils` package is organized into focused modules:
 - **`collection/`** - Data collection utilities for parallel API operations
 - **`db/`** - Database utilities using DuckDB for data processing and table creation
 - **`file/`** - File I/O operations including CSV/JSON serialization
-- **`http/`** - HTTP utilities (new module)
+- **`http/`** - HTTP utilities using httpx with retry policies and rate limiting
+- **`api/`** - httpx-based T3 API client with async support and enhanced features
 - **`main/`** - Main utility functions that orchestrate other modules
 
 ### Core Interfaces
 - `HasData[T]` - Protocol for objects with a `data` attribute containing lists
 - `SerializableObject` - Protocol for objects with `index`, `license_number`, and `to_dict()` method
 - `T3Credentials` - Authentication credentials interface
+- `PaginatedResponse[T]` - Protocol for paginated API responses
 
 ### Key Dependencies
-- **T3 API Integration**: Uses `t3api` client for Track & Trace Tools platform
+- **T3 API Integration**: httpx-based implementation for modern API client functionality
+  - httpx >= 0.25.0 for HTTP client functionality with async support
 - **Data Processing**: DuckDB + PyArrow for high-performance data operations
 - **CLI**: Typer for command-line interfaces with Rich for output formatting
 - **Type Safety**: Full mypy strict typing enforced
 
+### httpx-based API Client Features
+
+**Usage:**
+```python
+# Create authenticated client
+client = get_authenticated_client_or_error()
+client = create_credentials_authenticated_client_or_error(hostname="...", username="...", password="...")
+```
+
+**Key Features:**
+- **Async Support**: `AsyncT3APIClient` for high-performance concurrent operations
+- **Rate Limiting**: Configurable requests-per-second limits to avoid API throttling
+- **Enhanced Error Handling**: Better error messages and retry policies with exponential backoff
+- **Batching**: Process large datasets in configurable batch sizes
+- **Parallel Loading**: Improved parallel data fetching with `load_all_licenses()`, `load_all_packages()`, etc.
+
 ### Data Flow Pattern
-1. **Authentication** (`auth/`) - Create authenticated API clients
-2. **Collection** (`collection/`) - Parallel data fetching from T3 API
+1. **Authentication** (`auth/`) - Create authenticated httpx-based API clients
+2. **Collection** (`collection/`, `api/`) - Enhanced parallel data fetching with rate limiting
 3. **Processing** (`db/`) - Flatten nested data and create relational tables
 4. **Output** (`file/`) - Export to CSV/JSON formats
 
@@ -79,3 +98,4 @@ The `t3api_utils` package is organized into focused modules:
 - MyPy is configured with strict settings including `disallow_untyped_defs`
 - Python 3.8+ compatibility required
 - Uses `uv.lock` for dependency resolution
+- httpx-based HTTP client for better performance and async support

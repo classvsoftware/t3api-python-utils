@@ -2,7 +2,7 @@ from collections import defaultdict
 from typing import Any, Dict, List, Set, Tuple, Union
 
 import duckdb
-import pyarrow as pa
+import pyarrow as pa  # type: ignore[import-untyped]
 
 from t3api_utils.db.consts import ID_KEY, ID_SUFFIX, MODEL_KEY, SCHEMA_NAME
 
@@ -57,7 +57,7 @@ def _is_list_of_nested_dicts(value: Any) -> bool:
     """Check if a value is a list of nested dicts with IDs and data_models."""
     return (
         isinstance(value, list)
-        and value
+        and bool(value)
         and all(
             isinstance(item, dict) and ID_KEY in item and MODEL_KEY in item
             for item in value
