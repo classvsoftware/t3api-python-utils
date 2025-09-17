@@ -7,16 +7,11 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, NotRequired, TypedDict, TypeVar
 
-T = TypeVar("T")
-
 
 class AuthResponseData(TypedDict):
     """Authentication response data structure."""
 
-    access_token: str
-    refresh_token: NotRequired[str]
-    expires_in: NotRequired[int]
-    token_type: NotRequired[str]
+    accessToken: str
 
 
 class MetrcObject(TypedDict):

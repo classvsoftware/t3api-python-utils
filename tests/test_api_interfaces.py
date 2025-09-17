@@ -1,12 +1,10 @@
-"""Tests for API models."""
-import pytest
-from typing import Dict, Any
+"""Tests for API interfaces."""
+from typing import Any, Dict
 
-from t3api_utils.api.models import (
-    AuthResponseData,
-    MetrcObject,
-    MetrcCollectionResponse,
-)
+import pytest
+
+from t3api_utils.api.interfaces import (AuthResponseData, MetrcCollectionResponse,
+                                    MetrcObject)
 
 
 class TestAuthResponseData:
@@ -15,22 +13,16 @@ class TestAuthResponseData:
     def test_basic_structure(self):
         """Test basic AuthResponseData structure."""
         response: AuthResponseData = {
-            "access_token": "test_token"
+            "accessToken": "test_token"
         }
-        assert response["access_token"] == "test_token"
+        assert response["accessToken"] == "test_token"
 
     def test_full_structure(self):
         """Test AuthResponseData with all fields."""
         response: AuthResponseData = {
-            "access_token": "test_token",
-            "refresh_token": "refresh_token",
-            "expires_in": 3600,
-            "token_type": "Custom"
+            "accessToken": "test_token",
         }
-        assert response["access_token"] == "test_token"
-        assert response["refresh_token"] == "refresh_token"
-        assert response["expires_in"] == 3600
-        assert response["token_type"] == "Custom"
+        assert response["accessToken"] == "test_token"
 
 
 class TestMetrcObject:

@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Optional
 
 from t3api_utils.api.client import T3APIClient
-from t3api_utils.api.models import AuthResponseData
+from t3api_utils.api.interfaces import AuthResponseData
 from t3api_utils.exceptions import AuthenticationError
 from t3api_utils.http.utils import T3HTTPError, HTTPConfig
 

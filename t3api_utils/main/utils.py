@@ -3,27 +3,26 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, ParamSpec, TypeVar, cast
+from typing import (Any, Callable, Dict, List, Optional, ParamSpec, TypeVar,
+                    cast)
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
 from t3api_utils.api.client import T3APIClient
-from t3api_utils.api.models import MetrcCollectionResponse, MetrcObject
-from t3api_utils.api.parallel import load_all_data_sync, parallel_load_collection_enhanced
+from t3api_utils.api.interfaces import MetrcCollectionResponse, MetrcObject
+from t3api_utils.api.parallel import (load_all_data_sync,
+                                      parallel_load_collection_enhanced)
 from t3api_utils.auth.interfaces import T3Credentials
-from t3api_utils.auth.utils import create_credentials_authenticated_client_or_error
+from t3api_utils.auth.utils import \
+    create_credentials_authenticated_client_or_error
 from t3api_utils.cli.utils import resolve_auth_inputs_or_error
 from t3api_utils.collection.utils import extract_data, parallel_load_collection
 from t3api_utils.db.utils import create_table_from_data, flatten_and_extract
 from t3api_utils.exceptions import AuthenticationError
-from t3api_utils.file.utils import (
-    collection_to_dicts,
-    open_file,
-    save_dicts_to_csv,
-    save_dicts_to_json,
-)
+from t3api_utils.file.utils import (collection_to_dicts, open_file,
+                                    save_dicts_to_csv, save_dicts_to_json)
 from t3api_utils.interfaces import HasData, P, SerializableObject, T
 from t3api_utils.logging import get_logger
 
@@ -77,6 +76,9 @@ def pick_license(*, api_client: T3APIClient) -> Dict[str, Any]:
         typer.Exit: If no licenses found or invalid selection
     """
     licenses_response = api_client.get_licenses()
+    
+    print(licenses_response)
+    
     licenses = licenses_response["data"]
 
     if not licenses:

@@ -1,11 +1,12 @@
 """Tests for T3APIClient."""
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-import httpx
+from unittest.mock import MagicMock, Mock, patch
 
-from t3api_utils.api.client import T3APIClient, AsyncT3APIClient
-from t3api_utils.api.models import AuthResponseData, MetrcCollectionResponse
-from t3api_utils.http.utils import T3HTTPError, HTTPConfig, RetryPolicy
+import httpx
+import pytest
+
+from t3api_utils.api.client import AsyncT3APIClient, T3APIClient
+from t3api_utils.api.interfaces import AuthResponseData, MetrcCollectionResponse
+from t3api_utils.http.utils import HTTPConfig, RetryPolicy, T3HTTPError
 
 
 class TestT3APIClient:
@@ -69,10 +70,7 @@ class TestT3APIClient:
         """Test successful authentication."""
         # Mock the API response
         mock_response = {
-            "access_token": "test_access_token",
-            "refresh_token": "test_refresh_token",
-            "expires_in": 3600,
-            "token_type": "Bearer"
+            "accessToken": "test_access_token",
         }
         mock_request.return_value = mock_response
 
@@ -100,10 +98,7 @@ class TestT3APIClient:
 
         # Verify the response
         assert isinstance(result, dict)
-        assert result["access_token"] == "test_access_token"
-        assert result["refresh_token"] == "test_refresh_token"
-        assert result["expires_in"] == 3600
-        assert result["token_type"] == "Bearer"
+        assert result["accessToken"] == "test_access_token"
 
         # Verify client state
         assert client.is_authenticated
@@ -113,7 +108,7 @@ class TestT3APIClient:
     def test_authenticate_with_credentials_minimal(self, mock_request):
         """Test authentication with minimal parameters."""
         mock_response = {
-            "access_token": "test_access_token"
+            "accessToken": "test_access_token"
         }
         mock_request.return_value = mock_response
 
@@ -133,9 +128,7 @@ class TestT3APIClient:
         }
 
         # Verify response handling
-        assert result["access_token"] == "test_access_token"
-        assert result.get("refresh_token") is None
-        assert result.get("token_type") is None  # not provided in minimal response
+        assert result["accessToken"] == "test_access_token"
 
     @patch('t3api_utils.api.client.request_json')
     def test_authenticate_with_credentials_failure(self, mock_request):
@@ -322,10 +315,7 @@ class TestAsyncT3APIClient:
     async def test_authenticate_with_credentials_success(self, mock_request):
         """Test successful async authentication."""
         mock_response = {
-            "access_token": "test_access_token",
-            "refresh_token": "test_refresh_token",
-            "expires_in": 3600,
-            "token_type": "Bearer"
+            "accessToken": "test_access_token",
         }
         mock_request.return_value = mock_response
 
@@ -344,7 +334,7 @@ class TestAsyncT3APIClient:
 
         # Verify the response
         assert isinstance(result, dict)
-        assert result["access_token"] == "test_access_token"
+        assert result["accessToken"] == "test_access_token"
         assert client.is_authenticated
 
     @pytest.mark.asyncio

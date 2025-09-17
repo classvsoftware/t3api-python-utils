@@ -22,7 +22,7 @@ from typing import (
 )
 
 from t3api_utils.api.client import T3APIClient, AsyncT3APIClient
-from t3api_utils.api.models import MetrcCollectionResponse
+from t3api_utils.api.interfaces import MetrcCollectionResponse
 from t3api_utils.interfaces import HasData
 from t3api_utils.logging import get_logger
 

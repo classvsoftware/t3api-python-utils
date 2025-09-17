@@ -35,7 +35,7 @@ def test_get_authenticated_client_or_error(mock_resolve, mock_create_client):
 @patch("t3api_utils.main.utils.console.print")
 @patch("t3api_utils.main.utils.typer.prompt")
 def test_pick_license_valid_choice(mock_prompt, mock_console):
-    from t3api_utils.api.models import MetrcCollectionResponse
+    from t3api_utils.api.interfaces import MetrcCollectionResponse
 
     mock_client = MagicMock()
     license1 = {"id": "1", "licenseNumber": "123", "legalName": "Alpha"}
@@ -55,7 +55,7 @@ def test_pick_license_valid_choice(mock_prompt, mock_console):
 
 @patch("t3api_utils.main.utils.typer.echo")
 def test_pick_license_empty_list(mock_echo):
-    from t3api_utils.api.models import MetrcCollectionResponse
+    from t3api_utils.api.interfaces import MetrcCollectionResponse
 
     mock_client = MagicMock()
     mock_response: MetrcCollectionResponse = {

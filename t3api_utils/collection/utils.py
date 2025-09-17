@@ -11,7 +11,7 @@ from t3api_utils.logging import get_logger
 
 # Import enhanced parallel utilities
 from t3api_utils.api.client import T3APIClient, AsyncT3APIClient
-from t3api_utils.api.models import MetrcObject
+from t3api_utils.api.interfaces import MetrcObject
 from t3api_utils.api.parallel import (
     load_all_data_sync,
     load_all_data_async,

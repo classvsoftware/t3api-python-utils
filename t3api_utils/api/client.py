@@ -5,22 +5,12 @@ from typing import Any, Dict, Optional, Union, cast
 
 import httpx
 
-from t3api_utils.http.utils import (
-    HTTPConfig,
-    RetryPolicy,
-    LoggingHooks,
-    T3HTTPError,
-    build_client,
-    build_async_client,
-    request_json,
-    arequest_json,
-    set_bearer_token,
-    clear_bearer_token,
-)
-from t3api_utils.api.models import (
-    AuthResponseData,
-    MetrcCollectionResponse,
-)
+from t3api_utils.api.interfaces import AuthResponseData, MetrcCollectionResponse
+from t3api_utils.http.utils import (HTTPConfig, LoggingHooks, RetryPolicy,
+                                    T3HTTPError, arequest_json,
+                                    build_async_client, build_client,
+                                    clear_bearer_token, request_json,
+                                    set_bearer_token)
 
 
 class T3APIClient:
@@ -149,7 +139,7 @@ class T3APIClient:
             )
 
             # Set the token for future requests
-            self.set_access_token(response_data["access_token"])
+            self.set_access_token(response_data["accessToken"])
 
             return cast(AuthResponseData, response_data)
 
@@ -377,7 +367,7 @@ class AsyncT3APIClient:
             )
 
             # Set the token for future requests
-            self.set_access_token(response_data["access_token"])
+            self.set_access_token(response_data["accessToken"])
 
             return cast(AuthResponseData, response_data)
 
