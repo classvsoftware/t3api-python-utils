@@ -14,6 +14,7 @@ dependencies = [
     "typer >=0.16.0",
     "duckdb>=1.3.0",
     "pyarrow>=17.0.0",
+    "httpx>=0.25.0",
 ]
 
 keywords = ["t3", "metrc", "utils", "helpers", "track and trace"]

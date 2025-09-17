@@ -38,7 +38,7 @@ import json
 import logging
 import random
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import (Any, Dict, Iterable, Mapping, Optional, Sequence, Tuple,
                     Union)
 
@@ -72,7 +72,7 @@ class HTTPConfig:
     host: str = "https://api.trackandtrace.tools"
     timeout: float = DEFAULT_TIMEOUT
     verify_ssl: Union[bool, str] = certifi.where()
-    base_headers: Mapping[str, str] = {"User-Agent": DEFAULT_USER_AGENT}
+    base_headers: Mapping[str, str] = field(default_factory=lambda: {"User-Agent": DEFAULT_USER_AGENT})
     proxies: Optional[Union[str, Mapping[str, str]]] = None
 
 
@@ -141,7 +141,7 @@ class T3HTTPError(httpx.HTTPError):
     def __init__(
         self, message: str, *, response: Optional[httpx.Response] = None
     ) -> None:
-        super().__init__(message, request=response.request if response else None)
+        super().__init__(message)
         self.response = response
 
     @property
@@ -178,8 +178,8 @@ def build_client(
         timeout=cfg.timeout,
         verify=cfg.verify_ssl,
         headers=merged_headers,
-        proxies=cfg.proxies,
-        http2=True,
+        proxy=cfg.proxies,
+        http2=False,
         event_hooks=(hooks.as_hooks(async_client=False) if hooks else None),
     )
 
@@ -199,8 +199,8 @@ def build_async_client(
         timeout=cfg.timeout,
         verify=cfg.verify_ssl,
         headers=merged_headers,
-        proxies=cfg.proxies,
-        http2=True,
+        proxy=cfg.proxies,
+        http2=False,
         event_hooks=(hooks.as_hooks(async_client=True) if hooks else None),
     )
 
