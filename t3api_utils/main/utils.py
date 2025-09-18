@@ -12,6 +12,7 @@ from rich.table import Table
 
 from t3api_utils.api.client import T3APIClient
 from t3api_utils.api.interfaces import MetrcCollectionResponse, MetrcObject
+from t3api_utils.api.operations import get_collection
 from t3api_utils.api.parallel import (load_all_data_sync,
                                       parallel_load_collection_enhanced)
 from t3api_utils.auth.interfaces import T3Credentials
@@ -75,7 +76,7 @@ def pick_license(*, api_client: T3APIClient) -> Dict[str, Any]:
     Raises:
         typer.Exit: If no licenses found or invalid selection
     """
-    licenses_response = api_client.get_licenses()
+    licenses_response = get_collection(api_client, "/v2/licenses")
     
     print(licenses_response)
     

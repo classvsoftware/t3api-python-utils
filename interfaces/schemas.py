@@ -1,7 +1,7 @@
 """Auto-generated TypedDict definitions from OpenAPI spec."""
 from __future__ import annotations
 
-from typing import Dict, List, Literal, NotRequired, TypedDict, Union
+from typing import Any, Dict, List, Literal, NotRequired, TypedDict, Union
 from datetime import datetime, date
 
 

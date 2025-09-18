@@ -34,8 +34,8 @@ def main():
     # Load all packages for the selected license using the new parallel loading
     all_packages: List[Dict[str, Any]] = load_all_data_sync(
         client=api_client,
-        method_name="get_packages",
-        license_number=license["licenseNumber"],
+        endpoint="/v2/packages",
+        licenseNumber=license["licenseNumber"],
     )
 
     # Load data into DuckDB

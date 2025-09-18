@@ -83,7 +83,8 @@ class TestParallelLoadPaginatedSync:
         self.mock_client = MagicMock(spec=T3APIClient)
         self.mock_client.is_authenticated = True
 
-    def test_single_page_response(self):
+    @patch('t3api_utils.api.parallel.get_collection')
+    def test_single_page_response(self, mock_get_collection):
         """Test loading when there's only one page."""
         # Mock response with single page
         mock_response: MetrcCollectionResponse = {
@@ -93,21 +94,21 @@ class TestParallelLoadPaginatedSync:
             "pageSize": 10
         }
 
-        mock_method = MagicMock(return_value=mock_response)
-        self.mock_client.get_licenses = mock_method
+        mock_get_collection.return_value = mock_response
 
         result: List[Any] = parallel_load_paginated_sync(
             client=self.mock_client,
-            method_name="get_licenses"
+            endpoint="/v2/licenses"
         )
 
         assert len(result) == 1
         assert result[0] == mock_response
-        mock_method.assert_called_once_with(page=1)
+        mock_get_collection.assert_called_once_with(self.mock_client, "/v2/licenses", page=1)
 
-    def test_multiple_pages_response(self):
+    @patch('t3api_utils.api.parallel.get_collection')
+    def test_multiple_pages_response(self, mock_get_collection):
         """Test loading when there are multiple pages."""
-        def mock_method_side_effect(page=1, **kwargs):
+        def mock_method_side_effect(client, endpoint, page=1, **kwargs):
             if page == 1:
                 return {
                     "data": [{"id": "1", "licenseNumber": "LIC-001", "legalName": "Company 1"}],
@@ -130,19 +131,19 @@ class TestParallelLoadPaginatedSync:
                     "pageSize": 10
                 }
 
-        mock_method = MagicMock(side_effect=mock_method_side_effect)
-        self.mock_client.get_licenses = mock_method
+        mock_get_collection.side_effect = mock_method_side_effect
 
         result: List[Any] = parallel_load_paginated_sync(
             client=self.mock_client,
-            method_name="get_licenses"
+            endpoint="/v2/licenses"
         )
 
         # Should return 3 pages total (25 items / 10 per page = 3 pages)
         assert len(result) == 3
-        assert mock_method.call_count == 3
+        assert mock_get_collection.call_count == 3
 
-    def test_rate_limiting_applied(self):
+    @patch('t3api_utils.api.parallel.get_collection')
+    def test_rate_limiting_applied(self, mock_get_collection):
         """Test that rate limiting is properly applied."""
         mock_response: MetrcCollectionResponse = {
             "data": [{"id": "1", "licenseNumber": "LIC-001", "legalName": "Company 1"}],
@@ -151,13 +152,12 @@ class TestParallelLoadPaginatedSync:
             "pageSize": 10
         }
 
-        mock_method = MagicMock(return_value=mock_response)
-        self.mock_client.get_licenses = mock_method
+        mock_get_collection.return_value = mock_response
 
         start_time = time.time()
         result: List[Any] = parallel_load_paginated_sync(
             client=self.mock_client,
-            method_name="get_licenses",
+            endpoint="/v2/licenses",
             rate_limit=1000  # Very high rate limit should still add minimal delay
         )
         end_time = time.time()
@@ -165,6 +165,7 @@ class TestParallelLoadPaginatedSync:
         assert len(result) == 1
         # Should complete quickly but not instantaneously due to rate limiting setup
         assert end_time - start_time < 1.0
+        mock_get_collection.assert_called_once_with(self.mock_client, "/v2/licenses", page=1)
 
 
 class TestParallelLoadPaginatedAsync:
@@ -176,7 +177,8 @@ class TestParallelLoadPaginatedAsync:
         self.mock_client.is_authenticated = True
 
     @pytest.mark.asyncio
-    async def test_single_page_response(self):
+    @patch('t3api_utils.api.parallel.get_collection_async')
+    async def test_single_page_response(self, mock_get_collection_async):
         """Test async loading when there's only one page."""
         mock_response: MetrcCollectionResponse = {
             "data": [{"id": "1", "licenseNumber": "LIC-001", "legalName": "Company 1"}],
@@ -185,22 +187,22 @@ class TestParallelLoadPaginatedAsync:
             "pageSize": 10
         }
 
-        mock_method = AsyncMock(return_value=mock_response)
-        self.mock_client.get_licenses = mock_method
+        mock_get_collection_async.return_value = mock_response
 
         result: List[Any] = await parallel_load_paginated_async(
             client=self.mock_client,
-            method_name="get_licenses"
+            endpoint="/v2/licenses"
         )
 
         assert len(result) == 1
         assert result[0] == mock_response
-        mock_method.assert_called_once_with(page=1)
+        mock_get_collection_async.assert_called_once_with(self.mock_client, "/v2/licenses", page=1)
 
     @pytest.mark.asyncio
-    async def test_multiple_pages_response(self):
+    @patch('t3api_utils.api.parallel.get_collection_async')
+    async def test_multiple_pages_response(self, mock_get_collection_async):
         """Test async loading when there are multiple pages."""
-        async def mock_method_side_effect(page=1, **kwargs):
+        def mock_method_side_effect(client, endpoint, page=1, **kwargs):
             if page == 1:
                 return {
                     "data": [{"id": "1", "licenseNumber": "LIC-001", "legalName": "Company 1"}],
@@ -223,22 +225,22 @@ class TestParallelLoadPaginatedAsync:
                     "pageSize": 10
                 }
 
-        mock_method = AsyncMock(side_effect=mock_method_side_effect)
-        self.mock_client.get_licenses = mock_method
+        mock_get_collection_async.side_effect = mock_method_side_effect
 
         result: List[Any] = await parallel_load_paginated_async(
             client=self.mock_client,
-            method_name="get_licenses"
+            endpoint="/v2/licenses"
         )
 
         # Should return 3 pages total (25 items / 10 per page = 3 pages)
         assert len(result) == 3
-        assert mock_method.call_count == 3
+        assert mock_get_collection_async.call_count == 3
 
     @pytest.mark.asyncio
-    async def test_batched_processing(self):
+    @patch('t3api_utils.api.parallel.get_collection_async')
+    async def test_batched_processing(self, mock_get_collection_async):
         """Test batched processing functionality."""
-        async def mock_method_side_effect(page=1, **kwargs):
+        def mock_method_side_effect(client, endpoint, page=1, **kwargs):
             return {
                 "data": [{"id": str(page), "licenseNumber": f"LIC-{page:03d}", "legalName": f"Company {page}"}],
                 "total": 50,  # 5 pages total
@@ -246,18 +248,17 @@ class TestParallelLoadPaginatedAsync:
                 "pageSize": 10
             }
 
-        mock_method = AsyncMock(side_effect=mock_method_side_effect)
-        self.mock_client.get_licenses = mock_method
+        mock_get_collection_async.side_effect = mock_method_side_effect
 
         result: List[Any] = await parallel_load_paginated_async(
             client=self.mock_client,
-            method_name="get_licenses",
+            endpoint="/v2/licenses",
             batch_size=2  # Process in batches of 2
         )
 
         # Should return 5 pages total
         assert len(result) == 5
-        assert mock_method.call_count == 5
+        assert mock_get_collection_async.call_count == 5
 
 
 class TestLoadAllDataSync:
@@ -294,7 +295,7 @@ class TestLoadAllDataSync:
         with patch('t3api_utils.api.parallel.parallel_load_paginated_sync', return_value=mock_responses):
             result: List[Any] = load_all_data_sync(
                 client=self.mock_client,
-                method_name="get_licenses"
+                endpoint="/v2/licenses"
             )
 
         # Should return flattened data from both pages
@@ -338,7 +339,7 @@ class TestLoadAllDataAsync:
         with patch('t3api_utils.api.parallel.parallel_load_paginated_async', return_value=mock_responses):
             result: List[Any] = await load_all_data_async(
                 client=self.mock_client,
-                method_name="get_licenses"
+                endpoint="/v2/licenses"
             )
 
         # Should return flattened data from both pages

@@ -90,7 +90,7 @@ def load_all_licenses(
     """
     return load_all_data_sync(
         client=client,
-        method_name="get_licenses",
+        endpoint="/v2/licenses",
         max_workers=max_workers,
         rate_limit=rate_limit,
         **kwargs,
@@ -119,10 +119,10 @@ def load_all_packages(
     """
     return load_all_data_sync(
         client=client,
-        method_name="get_packages",
-        license_number=license_number,
+        endpoint="/v2/packages",
         max_workers=max_workers,
         rate_limit=rate_limit,
+        licenseNumber=license_number,
         **kwargs,
     )
 
@@ -149,7 +149,7 @@ async def load_all_licenses_async(
     """
     return await load_all_data_async(
         client=client,
-        method_name="get_licenses",
+        endpoint="/v2/licenses",
         max_concurrent=max_concurrent,
         rate_limit=rate_limit,
         batch_size=batch_size,
@@ -181,11 +181,11 @@ async def load_all_packages_async(
     """
     return await load_all_data_async(
         client=client,
-        method_name="get_packages",
-        license_number=license_number,
+        endpoint="/v2/packages",
         max_concurrent=max_concurrent,
         rate_limit=rate_limit,
         batch_size=batch_size,
+        licenseNumber=license_number,
         **kwargs,
     )
 

@@ -34,7 +34,8 @@ def test_get_authenticated_client_or_error(mock_resolve, mock_create_client):
 
 @patch("t3api_utils.main.utils.console.print")
 @patch("t3api_utils.main.utils.typer.prompt")
-def test_pick_license_valid_choice(mock_prompt, mock_console):
+@patch("t3api_utils.main.utils.get_collection")
+def test_pick_license_valid_choice(mock_get_collection, mock_prompt, mock_console):
     from t3api_utils.api.interfaces import MetrcCollectionResponse
 
     mock_client = MagicMock()
@@ -46,7 +47,7 @@ def test_pick_license_valid_choice(mock_prompt, mock_console):
         "page": 1,
         "pageSize": 100
     }
-    mock_client.get_licenses.return_value = mock_response
+    mock_get_collection.return_value = mock_response
     mock_prompt.return_value = 2
 
     result = pick_license(api_client=mock_client)
@@ -54,7 +55,8 @@ def test_pick_license_valid_choice(mock_prompt, mock_console):
 
 
 @patch("t3api_utils.main.utils.typer.echo")
-def test_pick_license_empty_list(mock_echo):
+@patch("t3api_utils.main.utils.get_collection")
+def test_pick_license_empty_list(mock_get_collection, mock_echo):
     from t3api_utils.api.interfaces import MetrcCollectionResponse
 
     mock_client = MagicMock()
@@ -64,7 +66,7 @@ def test_pick_license_empty_list(mock_echo):
         "page": 1,
         "pageSize": 100
     }
-    mock_client.get_licenses.return_value = mock_response
+    mock_get_collection.return_value = mock_response
 
     with pytest.raises(Exit):
         pick_license(api_client=mock_client)

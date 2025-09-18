@@ -23,6 +23,7 @@ from typing import (
 
 from t3api_utils.api.client import T3APIClient, AsyncT3APIClient
 from t3api_utils.api.interfaces import MetrcCollectionResponse
+from t3api_utils.api.operations import get_collection, get_collection_async
 from t3api_utils.interfaces import HasData
 from t3api_utils.logging import get_logger
 
@@ -76,7 +77,7 @@ class RateLimiter:
 
 def parallel_load_paginated_sync(
     client: T3APIClient,
-    method_name: str,
+    endpoint: str,
     max_workers: Optional[int] = None,
     rate_limit: Optional[float] = 10.0,
     **method_kwargs: Any,
@@ -86,7 +87,7 @@ def parallel_load_paginated_sync(
 
     Args:
         client: Authenticated T3APIClient instance
-        method_name: Name of the client method to call (e.g., 'get_licenses')
+        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages")
         max_workers: Maximum number of threads to use
         rate_limit: Requests per second limit (None to disable)
         **method_kwargs: Arguments to pass to the API method
@@ -95,18 +96,13 @@ def parallel_load_paginated_sync(
         List of paginated response objects, one per page
 
     Raises:
-        ValueError: If the method doesn't exist or response is invalid
+        ValueError: If response is invalid
         AttributeError: If client is not authenticated
     """
     if not client.is_authenticated:
         raise AttributeError("Client must be authenticated before loading data")
 
-    # Get the method from the client
-    method = getattr(client, method_name, None)
-    if method is None or not callable(method):
-        raise ValueError(f"Client has no callable method '{method_name}'")
-
-    logger.info(f"Starting parallel sync load for {method_name}")
+    logger.info(f"Starting parallel sync load for {endpoint}")
 
     # Set up rate limiter
     rate_limiter = RateLimiter(rate_limit) if rate_limit else None
@@ -115,7 +111,7 @@ def parallel_load_paginated_sync(
     if rate_limiter:
         rate_limiter.acquire()
 
-    first_response = method(page=1, **method_kwargs)
+    first_response = cast(PaginatedT, get_collection(client, endpoint, page=1, **method_kwargs))
 
     if 'total' not in first_response or 'pageSize' not in first_response:
         raise ValueError("Response must have 'total' and 'pageSize' fields")
@@ -139,7 +135,7 @@ def parallel_load_paginated_sync(
             rate_limiter.acquire()
 
         logger.debug(f"Fetching page {page_number}")
-        response = method(page=page_number, **method_kwargs)
+        response = cast(PaginatedT, get_collection(client, endpoint, page=page_number, **method_kwargs))
         return page_number - 1, response  # Convert to 0-based index
 
     # Fetch remaining pages in parallel
@@ -157,7 +153,7 @@ def parallel_load_paginated_sync(
 
 async def parallel_load_paginated_async(
     client: AsyncT3APIClient,
-    method_name: str,
+    endpoint: str,
     max_concurrent: Optional[int] = 10,
     rate_limit: Optional[float] = 10.0,
     batch_size: Optional[int] = None,
@@ -168,7 +164,7 @@ async def parallel_load_paginated_async(
 
     Args:
         client: Authenticated AsyncT3APIClient instance
-        method_name: Name of the client method to call (e.g., 'get_licenses')
+        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages")
         max_concurrent: Maximum number of concurrent requests
         rate_limit: Requests per second limit (None to disable)
         batch_size: Process requests in batches of this size (None for no batching)
@@ -178,18 +174,13 @@ async def parallel_load_paginated_async(
         List of paginated response objects, one per page
 
     Raises:
-        ValueError: If the method doesn't exist or response is invalid
+        ValueError: If response is invalid
         AttributeError: If client is not authenticated
     """
     if not client.is_authenticated:
         raise AttributeError("Client must be authenticated before loading data")
 
-    # Get the method from the client
-    method = getattr(client, method_name, None)
-    if method is None or not callable(method):
-        raise ValueError(f"Client has no callable method '{method_name}'")
-
-    logger.info(f"Starting parallel async load for {method_name}")
+    logger.info(f"Starting parallel async load for {endpoint}")
 
     # Set up rate limiter
     rate_limiter = RateLimiter(rate_limit) if rate_limit else None
@@ -198,7 +189,7 @@ async def parallel_load_paginated_async(
     if rate_limiter:
         await rate_limiter.acquire_async()
 
-    first_response = await method(page=1, **method_kwargs)
+    first_response = cast(PaginatedT, await get_collection_async(client, endpoint, page=1, **method_kwargs))
 
     if 'total' not in first_response or 'pageSize' not in first_response:
         raise ValueError("Response must have 'total' and 'pageSize' fields")
@@ -218,7 +209,7 @@ async def parallel_load_paginated_async(
             await rate_limiter.acquire_async()
 
         logger.debug(f"Fetching page {page_number}")
-        response = await method(page=page_number, **method_kwargs)
+        response = cast(PaginatedT, await get_collection_async(client, endpoint, page=page_number, **method_kwargs))
         return page_number - 1, response  # Convert to 0-based index
 
     # Prepare responses list
@@ -274,7 +265,7 @@ async def parallel_load_paginated_async(
 
 def load_all_data_sync(
     client: T3APIClient,
-    method_name: str,
+    endpoint: str,
     max_workers: Optional[int] = None,
     rate_limit: Optional[float] = 10.0,
     **method_kwargs: Any,
@@ -287,7 +278,7 @@ def load_all_data_sync(
 
     Args:
         client: Authenticated T3APIClient instance
-        method_name: Name of the client method to call
+        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages")
         max_workers: Maximum number of threads to use
         rate_limit: Requests per second limit (None to disable)
         **method_kwargs: Arguments to pass to the API method
@@ -297,7 +288,7 @@ def load_all_data_sync(
     """
     responses: List[MetrcCollectionResponse] = parallel_load_paginated_sync(
         client=client,
-        method_name=method_name,
+        endpoint=endpoint,
         max_workers=max_workers,
         rate_limit=rate_limit,
         **method_kwargs,
@@ -313,7 +304,7 @@ def load_all_data_sync(
 
 async def load_all_data_async(
     client: AsyncT3APIClient,
-    method_name: str,
+    endpoint: str,
     max_concurrent: Optional[int] = 10,
     rate_limit: Optional[float] = 10.0,
     batch_size: Optional[int] = None,
@@ -327,7 +318,7 @@ async def load_all_data_async(
 
     Args:
         client: Authenticated AsyncT3APIClient instance
-        method_name: Name of the client method to call
+        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages")
         max_concurrent: Maximum number of concurrent requests
         rate_limit: Requests per second limit (None to disable)
         batch_size: Process requests in batches of this size (None for no batching)
@@ -338,7 +329,7 @@ async def load_all_data_async(
     """
     responses: List[MetrcCollectionResponse] = await parallel_load_paginated_async(
         client=client,
-        method_name=method_name,
+        endpoint=endpoint,
         max_concurrent=max_concurrent,
         rate_limit=rate_limit,
         batch_size=batch_size,
