@@ -83,8 +83,16 @@ class TestParallelLoadPaginatedSync:
         self.mock_client = MagicMock(spec=T3APIClient)
         self.mock_client.is_authenticated = True
 
-    @patch('t3api_utils.api.parallel.get_collection')
-    def test_single_page_response(self, mock_get_collection):
+        # Add required attributes for asyncio wrapper
+        from t3api_utils.http.utils import HTTPConfig, RetryPolicy
+        self.mock_client._config = HTTPConfig()
+        self.mock_client._retry_policy = RetryPolicy()
+        self.mock_client._logging_hooks = None
+        self.mock_client._extra_headers = {}
+        self.mock_client._access_token = "test_token"
+
+    @patch('t3api_utils.api.parallel.get_collection_async')
+    def test_single_page_response(self, mock_get_collection_async):
         """Test loading when there's only one page."""
         # Mock response with single page
         mock_response: MetrcCollectionResponse = {
@@ -94,7 +102,7 @@ class TestParallelLoadPaginatedSync:
             "pageSize": 10
         }
 
-        mock_get_collection.return_value = mock_response
+        mock_get_collection_async.return_value = mock_response
 
         result: List[Any] = parallel_load_paginated_sync(
             client=self.mock_client,
@@ -103,10 +111,14 @@ class TestParallelLoadPaginatedSync:
 
         assert len(result) == 1
         assert result[0] == mock_response
-        mock_get_collection.assert_called_once_with(self.mock_client, "/v2/licenses", page=1)
+        # Verify the async function was called (client will be different due to wrapper)
+        mock_get_collection_async.assert_called_once()
+        call_args = mock_get_collection_async.call_args
+        assert call_args[0][1] == "/v2/licenses"  # endpoint
+        assert call_args[1]["page"] == 1  # page parameter
 
-    @patch('t3api_utils.api.parallel.get_collection')
-    def test_multiple_pages_response(self, mock_get_collection):
+    @patch('t3api_utils.api.parallel.get_collection_async')
+    def test_multiple_pages_response(self, mock_get_collection_async):
         """Test loading when there are multiple pages."""
         def mock_method_side_effect(client, endpoint, page=1, **kwargs):
             if page == 1:
@@ -131,7 +143,7 @@ class TestParallelLoadPaginatedSync:
                     "pageSize": 10
                 }
 
-        mock_get_collection.side_effect = mock_method_side_effect
+        mock_get_collection_async.side_effect = mock_method_side_effect
 
         result: List[Any] = parallel_load_paginated_sync(
             client=self.mock_client,
@@ -140,10 +152,10 @@ class TestParallelLoadPaginatedSync:
 
         # Should return 3 pages total (25 items / 10 per page = 3 pages)
         assert len(result) == 3
-        assert mock_get_collection.call_count == 3
+        assert mock_get_collection_async.call_count == 3
 
-    @patch('t3api_utils.api.parallel.get_collection')
-    def test_rate_limiting_applied(self, mock_get_collection):
+    @patch('t3api_utils.api.parallel.get_collection_async')
+    def test_rate_limiting_applied(self, mock_get_collection_async):
         """Test that rate limiting is properly applied."""
         mock_response: MetrcCollectionResponse = {
             "data": [{"id": "1", "licenseNumber": "LIC-001", "legalName": "Company 1"}],
@@ -152,7 +164,7 @@ class TestParallelLoadPaginatedSync:
             "pageSize": 10
         }
 
-        mock_get_collection.return_value = mock_response
+        mock_get_collection_async.return_value = mock_response
 
         start_time = time.time()
         result: List[Any] = parallel_load_paginated_sync(
@@ -165,7 +177,11 @@ class TestParallelLoadPaginatedSync:
         assert len(result) == 1
         # Should complete quickly but not instantaneously due to rate limiting setup
         assert end_time - start_time < 1.0
-        mock_get_collection.assert_called_once_with(self.mock_client, "/v2/licenses", page=1)
+        # Verify the async function was called (client will be different due to wrapper)
+        mock_get_collection_async.assert_called_once()
+        call_args = mock_get_collection_async.call_args
+        assert call_args[0][1] == "/v2/licenses"  # endpoint
+        assert call_args[1]["page"] == 1  # page parameter
 
 
 class TestParallelLoadPaginatedAsync:
@@ -269,6 +285,14 @@ class TestLoadAllDataSync:
         self.mock_client = MagicMock(spec=T3APIClient)
         self.mock_client.is_authenticated = True
 
+        # Add required attributes for asyncio wrapper
+        from t3api_utils.http.utils import HTTPConfig, RetryPolicy
+        self.mock_client._config = HTTPConfig()
+        self.mock_client._retry_policy = RetryPolicy()
+        self.mock_client._logging_hooks = None
+        self.mock_client._extra_headers = {}
+        self.mock_client._access_token = "test_token"
+
     def test_data_extraction(self):
         """Test that data is properly extracted from paginated responses."""
         mock_responses = [
@@ -292,7 +316,7 @@ class TestLoadAllDataSync:
             }
         ]
 
-        with patch('t3api_utils.api.parallel.parallel_load_paginated_sync', return_value=mock_responses):
+        with patch('t3api_utils.api.parallel.parallel_load_paginated_async', return_value=mock_responses):
             result: List[Any] = load_all_data_sync(
                 client=self.mock_client,
                 endpoint="/v2/licenses"

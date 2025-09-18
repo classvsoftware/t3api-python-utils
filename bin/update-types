@@ -1,5 +1,0 @@
-#!/bin/bash
-# Wrapper script to run the type generator with proper Python environment
-
-echo "🔄 Updating TypedDict definitions from OpenAPI spec..."
-python "$(dirname "$0")/generate_types.py" "$@"

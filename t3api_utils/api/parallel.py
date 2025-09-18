@@ -23,7 +23,7 @@ from typing import (
 
 from t3api_utils.api.client import T3APIClient, AsyncT3APIClient
 from t3api_utils.api.interfaces import MetrcCollectionResponse
-from t3api_utils.api.operations import get_collection, get_collection_async
+from t3api_utils.api.operations import get_collection_async
 from t3api_utils.interfaces import HasData
 from t3api_utils.logging import get_logger
 
@@ -85,10 +85,12 @@ def parallel_load_paginated_sync(
     """
     Load all pages of a paginated API endpoint in parallel using sync client.
 
+    This is a wrapper around the async implementation using asyncio.
+
     Args:
         client: Authenticated T3APIClient instance
         endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages")
-        max_workers: Maximum number of threads to use
+        max_workers: Maximum number of threads to use (maps to max_concurrent for async)
         rate_limit: Requests per second limit (None to disable)
         **method_kwargs: Arguments to pass to the API method
 
@@ -99,56 +101,29 @@ def parallel_load_paginated_sync(
         ValueError: If response is invalid
         AttributeError: If client is not authenticated
     """
-    if not client.is_authenticated:
-        raise AttributeError("Client must be authenticated before loading data")
+    # Create async client from sync client
+    async_client = AsyncT3APIClient(
+        config=client._config,
+        retry_policy=client._retry_policy,
+        logging_hooks=client._logging_hooks,
+        headers=client._extra_headers,
+    )
+    # Set access token if available
+    if client._access_token:
+        async_client.set_access_token(client._access_token)
 
-    logger.info(f"Starting parallel sync load for {endpoint}")
+    # Run the async version
+    async def _run() -> List[PaginatedT]:
+        async with async_client:
+            return await parallel_load_paginated_async(
+                client=async_client,
+                endpoint=endpoint,
+                max_concurrent=max_workers,
+                rate_limit=rate_limit,
+                **method_kwargs,
+            )
 
-    # Set up rate limiter
-    rate_limiter = RateLimiter(rate_limit) if rate_limit else None
-
-    # Fetch first page to determine pagination
-    if rate_limiter:
-        rate_limiter.acquire()
-
-    first_response = cast(PaginatedT, get_collection(client, endpoint, page=1, **method_kwargs))
-
-    if 'total' not in first_response or 'pageSize' not in first_response:
-        raise ValueError("Response must have 'total' and 'pageSize' fields")
-
-    total_records = first_response["total"]
-    page_size = first_response["pageSize"]
-    num_pages = (total_records + page_size - 1) // page_size
-
-    logger.info(f"Total records: {total_records}, page size: {page_size}, pages: {num_pages}")
-
-    if num_pages <= 1:
-        return [first_response]
-
-    # Prepare responses list
-    responses: List[PaginatedT] = [None] * num_pages  # type: ignore
-    responses[0] = first_response
-
-    def fetch_page(page_number: int) -> tuple[int, PaginatedT]:
-        """Fetch a specific page."""
-        if rate_limiter:
-            rate_limiter.acquire()
-
-        logger.debug(f"Fetching page {page_number}")
-        response = cast(PaginatedT, get_collection(client, endpoint, page=page_number, **method_kwargs))
-        return page_number - 1, response  # Convert to 0-based index
-
-    # Fetch remaining pages in parallel
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(fetch_page, i) for i in range(2, num_pages + 1)]
-
-        for count, future in enumerate(as_completed(futures), start=1):
-            page_index, response = future.result()
-            responses[page_index] = response
-            logger.info(f"Loaded page {page_index + 1} ({count}/{num_pages - 1})")
-
-    logger.info("Finished parallel sync load")
-    return [r for r in responses if r is not None]
+    return asyncio.run(_run())
 
 
 async def parallel_load_paginated_async(
@@ -273,33 +248,41 @@ def load_all_data_sync(
     """
     Load all data from a paginated endpoint and flatten into a single list (sync).
 
-    This is a convenience function that combines parallel_load_paginated_sync
-    with data extraction.
+    This is a wrapper around the async implementation using asyncio.
 
     Args:
         client: Authenticated T3APIClient instance
         endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages")
-        max_workers: Maximum number of threads to use
+        max_workers: Maximum number of threads to use (maps to max_concurrent for async)
         rate_limit: Requests per second limit (None to disable)
         **method_kwargs: Arguments to pass to the API method
 
     Returns:
         Flattened list of all data items across all pages
     """
-    responses: List[MetrcCollectionResponse] = parallel_load_paginated_sync(
-        client=client,
-        endpoint=endpoint,
-        max_workers=max_workers,
-        rate_limit=rate_limit,
-        **method_kwargs,
+    # Create async client from sync client
+    async_client = AsyncT3APIClient(
+        config=client._config,
+        retry_policy=client._retry_policy,
+        logging_hooks=client._logging_hooks,
+        headers=client._extra_headers,
     )
+    # Set access token if available
+    if client._access_token:
+        async_client.set_access_token(client._access_token)
 
-    # Extract all data items
-    all_data: List[T] = []
-    for response in responses:
-        all_data.extend(cast(List[T], response["data"]))
+    # Run the async version
+    async def _run() -> List[T]:
+        async with async_client:
+            return await load_all_data_async(
+                client=async_client,
+                endpoint=endpoint,
+                max_concurrent=max_workers,
+                rate_limit=rate_limit,
+                **method_kwargs,
+            )
 
-    return all_data
+    return asyncio.run(_run())
 
 
 async def load_all_data_async(

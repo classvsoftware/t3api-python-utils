@@ -3,22 +3,22 @@ import pytest
 from unittest.mock import patch
 
 from t3api_utils.api.client import T3APIClient, AsyncT3APIClient
-from t3api_utils.api.operations import get_collection, get_collection_async
+from t3api_utils.api.operations import get_collection, get_collection_async, get_data, get_data_async
 from t3api_utils.http.utils import T3HTTPError
 
 
 class TestSyncOperations:
     """Test synchronous API operations."""
 
-    @patch('t3api_utils.api.operations.request_json')
-    def test_get_licenses_success(self, mock_request):
-        """Test successful licenses retrieval."""
+    @patch('t3api_utils.api.operations.arequest_json')
+    def test_get_collection_success(self, mock_request):
+        """Test successful collection retrieval."""
         mock_response = {
             "data": [
                 {
                     "id": "123",
                     "licenseNumber": "LIC-001",
-                    "legalName": "Test Company"
+                    "tag": "TAG-001"
                 }
             ],
             "total": 1,
@@ -30,36 +30,45 @@ class TestSyncOperations:
         client = T3APIClient()
         client.set_access_token("test_token")
 
-        result = get_collection(client, "/v2/licenses")
+        result = get_collection(client, "/v2/packages", license_number="LIC-001")
 
         # Verify the request
         mock_request.assert_called_once()
         call_args = mock_request.call_args
         assert call_args[1]["method"] == "GET"
-        assert call_args[1]["url"] == "/v2/licenses"
-        assert call_args[1]["params"] == {"page": 1, "pageSize": 100}
+        assert call_args[1]["url"] == "/v2/packages"
+        expected_params = {
+            "licenseNumber": "LIC-001",
+            "page": 1,
+            "pageSize": 100,
+            "strictPagination": False,
+            "filterLogic": "and"
+        }
+        assert call_args[1]["params"] == expected_params
 
         # Verify the response
         assert isinstance(result, dict)
         assert len(result["data"]) == 1
         assert result["data"][0]["licenseNumber"] == "LIC-001"
 
-    @patch('t3api_utils.api.operations.request_json')
-    def test_get_licenses_with_params(self, mock_request):
-        """Test licenses retrieval with custom parameters."""
+    @patch('t3api_utils.api.operations.arequest_json')
+    def test_get_data_with_params(self, mock_request):
+        """Test get_data with custom parameters."""
         mock_response = {"data": [], "total": 0, "page": 2, "pageSize": 50}
         mock_request.return_value = mock_response
 
         client = T3APIClient()
         client.set_access_token("test_token")
 
-        result = get_collection(
+        result = get_data(
             client,
             "/v2/licenses",
-            page=2,
-            page_size=50,
-            state="CA",
-            active_only=True
+            params={
+                "page": 2,
+                "pageSize": 50,
+                "state": "CA",
+                "active_only": True
+            }
         )
 
         # Verify the request parameters
@@ -72,16 +81,25 @@ class TestSyncOperations:
         }
         assert call_args[1]["params"] == expected_params
 
+    def test_get_data_not_authenticated(self):
+        """Test get_data without authentication."""
+        client = T3APIClient()
+
+        with pytest.raises(T3HTTPError) as exc_info:
+            get_data(client, "/v2/licenses")
+
+        assert "not authenticated" in str(exc_info.value)
+
     def test_get_collection_not_authenticated(self):
         """Test collection retrieval without authentication."""
         client = T3APIClient()
 
         with pytest.raises(T3HTTPError) as exc_info:
-            get_collection(client, "/v2/licenses")
+            get_collection(client, "/v2/packages", license_number="LIC-001")
 
         assert "not authenticated" in str(exc_info.value)
 
-    @patch('t3api_utils.api.operations.request_json')
+    @patch('t3api_utils.api.operations.arequest_json')
     def test_get_packages_success(self, mock_request):
         """Test successful packages retrieval."""
         mock_response = {
@@ -101,7 +119,7 @@ class TestSyncOperations:
         client = T3APIClient()
         client.set_access_token("test_token")
 
-        result = get_collection(client, "/v2/packages", licenseNumber="LIC-001")
+        result = get_collection(client, "/v2/packages", license_number="LIC-001")
 
         # Verify the request
         mock_request.assert_called_once()
@@ -111,7 +129,9 @@ class TestSyncOperations:
         expected_params = {
             "licenseNumber": "LIC-001",
             "page": 1,
-            "pageSize": 100
+            "pageSize": 100,
+            "strictPagination": False,
+            "filterLogic": "and"
         }
         assert call_args[1]["params"] == expected_params
 
@@ -125,11 +145,11 @@ class TestSyncOperations:
         client = T3APIClient()
 
         with pytest.raises(T3HTTPError) as exc_info:
-            get_collection(client, "/v2/packages", licenseNumber="LIC-001")
+            get_collection(client, "/v2/packages", license_number="LIC-001")
 
         assert "not authenticated" in str(exc_info.value)
 
-    @patch('t3api_utils.api.operations.request_json')
+    @patch('t3api_utils.api.operations.arequest_json')
     def test_get_packages_api_error(self, mock_request):
         """Test packages retrieval with API error."""
         mock_request.side_effect = T3HTTPError("API Error")
@@ -138,7 +158,7 @@ class TestSyncOperations:
         client.set_access_token("test_token")
 
         with pytest.raises(T3HTTPError) as exc_info:
-            get_collection(client, "/v2/packages", licenseNumber="LIC-001")
+            get_collection(client, "/v2/packages", license_number="LIC-001")
 
         assert "Failed to get collection" in str(exc_info.value)
 
@@ -148,8 +168,8 @@ class TestAsyncOperations:
 
     @pytest.mark.asyncio
     @patch('t3api_utils.api.operations.arequest_json')
-    async def test_get_licenses_success(self, mock_request):
-        """Test successful async licenses retrieval."""
+    async def test_get_data_async_success(self, mock_request):
+        """Test successful async get_data retrieval."""
         mock_response = {
             "data": [
                 {
@@ -167,7 +187,7 @@ class TestAsyncOperations:
         client = AsyncT3APIClient()
         client.set_access_token("test_token")
 
-        result = await get_collection_async(client, "/v2/licenses")
+        result = await get_data_async(client, "/v2/licenses")
 
         # Verify the request
         mock_request.assert_called_once()
@@ -180,12 +200,22 @@ class TestAsyncOperations:
         assert len(result["data"]) == 1
 
     @pytest.mark.asyncio
-    async def test_get_collection_not_authenticated(self):
+    async def test_get_data_async_not_authenticated(self):
+        """Test async get_data without authentication."""
+        client = AsyncT3APIClient()
+
+        with pytest.raises(T3HTTPError) as exc_info:
+            await get_data_async(client, "/v2/licenses")
+
+        assert "not authenticated" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_get_collection_async_not_authenticated(self):
         """Test async collection retrieval without authentication."""
         client = AsyncT3APIClient()
 
         with pytest.raises(T3HTTPError) as exc_info:
-            await get_collection_async(client, "/v2/licenses")
+            await get_collection_async(client, "/v2/packages", license_number="LIC-001")
 
         assert "not authenticated" in str(exc_info.value)
 
@@ -210,7 +240,7 @@ class TestAsyncOperations:
         client = AsyncT3APIClient()
         client.set_access_token("test_token")
 
-        result = await get_collection_async(client, "/v2/packages", licenseNumber="LIC-001")
+        result = await get_collection_async(client, "/v2/packages", license_number="LIC-001")
 
         # Verify the request
         mock_request.assert_called_once()
@@ -228,6 +258,6 @@ class TestAsyncOperations:
         client = AsyncT3APIClient()
 
         with pytest.raises(T3HTTPError) as exc_info:
-            await get_collection_async(client, "/v2/packages", licenseNumber="LIC-001")
+            await get_collection_async(client, "/v2/packages", license_number="LIC-001")
 
         assert "not authenticated" in str(exc_info.value)

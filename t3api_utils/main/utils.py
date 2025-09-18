@@ -12,7 +12,7 @@ from rich.table import Table
 
 from t3api_utils.api.client import T3APIClient
 from t3api_utils.api.interfaces import MetrcCollectionResponse, MetrcObject
-from t3api_utils.api.operations import get_collection
+from t3api_utils.api.operations import get_data
 from t3api_utils.api.parallel import (load_all_data_sync,
                                       parallel_load_collection_enhanced)
 from t3api_utils.auth.interfaces import T3Credentials
@@ -76,11 +76,7 @@ def pick_license(*, api_client: T3APIClient) -> Dict[str, Any]:
     Raises:
         typer.Exit: If no licenses found or invalid selection
     """
-    licenses_response = get_collection(api_client, "/v2/licenses")
-    
-    print(licenses_response)
-    
-    licenses = licenses_response["data"]
+    licenses = get_data(api_client, "/v2/licenses")
 
     if not licenses:
         typer.echo("No licenses found.")
@@ -92,7 +88,7 @@ def pick_license(*, api_client: T3APIClient) -> Dict[str, Any]:
     table.add_column("License Number", style="green")
 
     for idx, license in enumerate(licenses, start=1):
-        table.add_row(str(idx), license["legalName"], license["licenseNumber"])
+        table.add_row(str(idx), license["licenseName"], license["licenseNumber"])
 
     console.print(table)
 
