@@ -12,9 +12,9 @@ Available operations:
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Union, cast, Dict, Optional, List, Literal
+from typing import Any, Dict, List, Literal, Optional, Union, cast
 
-from t3api_utils.api.client import T3APIClient, AsyncT3APIClient
+from t3api_utils.api.client import AsyncT3APIClient, T3APIClient
 from t3api_utils.api.interfaces import MetrcCollectionResponse
 from t3api_utils.http.utils import T3HTTPError, arequest_json
 
@@ -36,7 +36,7 @@ def get_data(
 
     Args:
         client: Authenticated T3APIClient instance
-        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages", "/v2/facilities/123")
+        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active", "/v2/facilities/123")
         method: HTTP method (default: "GET")
         params: Query parameters (optional)
         json_body: JSON request body for POST/PUT requests (optional)
@@ -95,7 +95,7 @@ def get_collection(
 
     Args:
         client: Authenticated T3APIClient instance
-        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages")
+        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active")
         license_number: The unique identifier for the license (required)
         page: Page number (1-based, default: 1)
         page_size: Number of items per page (default: 100)
@@ -158,7 +158,7 @@ async def get_collection_async(
 
     Args:
         client: Authenticated AsyncT3APIClient instance
-        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages")
+        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active")
         license_number: The unique identifier for the license (required)
         page: Page number (1-based, default: 1)
         page_size: Number of items per page (default: 100)
@@ -226,7 +226,7 @@ async def get_data_async(
 
     Args:
         client: Authenticated AsyncT3APIClient instance
-        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages", "/v2/facilities/123")
+        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active", "/v2/facilities/123")
         method: HTTP method (default: "GET")
         params: Query parameters (optional)
         json_body: JSON request body for POST/PUT requests (optional)

@@ -1,20 +1,18 @@
 """Tests for parallel API utilities."""
 import asyncio
 import time
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
-from typing import List, Any
+from typing import Any, List
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from t3api_utils.api.parallel import (
-    RateLimiter,
-    parallel_load_paginated_sync,
-    parallel_load_paginated_async,
-    load_all_data_sync,
-    load_all_data_async,
-    parallel_load_collection_enhanced,
-)
-from t3api_utils.api.client import T3APIClient, AsyncT3APIClient
+import pytest
+
+from t3api_utils.api.client import AsyncT3APIClient, T3APIClient
 from t3api_utils.api.interfaces import MetrcCollectionResponse
+from t3api_utils.api.parallel import (RateLimiter, load_all_data_async,
+                                      load_all_data_sync,
+                                      parallel_load_collection_enhanced,
+                                      parallel_load_paginated_async,
+                                      parallel_load_paginated_sync)
 
 
 class TestRateLimiter:
@@ -96,7 +94,7 @@ class TestParallelLoadPaginatedSync:
         """Test loading when there's only one page."""
         # Mock response with single page
         mock_response: MetrcCollectionResponse = {
-            "data": [{"id": "1", "licenseNumber": "LIC-001", "legalName": "Company 1"}],
+            "data": [{"id": "1", "licenseNumber": "LIC-001", "licenseName": "Company 1"}],
             "total": 1,
             "page": 1,
             "pageSize": 10
@@ -123,21 +121,21 @@ class TestParallelLoadPaginatedSync:
         def mock_method_side_effect(client, endpoint, page=1, **kwargs):
             if page == 1:
                 return {
-                    "data": [{"id": "1", "licenseNumber": "LIC-001", "legalName": "Company 1"}],
+                    "data": [{"id": "1", "licenseNumber": "LIC-001", "licenseName": "Company 1"}],
                     "total": 25,
                     "page": 1,
                     "pageSize": 10
                 }
             elif page == 2:
                 return {
-                    "data": [{"id": "2", "licenseNumber": "LIC-002", "legalName": "Company 2"}],
+                    "data": [{"id": "2", "licenseNumber": "LIC-002", "licenseName": "Company 2"}],
                     "total": 25,
                     "page": 2,
                     "pageSize": 10
                 }
             elif page == 3:
                 return {
-                    "data": [{"id": "3", "licenseNumber": "LIC-003", "legalName": "Company 3"}],
+                    "data": [{"id": "3", "licenseNumber": "LIC-003", "licenseName": "Company 3"}],
                     "total": 25,
                     "page": 3,
                     "pageSize": 10
@@ -158,7 +156,7 @@ class TestParallelLoadPaginatedSync:
     def test_rate_limiting_applied(self, mock_get_collection_async):
         """Test that rate limiting is properly applied."""
         mock_response: MetrcCollectionResponse = {
-            "data": [{"id": "1", "licenseNumber": "LIC-001", "legalName": "Company 1"}],
+            "data": [{"id": "1", "licenseNumber": "LIC-001", "licenseName": "Company 1"}],
             "total": 1,
             "page": 1,
             "pageSize": 10
@@ -197,7 +195,7 @@ class TestParallelLoadPaginatedAsync:
     async def test_single_page_response(self, mock_get_collection_async):
         """Test async loading when there's only one page."""
         mock_response: MetrcCollectionResponse = {
-            "data": [{"id": "1", "licenseNumber": "LIC-001", "legalName": "Company 1"}],
+            "data": [{"id": "1", "licenseNumber": "LIC-001", "licenseName": "Company 1"}],
             "total": 1,
             "page": 1,
             "pageSize": 10
@@ -221,21 +219,21 @@ class TestParallelLoadPaginatedAsync:
         def mock_method_side_effect(client, endpoint, page=1, **kwargs):
             if page == 1:
                 return {
-                    "data": [{"id": "1", "licenseNumber": "LIC-001", "legalName": "Company 1"}],
+                    "data": [{"id": "1", "licenseNumber": "LIC-001", "licenseName": "Company 1"}],
                     "total": 25,
                     "page": 1,
                     "pageSize": 10
                 }
             elif page == 2:
                 return {
-                    "data": [{"id": "2", "licenseNumber": "LIC-002", "legalName": "Company 2"}],
+                    "data": [{"id": "2", "licenseNumber": "LIC-002", "licenseName": "Company 2"}],
                     "total": 25,
                     "page": 2,
                     "pageSize": 10
                 }
             elif page == 3:
                 return {
-                    "data": [{"id": "3", "licenseNumber": "LIC-003", "legalName": "Company 3"}],
+                    "data": [{"id": "3", "licenseNumber": "LIC-003", "licenseName": "Company 3"}],
                     "total": 25,
                     "page": 3,
                     "pageSize": 10
@@ -258,7 +256,7 @@ class TestParallelLoadPaginatedAsync:
         """Test batched processing functionality."""
         def mock_method_side_effect(client, endpoint, page=1, **kwargs):
             return {
-                "data": [{"id": str(page), "licenseNumber": f"LIC-{page:03d}", "legalName": f"Company {page}"}],
+                "data": [{"id": str(page), "licenseNumber": f"LIC-{page:03d}", "licenseName": f"Company {page}"}],
                 "total": 50,  # 5 pages total
                 "page": page,
                 "pageSize": 10
@@ -298,8 +296,8 @@ class TestLoadAllDataSync:
         mock_responses = [
             {
                 "data": [
-                    {"id": "1", "licenseNumber": "LIC-001", "legalName": "Company 1"},
-                    {"id": "2", "licenseNumber": "LIC-002", "legalName": "Company 2"},
+                    {"id": "1", "licenseNumber": "LIC-001", "licenseName": "Company 1"},
+                    {"id": "2", "licenseNumber": "LIC-002", "licenseName": "Company 2"},
                 ],
                 "total": 4,
                 "page": 1,
@@ -307,8 +305,8 @@ class TestLoadAllDataSync:
             },
             {
                 "data": [
-                    {"id": "3", "licenseNumber": "LIC-003", "legalName": "Company 3"},
-                    {"id": "4", "licenseNumber": "LIC-004", "legalName": "Company 4"},
+                    {"id": "3", "licenseNumber": "LIC-003", "licenseName": "Company 3"},
+                    {"id": "4", "licenseNumber": "LIC-004", "licenseName": "Company 4"},
                 ],
                 "total": 4,
                 "page": 2,
@@ -342,8 +340,8 @@ class TestLoadAllDataAsync:
         mock_responses = [
             {
                 "data": [
-                    {"id": "1", "licenseNumber": "LIC-001", "legalName": "Company 1"},
-                    {"id": "2", "licenseNumber": "LIC-002", "legalName": "Company 2"},
+                    {"id": "1", "licenseNumber": "LIC-001", "licenseName": "Company 1"},
+                    {"id": "2", "licenseNumber": "LIC-002", "licenseName": "Company 2"},
                 ],
                 "total": 4,
                 "page": 1,
@@ -351,8 +349,8 @@ class TestLoadAllDataAsync:
             },
             {
                 "data": [
-                    {"id": "3", "licenseNumber": "LIC-003", "legalName": "Company 3"},
-                    {"id": "4", "licenseNumber": "LIC-004", "legalName": "Company 4"},
+                    {"id": "3", "licenseNumber": "LIC-003", "licenseName": "Company 3"},
+                    {"id": "4", "licenseNumber": "LIC-004", "licenseName": "Company 4"},
                 ],
                 "total": 4,
                 "page": 2,

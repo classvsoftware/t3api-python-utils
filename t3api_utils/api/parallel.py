@@ -9,19 +9,10 @@ from __future__ import annotations
 import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import (Any, Awaitable, Callable, Dict, List, Optional, TypeVar,
+                    Union, cast)
 
-from t3api_utils.api.client import T3APIClient, AsyncT3APIClient
+from t3api_utils.api.client import AsyncT3APIClient, T3APIClient
 from t3api_utils.api.interfaces import MetrcCollectionResponse
 from t3api_utils.api.operations import get_collection_async
 from t3api_utils.interfaces import HasData
@@ -89,7 +80,7 @@ def parallel_load_paginated_sync(
 
     Args:
         client: Authenticated T3APIClient instance
-        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages")
+        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active")
         max_workers: Maximum number of threads to use (maps to max_concurrent for async)
         rate_limit: Requests per second limit (None to disable)
         **method_kwargs: Arguments to pass to the API method
@@ -139,7 +130,7 @@ async def parallel_load_paginated_async(
 
     Args:
         client: Authenticated AsyncT3APIClient instance
-        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages")
+        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active")
         max_concurrent: Maximum number of concurrent requests
         rate_limit: Requests per second limit (None to disable)
         batch_size: Process requests in batches of this size (None for no batching)
@@ -252,7 +243,7 @@ def load_all_data_sync(
 
     Args:
         client: Authenticated T3APIClient instance
-        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages")
+        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active")
         max_workers: Maximum number of threads to use (maps to max_concurrent for async)
         rate_limit: Requests per second limit (None to disable)
         **method_kwargs: Arguments to pass to the API method
@@ -301,7 +292,7 @@ async def load_all_data_async(
 
     Args:
         client: Authenticated AsyncT3APIClient instance
-        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages")
+        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active")
         max_concurrent: Maximum number of concurrent requests
         rate_limit: Requests per second limit (None to disable)
         batch_size: Process requests in batches of this size (None for no batching)

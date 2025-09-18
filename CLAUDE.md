@@ -115,7 +115,7 @@ from interfaces import MetrcLicense, MetrcPackage, SearchResponse
 # Use in type annotations
 def process_licenses(licenses: List[MetrcLicense]) -> None:
     for license in licenses:
-        print(license["legalName"])  # Full type safety with dict access
+        print(license["licenseName"])  # Full type safety with dict access
 ```
 
 **Key Benefits:**

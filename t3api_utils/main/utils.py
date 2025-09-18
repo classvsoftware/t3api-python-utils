@@ -216,5 +216,5 @@ def load_db(con: duckdb.DuckDBPyConnection, data: List[Dict[str, Any]]) -> None:
     create_table_from_data(con, flat_data)
 
     # Create one table per nested data_model
-    for table_name, data_dict in extracted_tables.items():
+    for _, data_dict in extracted_tables.items():
         create_table_from_data(con, data_dict)

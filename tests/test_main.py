@@ -1,16 +1,14 @@
 from pathlib import Path
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 from typer import Exit
 
-from t3api_utils.main.utils import (
-    get_authenticated_client_or_error,
-    pick_license,
-    load_collection,
-    save_collection_to_json,
-    save_collection_to_csv,
-)
 from t3api_utils.interfaces import SerializableObject
+from t3api_utils.main.utils import (get_authenticated_client_or_error,
+                                    load_collection, pick_license,
+                                    save_collection_to_csv,
+                                    save_collection_to_json)
 
 
 @patch("t3api_utils.main.utils.create_credentials_authenticated_client_or_error")
@@ -39,8 +37,8 @@ def test_pick_license_valid_choice(mock_get_data, mock_prompt, mock_console):
     from t3api_utils.api.interfaces import MetrcCollectionResponse
 
     mock_client = MagicMock()
-    license1 = {"id": "1", "licenseNumber": "123", "legalName": "Alpha"}
-    license2 = {"id": "2", "licenseNumber": "456", "legalName": "Beta"}
+    license1 = {"id": "1", "licenseNumber": "123", "licenseName": "Alpha"}
+    license2 = {"id": "2", "licenseNumber": "456", "licenseName": "Beta"}
     mock_response: MetrcCollectionResponse = {
         "data": [license1, license2],
         "total": 2,

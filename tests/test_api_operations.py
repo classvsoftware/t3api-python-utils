@@ -1,9 +1,11 @@
 """Tests for T3 API operations."""
-import pytest
 from unittest.mock import patch
 
-from t3api_utils.api.client import T3APIClient, AsyncT3APIClient
-from t3api_utils.api.operations import get_collection, get_collection_async, get_data, get_data_async
+import pytest
+
+from t3api_utils.api.client import AsyncT3APIClient, T3APIClient
+from t3api_utils.api.operations import (get_collection, get_collection_async,
+                                        get_data, get_data_async)
 from t3api_utils.http.utils import T3HTTPError
 
 
@@ -30,13 +32,13 @@ class TestSyncOperations:
         client = T3APIClient()
         client.set_access_token("test_token")
 
-        result = get_collection(client, "/v2/packages", license_number="LIC-001")
+        result = get_collection(client, "/v2/packages/active", license_number="LIC-001")
 
         # Verify the request
         mock_request.assert_called_once()
         call_args = mock_request.call_args
         assert call_args[1]["method"] == "GET"
-        assert call_args[1]["url"] == "/v2/packages"
+        assert call_args[1]["url"] == "/v2/packages/active"
         expected_params = {
             "licenseNumber": "LIC-001",
             "page": 1,
@@ -95,7 +97,7 @@ class TestSyncOperations:
         client = T3APIClient()
 
         with pytest.raises(T3HTTPError) as exc_info:
-            get_collection(client, "/v2/packages", license_number="LIC-001")
+            get_collection(client, "/v2/packages/active", license_number="LIC-001")
 
         assert "not authenticated" in str(exc_info.value)
 
@@ -119,13 +121,13 @@ class TestSyncOperations:
         client = T3APIClient()
         client.set_access_token("test_token")
 
-        result = get_collection(client, "/v2/packages", license_number="LIC-001")
+        result = get_collection(client, "/v2/packages/active", license_number="LIC-001")
 
         # Verify the request
         mock_request.assert_called_once()
         call_args = mock_request.call_args
         assert call_args[1]["method"] == "GET"
-        assert call_args[1]["url"] == "/v2/packages"
+        assert call_args[1]["url"] == "/v2/packages/active"
         expected_params = {
             "licenseNumber": "LIC-001",
             "page": 1,
@@ -145,7 +147,7 @@ class TestSyncOperations:
         client = T3APIClient()
 
         with pytest.raises(T3HTTPError) as exc_info:
-            get_collection(client, "/v2/packages", license_number="LIC-001")
+            get_collection(client, "/v2/packages/active", license_number="LIC-001")
 
         assert "not authenticated" in str(exc_info.value)
 
@@ -158,7 +160,7 @@ class TestSyncOperations:
         client.set_access_token("test_token")
 
         with pytest.raises(T3HTTPError) as exc_info:
-            get_collection(client, "/v2/packages", license_number="LIC-001")
+            get_collection(client, "/v2/packages/active", license_number="LIC-001")
 
         assert "Failed to get collection" in str(exc_info.value)
 
@@ -175,7 +177,7 @@ class TestAsyncOperations:
                 {
                     "id": "123",
                     "licenseNumber": "LIC-001",
-                    "legalName": "Test Company"
+                    "licenseName": "Test Company"
                 }
             ],
             "total": 1,
@@ -215,7 +217,7 @@ class TestAsyncOperations:
         client = AsyncT3APIClient()
 
         with pytest.raises(T3HTTPError) as exc_info:
-            await get_collection_async(client, "/v2/packages", license_number="LIC-001")
+            await get_collection_async(client, "/v2/packages/active", license_number="LIC-001")
 
         assert "not authenticated" in str(exc_info.value)
 
@@ -240,13 +242,13 @@ class TestAsyncOperations:
         client = AsyncT3APIClient()
         client.set_access_token("test_token")
 
-        result = await get_collection_async(client, "/v2/packages", license_number="LIC-001")
+        result = await get_collection_async(client, "/v2/packages/active", license_number="LIC-001")
 
         # Verify the request
         mock_request.assert_called_once()
         call_args = mock_request.call_args
         assert call_args[1]["method"] == "GET"
-        assert call_args[1]["url"] == "/v2/packages"
+        assert call_args[1]["url"] == "/v2/packages/active"
 
         # Verify the response
         assert isinstance(result, dict)
@@ -258,6 +260,7 @@ class TestAsyncOperations:
         client = AsyncT3APIClient()
 
         with pytest.raises(T3HTTPError) as exc_info:
-            await get_collection_async(client, "/v2/packages", license_number="LIC-001")
+            await get_collection_async(client, "/v2/packages/active", license_number="LIC-001")
 
+        assert "not authenticated" in str(exc_info.value)
         assert "not authenticated" in str(exc_info.value)

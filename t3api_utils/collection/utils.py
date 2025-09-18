@@ -6,19 +6,15 @@ supporting both the original t3api-based functions and new httpx-based clients.
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Callable, Dict, List, Optional
 
+# Import enhanced parallel utilities
+from t3api_utils.api.client import AsyncT3APIClient, T3APIClient
+from t3api_utils.api.interfaces import MetrcObject
+from t3api_utils.api.parallel import (load_all_data_async, load_all_data_sync,
+                                      parallel_load_collection_enhanced,
+                                      parallel_load_paginated_async,
+                                      parallel_load_paginated_sync)
 from t3api_utils.interfaces import HasData, P, T
 from t3api_utils.logging import get_logger
-
-# Import enhanced parallel utilities
-from t3api_utils.api.client import T3APIClient, AsyncT3APIClient
-from t3api_utils.api.interfaces import MetrcObject
-from t3api_utils.api.parallel import (
-    load_all_data_sync,
-    load_all_data_async,
-    parallel_load_paginated_sync,
-    parallel_load_paginated_async,
-    parallel_load_collection_enhanced,
-)
 
 logger = get_logger(__name__)
 
@@ -119,7 +115,7 @@ def load_all_packages(
     """
     return load_all_data_sync(
         client=client,
-        endpoint="/v2/packages",
+        endpoint="/v2/packages/active",
         max_workers=max_workers,
         rate_limit=rate_limit,
         licenseNumber=license_number,
@@ -181,7 +177,7 @@ async def load_all_packages_async(
     """
     return await load_all_data_async(
         client=client,
-        endpoint="/v2/packages",
+        endpoint="/v2/packages/active",
         max_concurrent=max_concurrent,
         rate_limit=rate_limit,
         batch_size=batch_size,

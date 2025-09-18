@@ -3,8 +3,8 @@ from typing import Any, Dict
 
 import pytest
 
-from t3api_utils.api.interfaces import (AuthResponseData, MetrcCollectionResponse,
-                                    MetrcObject)
+from t3api_utils.api.interfaces import (AuthResponseData,
+                                        MetrcCollectionResponse, MetrcObject)
 
 
 class TestAuthResponseData:
@@ -50,8 +50,8 @@ class TestMetrcCollectionResponse:
         """Test basic MetrcCollectionResponse structure."""
         response: MetrcCollectionResponse = {
             "data": [
-                {"id": "1", "licenseNumber": "LIC-001", "legalName": "Company 1"},
-                {"id": "2", "licenseNumber": "LIC-002", "legalName": "Company 2"}
+                {"id": "1", "licenseNumber": "LIC-001", "licenseName": "Company 1"},
+                {"id": "2", "licenseNumber": "LIC-002", "licenseName": "Company 2"}
             ],
             "total": 2,
             "page": 1,
@@ -70,7 +70,7 @@ class TestMetrcCollectionResponse:
                 {
                     "id": "123",
                     "licenseNumber": "LIC-001",
-                    "legalName": "Test Company",
+                    "licenseName": "Test Company",
                     "dbaName": "Test DBA",
                     "facilityName": "Test Facility",
                     "isActive": True,
@@ -79,7 +79,7 @@ class TestMetrcCollectionResponse:
                 {
                     "id": "456",
                     "licenseNumber": "LIC-002",
-                    "legalName": "Another Company",
+                    "licenseName": "Another Company",
                     "isActive": False
                 }
             ],
@@ -95,7 +95,7 @@ class TestMetrcCollectionResponse:
         license1 = license_response["data"][0]
         assert license1["id"] == "123"
         assert license1["licenseNumber"] == "LIC-001"
-        assert license1["legalName"] == "Test Company"
+        assert license1["licenseName"] == "Test Company"
         assert license1["dbaName"] == "Test DBA"
         assert license1["facilityName"] == "Test Facility"
         assert license1["isActive"] is True
@@ -105,7 +105,7 @@ class TestMetrcCollectionResponse:
         license2 = license_response["data"][1]
         assert license2["id"] == "456"
         assert license2["licenseNumber"] == "LIC-002"
-        assert license2["legalName"] == "Another Company"
+        assert license2["licenseName"] == "Another Company"
         assert license2["isActive"] is False
 
     def test_package_collection_response(self):

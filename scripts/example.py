@@ -10,18 +10,15 @@
 # ]
 # ///
 
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 import duckdb
 
 from t3api_utils.api.parallel import load_all_data_sync
 from t3api_utils.db.utils import export_duckdb_schema
-from t3api_utils.file.utils import save_dicts_to_csv, open_file
-from t3api_utils.main.utils import (
-    get_authenticated_client_or_error,
-    load_db,
-    pick_license,
-)
+from t3api_utils.file.utils import open_file, save_dicts_to_csv
+from t3api_utils.main.utils import (get_authenticated_client_or_error, load_db,
+                                    pick_license)
 
 
 def main():
@@ -34,8 +31,8 @@ def main():
     # Load all packages for the selected license using the new parallel loading
     all_packages: List[Dict[str, Any]] = load_all_data_sync(
         client=api_client,
-        endpoint="/v2/packages",
-        licenseNumber=license["licenseNumber"],
+        endpoint="/v2/packages/active",
+        license_number=license["licenseNumber"],
     )
 
     # Load data into DuckDB
