@@ -17,7 +17,7 @@ from t3api_utils.api.parallel import (load_all_data_sync,
                                       parallel_load_collection_enhanced)
 from t3api_utils.auth.interfaces import T3Credentials
 from t3api_utils.auth.utils import \
-    create_credentials_authenticated_client_or_error
+    create_credentials_authenticated_client_or_error, create_jwt_authenticated_client
 from t3api_utils.cli.utils import resolve_auth_inputs_or_error
 from t3api_utils.collection.utils import extract_data, parallel_load_collection
 from t3api_utils.db.utils import create_table_from_data, flatten_and_extract
@@ -63,6 +63,35 @@ def get_authenticated_client_or_error() -> T3APIClient:
         raise
 
 
+def get_jwt_authenticated_client_or_error(jwt_token: str) -> T3APIClient:
+    """
+    High-level method to return a JWT-authenticated httpx-based T3 API client.
+
+    This function provides a simple way to create an authenticated client
+    using a pre-existing JWT token, with proper error handling and logging.
+
+    Args:
+        jwt_token: Valid JWT access token for the T3 API
+
+    Returns:
+        T3APIClient: Authenticated httpx-based client
+
+    Raises:
+        ValueError: If jwt_token is empty or None
+        AuthenticationError: If authentication fails
+    """
+    try:
+        api_client = create_jwt_authenticated_client(jwt_token)
+        logger.info("[bold green]Successfully authenticated with T3 API using JWT token.[/]")
+        return api_client
+    except ValueError as e:
+        logger.error(f"JWT token validation error: {e}")
+        raise AuthenticationError(f"Invalid JWT token: {e}") from e
+    except Exception as e:
+        logger.exception("Unexpected error while creating JWT authenticated client.")
+        raise
+
+
 def pick_license(*, api_client: T3APIClient) -> Dict[str, Any]:
     """
     Interactive license picker using httpx-based T3 API client.
@@ -76,7 +105,8 @@ def pick_license(*, api_client: T3APIClient) -> Dict[str, Any]:
     Raises:
         typer.Exit: If no licenses found or invalid selection
     """
-    licenses = get_data(api_client, "/v2/licenses")
+    licenses_response = get_data(api_client, "/v2/licenses")
+    licenses = licenses_response["data"]
 
     if not licenses:
         typer.echo("No licenses found.")
@@ -88,7 +118,7 @@ def pick_license(*, api_client: T3APIClient) -> Dict[str, Any]:
     table.add_column("License Number", style="green")
 
     for idx, license in enumerate(licenses, start=1):
-        table.add_row(str(idx), license["licenseName"], license["licenseNumber"])
+        table.add_row(str(idx), license["legalName"], license["licenseNumber"])
 
     console.print(table)
 

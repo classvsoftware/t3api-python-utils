@@ -6,9 +6,11 @@ from typer import Exit
 
 from t3api_utils.interfaces import SerializableObject
 from t3api_utils.main.utils import (get_authenticated_client_or_error,
+                                    get_jwt_authenticated_client_or_error,
                                     load_collection, pick_license,
                                     save_collection_to_csv,
                                     save_collection_to_json)
+from t3api_utils.exceptions import AuthenticationError
 
 
 @patch("t3api_utils.main.utils.create_credentials_authenticated_client_or_error")
@@ -30,6 +32,43 @@ def test_get_authenticated_client_or_error(mock_resolve, mock_create_client):
     assert result == mock_client
 
 
+@patch("t3api_utils.main.utils.create_jwt_authenticated_client")
+def test_get_jwt_authenticated_client_or_error_success(mock_create_jwt_client):
+    """Test successful JWT authentication."""
+    test_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test.signature"
+    mock_client = MagicMock(name="jwt_authenticated_client")
+    mock_create_jwt_client.return_value = mock_client
+
+    result = get_jwt_authenticated_client_or_error(test_token)
+
+    mock_create_jwt_client.assert_called_once_with(test_token)
+    assert result == mock_client
+
+
+@patch("t3api_utils.main.utils.create_jwt_authenticated_client")
+def test_get_jwt_authenticated_client_or_error_invalid_token(mock_create_jwt_client):
+    """Test JWT authentication with invalid token."""
+    test_token = ""
+    mock_create_jwt_client.side_effect = ValueError("JWT token cannot be empty or None")
+
+    with pytest.raises(AuthenticationError, match="Invalid JWT token"):
+        get_jwt_authenticated_client_or_error(test_token)
+
+    mock_create_jwt_client.assert_called_once_with(test_token)
+
+
+@patch("t3api_utils.main.utils.create_jwt_authenticated_client")
+def test_get_jwt_authenticated_client_or_error_unexpected_error(mock_create_jwt_client):
+    """Test JWT authentication with unexpected error."""
+    test_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test.signature"
+    mock_create_jwt_client.side_effect = RuntimeError("Unexpected error")
+
+    with pytest.raises(RuntimeError, match="Unexpected error"):
+        get_jwt_authenticated_client_or_error(test_token)
+
+    mock_create_jwt_client.assert_called_once_with(test_token)
+
+
 @patch("t3api_utils.main.utils.console.print")
 @patch("t3api_utils.main.utils.typer.prompt")
 @patch("t3api_utils.main.utils.get_data")
@@ -37,8 +76,8 @@ def test_pick_license_valid_choice(mock_get_data, mock_prompt, mock_console):
     from t3api_utils.api.interfaces import MetrcCollectionResponse
 
     mock_client = MagicMock()
-    license1 = {"id": "1", "licenseNumber": "123", "licenseName": "Alpha"}
-    license2 = {"id": "2", "licenseNumber": "456", "licenseName": "Beta"}
+    license1 = {"id": "1", "licenseNumber": "123", "legalName": "Alpha"}
+    license2 = {"id": "2", "licenseNumber": "456", "legalName": "Beta"}
     mock_response: MetrcCollectionResponse = {
         "data": [license1, license2],
         "total": 2,
