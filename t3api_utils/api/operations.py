@@ -49,20 +49,48 @@ def get_data(
     Raises:
         T3HTTPError: If request fails or client not authenticated
     """
-    # Run the async version
-    async def _run() -> Any:
-        async with client:
-            return await get_data_async(
-                client=client,
-                endpoint=endpoint,
-                method=method,
-                params=params,
-                json_body=json_body,
-                headers=headers,
-                expected_status=expected_status,
-            )
+    # For sync wrapper, we need to handle the case where the client might have been
+    # created in a different event loop context. The safest approach is to create
+    # a new client instance for this operation.
 
-    return asyncio.run(_run())
+    from t3api_utils.http.utils import request_json
+
+    # Use the sync version of request_json directly with the client's underlying config
+    if not client.is_authenticated:
+        raise T3HTTPError("Client is not authenticated. Call authenticate_with_credentials() first.")
+
+    # Extract auth headers from the async client
+    headers_dict = dict(headers) if headers else {}
+    if client.access_token:
+        headers_dict["Authorization"] = f"Bearer {client.access_token}"
+
+    # Create a sync httpx client for this operation
+    import httpx
+
+    # Prepare client kwargs, handling optional parameters properly
+    client_kwargs: Dict[str, Any] = {
+        "base_url": client._config.host,
+        "timeout": client._config.timeout,
+        "verify": client._config.ssl_context,
+    }
+
+    if client._config.base_headers:
+        client_kwargs["headers"] = client._config.base_headers
+
+    if client._config.proxies:
+        client_kwargs["proxies"] = client._config.proxies
+
+    with httpx.Client(**client_kwargs) as sync_client:
+        return request_json(
+            client=sync_client,
+            method=method,
+            url=endpoint,
+            params=params,
+            json_body=json_body,
+            headers=headers_dict,
+            policy=client._retry_policy,
+            expected_status=expected_status,
+        )
 
 
 def get_collection(
@@ -100,23 +128,65 @@ def get_collection(
     Raises:
         T3HTTPError: If request fails or client not authenticated
     """
-    # Run the async version
-    async def _run() -> MetrcCollectionResponse:
-        async with client:
-            return await get_collection_async(
-                client=client,
-                endpoint=endpoint,
-                license_number=license_number,
-                page=page,
-                page_size=page_size,
-                strict_pagination=strict_pagination,
-                sort=sort,
-                filter_logic=filter_logic,
-                filter=filter,
-                **kwargs,
+    # Use sync HTTP client to avoid event loop conflicts
+    from t3api_utils.http.utils import request_json
+
+    if not client.is_authenticated:
+        raise T3HTTPError("Client is not authenticated. Call authenticate_with_credentials() first.")
+
+    # Prepare query parameters
+    params = {
+        "licenseNumber": license_number,
+        "page": page,
+        "pageSize": page_size,
+        "strictPagination": strict_pagination,
+        "filterLogic": filter_logic,
+        **kwargs,
+    }
+
+    # Add optional parameters only if they're provided
+    if sort is not None:
+        params["sort"] = sort
+    if filter is not None:
+        params["filter"] = filter
+
+    # Extract auth headers
+    headers_dict = {}
+    if client.access_token:
+        headers_dict["Authorization"] = f"Bearer {client.access_token}"
+
+    try:
+        # Create a sync httpx client for this operation
+        import httpx
+
+        # Prepare client kwargs, handling optional parameters properly
+        client_kwargs: Dict[str, Any] = {
+            "base_url": client._config.host,
+            "timeout": client._config.timeout,
+            "verify": client._config.ssl_context,
+        }
+
+        if client._config.base_headers:
+            client_kwargs["headers"] = client._config.base_headers
+
+        if client._config.proxies:
+            client_kwargs["proxies"] = client._config.proxies
+
+        with httpx.Client(**client_kwargs) as sync_client:
+            response_data = request_json(
+                client=sync_client,
+                method="GET",
+                url=endpoint,
+                params=params,
+                headers=headers_dict,
+                policy=client._retry_policy,
+                expected_status=200,
             )
 
-    return asyncio.run(_run())
+            return cast(MetrcCollectionResponse, response_data)
+
+    except T3HTTPError as e:
+        raise T3HTTPError(f"Failed to get collection from {endpoint}: {e}", response=e.response) from e
 
 
 async def get_collection_async(

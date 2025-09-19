@@ -16,8 +16,10 @@ from t3api_utils.api.operations import get_data
 from t3api_utils.api.parallel import (load_all_data_sync,
                                       parallel_load_collection_enhanced)
 from t3api_utils.auth.interfaces import T3Credentials
-from t3api_utils.auth.utils import \
-    create_credentials_authenticated_client_or_error, create_jwt_authenticated_client
+from t3api_utils.auth.utils import (
+    create_credentials_authenticated_client_or_error,
+    create_credentials_authenticated_client_or_error_async,
+    create_jwt_authenticated_client)
 from t3api_utils.cli.utils import resolve_auth_inputs_or_error
 from t3api_utils.collection.utils import extract_data, parallel_load_collection
 from t3api_utils.db.utils import create_table_from_data, flatten_and_extract
@@ -32,9 +34,9 @@ console = Console()
 logger = get_logger(__name__)
 
 
-def get_authenticated_client_or_error() -> T3APIClient:
+async def get_authenticated_client_or_error_async() -> T3APIClient:
     """
-    High-level method to return an authenticated httpx-based T3 API client.
+    High-level method to return an authenticated httpx-based T3 API client (async).
 
     Returns:
         T3APIClient: Authenticated httpx-based client
@@ -52,7 +54,7 @@ def get_authenticated_client_or_error() -> T3APIClient:
         raise
 
     try:
-        api_client = create_credentials_authenticated_client_or_error(**credentials)
+        api_client = await create_credentials_authenticated_client_or_error_async(**credentials)
         logger.info("[bold green]Successfully authenticated with T3 API.[/]")
         return api_client
     except AuthenticationError as e:
@@ -61,6 +63,20 @@ def get_authenticated_client_or_error() -> T3APIClient:
     except Exception as e:
         logger.exception("Unexpected error while creating authenticated client.")
         raise
+
+
+def get_authenticated_client_or_error() -> T3APIClient:
+    """
+    High-level method to return an authenticated httpx-based T3 API client (sync wrapper).
+
+    Returns:
+        T3APIClient: Authenticated httpx-based client
+
+    Raises:
+        AuthenticationError: If authentication fails
+    """
+    import asyncio
+    return asyncio.run(get_authenticated_client_or_error_async())
 
 
 def get_jwt_authenticated_client_or_error(jwt_token: str) -> T3APIClient:
@@ -106,7 +122,7 @@ def pick_license(*, api_client: T3APIClient) -> Dict[str, Any]:
         typer.Exit: If no licenses found or invalid selection
     """
     licenses_response = get_data(api_client, "/v2/licenses")
-    licenses = licenses_response["data"]
+    licenses = licenses_response
 
     if not licenses:
         typer.echo("No licenses found.")
@@ -118,7 +134,7 @@ def pick_license(*, api_client: T3APIClient) -> Dict[str, Any]:
     table.add_column("License Number", style="green")
 
     for idx, license in enumerate(licenses, start=1):
-        table.add_row(str(idx), license["legalName"], license["licenseNumber"])
+        table.add_row(str(idx), license["licenseName"], license["licenseNumber"])
 
     console.print(table)
 
@@ -246,5 +262,7 @@ def load_db(con: duckdb.DuckDBPyConnection, data: List[Dict[str, Any]]) -> None:
     create_table_from_data(con, flat_data)
 
     # Create one table per nested data_model
+    for _, data_dict in extracted_tables.items():
+        create_table_from_data(con, data_dict)
     for _, data_dict in extracted_tables.items():
         create_table_from_data(con, data_dict)

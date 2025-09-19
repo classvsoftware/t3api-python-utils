@@ -1,34 +1,27 @@
 from pathlib import Path
+from typing import Any, Dict, List
 from unittest.mock import MagicMock, patch
 
 import pytest
 from typer import Exit
 
+from t3api_utils.exceptions import AuthenticationError
 from t3api_utils.interfaces import SerializableObject
 from t3api_utils.main.utils import (get_authenticated_client_or_error,
                                     get_jwt_authenticated_client_or_error,
                                     load_collection, pick_license,
                                     save_collection_to_csv,
                                     save_collection_to_json)
-from t3api_utils.exceptions import AuthenticationError
 
 
-@patch("t3api_utils.main.utils.create_credentials_authenticated_client_or_error")
-@patch("t3api_utils.main.utils.resolve_auth_inputs_or_error")
-def test_get_authenticated_client_or_error(mock_resolve, mock_create_client):
-    fake_inputs = {
-        "hostname": "mo.metrc.com",
-        "username": "user",
-        "password": "pass",
-    }
+@patch("t3api_utils.main.utils.get_authenticated_client_or_error_async")
+def test_get_authenticated_client_or_error(mock_get_client_async):
     mock_client = MagicMock(name="authenticated_client")
-    mock_resolve.return_value = fake_inputs
-    mock_create_client.return_value = mock_client
+    mock_get_client_async.return_value = mock_client
 
     result = get_authenticated_client_or_error()
 
-    mock_resolve.assert_called_once()
-    mock_create_client.assert_called_once_with(**fake_inputs)
+    mock_get_client_async.assert_called_once()
     assert result == mock_client
 
 
@@ -73,18 +66,11 @@ def test_get_jwt_authenticated_client_or_error_unexpected_error(mock_create_jwt_
 @patch("t3api_utils.main.utils.typer.prompt")
 @patch("t3api_utils.main.utils.get_data")
 def test_pick_license_valid_choice(mock_get_data, mock_prompt, mock_console):
-    from t3api_utils.api.interfaces import MetrcCollectionResponse
-
     mock_client = MagicMock()
-    license1 = {"id": "1", "licenseNumber": "123", "legalName": "Alpha"}
-    license2 = {"id": "2", "licenseNumber": "456", "legalName": "Beta"}
-    mock_response: MetrcCollectionResponse = {
-        "data": [license1, license2],
-        "total": 2,
-        "page": 1,
-        "pageSize": 100
-    }
-    mock_get_data.return_value = mock_response
+    license1 = {"id": "1", "licenseNumber": "123", "licenseName": "Alpha"}
+    license2 = {"id": "2", "licenseNumber": "456", "licenseName": "Beta"}
+    mock_licenses: List[Dict[str, Any]] = [license1, license2]
+    mock_get_data.return_value = mock_licenses
     mock_prompt.return_value = 2
 
     result = pick_license(api_client=mock_client)
@@ -94,16 +80,9 @@ def test_pick_license_valid_choice(mock_get_data, mock_prompt, mock_console):
 @patch("t3api_utils.main.utils.typer.echo")
 @patch("t3api_utils.main.utils.get_data")
 def test_pick_license_empty_list(mock_get_data, mock_echo):
-    from t3api_utils.api.interfaces import MetrcCollectionResponse
-
     mock_client = MagicMock()
-    mock_response: MetrcCollectionResponse = {
-        "data": [],
-        "total": 0,
-        "page": 1,
-        "pageSize": 100
-    }
-    mock_get_data.return_value = mock_response
+    mock_licenses: List[Dict[str, Any]] = []
+    mock_get_data.return_value = mock_licenses
 
     with pytest.raises(Exit):
         pick_license(api_client=mock_client)

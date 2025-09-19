@@ -12,7 +12,7 @@ from t3api_utils.http.utils import T3HTTPError
 class TestSyncOperations:
     """Test synchronous API operations."""
 
-    @patch('t3api_utils.api.operations.arequest_json')
+    @patch('t3api_utils.http.utils.request_json')
     def test_get_collection_success(self, mock_request):
         """Test successful collection retrieval."""
         mock_response = {
@@ -53,7 +53,7 @@ class TestSyncOperations:
         assert len(result["data"]) == 1
         assert result["data"][0]["licenseNumber"] == "LIC-001"
 
-    @patch('t3api_utils.api.operations.arequest_json')
+    @patch('t3api_utils.http.utils.request_json')
     def test_get_data_with_params(self, mock_request):
         """Test get_data with custom parameters."""
         mock_response = {"data": [], "total": 0, "page": 2, "pageSize": 50}
@@ -101,7 +101,7 @@ class TestSyncOperations:
 
         assert "not authenticated" in str(exc_info.value)
 
-    @patch('t3api_utils.api.operations.arequest_json')
+    @patch('t3api_utils.http.utils.request_json')
     def test_get_packages_success(self, mock_request):
         """Test successful packages retrieval."""
         mock_response = {
@@ -151,7 +151,7 @@ class TestSyncOperations:
 
         assert "not authenticated" in str(exc_info.value)
 
-    @patch('t3api_utils.api.operations.arequest_json')
+    @patch('t3api_utils.http.utils.request_json')
     def test_get_packages_api_error(self, mock_request):
         """Test packages retrieval with API error."""
         mock_request.side_effect = T3HTTPError("API Error")

@@ -92,18 +92,42 @@ def parallel_load_paginated_sync(
         ValueError: If response is invalid
         AttributeError: If client is not authenticated
     """
-    # Run the async version
-    async def _run() -> List[PaginatedT]:
-        async with client:
-            return await parallel_load_paginated_async(
-                client=client,
+    # Create a temporary async client that uses the same config and auth
+    # but runs in its own event loop to avoid conflicts
+    import concurrent.futures
+
+    def run_in_thread() -> List[PaginatedT]:
+        # Create a new event loop for this thread
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            # Import here to avoid circular imports
+            from t3api_utils.api.client import T3APIClient as TempClient
+
+            # Create a new client with the same config and auth
+            temp_client = TempClient(
+                config=client._config,
+                retry_policy=client._retry_policy,
+                logging_hooks=client._logging_hooks,
+                headers=client._extra_headers,
+            )
+            if client.access_token:
+                temp_client.set_access_token(client.access_token)
+
+            return loop.run_until_complete(parallel_load_paginated_async(
+                client=temp_client,
                 endpoint=endpoint,
                 max_concurrent=max_workers,
                 rate_limit=rate_limit,
                 **method_kwargs,
-            )
+            ))
+        finally:
+            loop.close()
 
-    return asyncio.run(_run())
+    # Run in a separate thread with its own event loop
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(run_in_thread)
+        return future.result()
 
 
 async def parallel_load_paginated_async(
@@ -240,18 +264,42 @@ def load_all_data_sync(
     Returns:
         Flattened list of all data items across all pages
     """
-    # Run the async version
-    async def _run() -> List[T]:
-        async with client:
-            return await load_all_data_async(
-                client=client,
+    # Create a temporary async client that uses the same config and auth
+    # but runs in its own event loop to avoid conflicts
+    import concurrent.futures
+
+    def run_in_thread() -> List[T]:
+        # Create a new event loop for this thread
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            # Import here to avoid circular imports
+            from t3api_utils.api.client import T3APIClient as TempClient
+
+            # Create a new client with the same config and auth
+            temp_client = TempClient(
+                config=client._config,
+                retry_policy=client._retry_policy,
+                logging_hooks=client._logging_hooks,
+                headers=client._extra_headers,
+            )
+            if client.access_token:
+                temp_client.set_access_token(client.access_token)
+
+            return loop.run_until_complete(load_all_data_async(
+                client=temp_client,
                 endpoint=endpoint,
                 max_concurrent=max_workers,
                 rate_limit=rate_limit,
                 **method_kwargs,
-            )
+            ))
+        finally:
+            loop.close()
 
-    return asyncio.run(_run())
+    # Run in a separate thread with its own event loop
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(run_in_thread)
+        return future.result()
 
 
 async def load_all_data_async(
