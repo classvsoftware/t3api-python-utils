@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import (Any, Awaitable, Callable, Dict, List, Optional, TypeVar,
                     Union, cast)
 
-from t3api_utils.api.client import AsyncT3APIClient, T3APIClient
+from t3api_utils.api.client import T3APIClient
 from t3api_utils.api.interfaces import MetrcCollectionResponse
 from t3api_utils.api.operations import get_collection_async
 from t3api_utils.interfaces import HasData
@@ -74,7 +74,7 @@ def parallel_load_paginated_sync(
     **method_kwargs: Any,
 ) -> List[PaginatedT]:
     """
-    Load all pages of a paginated API endpoint in parallel using sync client.
+    Load all pages of a paginated API endpoint in parallel (sync wrapper).
 
     This is a wrapper around the async implementation using asyncio.
 
@@ -92,22 +92,11 @@ def parallel_load_paginated_sync(
         ValueError: If response is invalid
         AttributeError: If client is not authenticated
     """
-    # Create async client from sync client
-    async_client = AsyncT3APIClient(
-        config=client._config,
-        retry_policy=client._retry_policy,
-        logging_hooks=client._logging_hooks,
-        headers=client._extra_headers,
-    )
-    # Set access token if available
-    if client._access_token:
-        async_client.set_access_token(client._access_token)
-
     # Run the async version
     async def _run() -> List[PaginatedT]:
-        async with async_client:
+        async with client:
             return await parallel_load_paginated_async(
-                client=async_client,
+                client=client,
                 endpoint=endpoint,
                 max_concurrent=max_workers,
                 rate_limit=rate_limit,
@@ -118,7 +107,7 @@ def parallel_load_paginated_sync(
 
 
 async def parallel_load_paginated_async(
-    client: AsyncT3APIClient,
+    client: T3APIClient,
     endpoint: str,
     max_concurrent: Optional[int] = 10,
     rate_limit: Optional[float] = 10.0,
@@ -129,7 +118,7 @@ async def parallel_load_paginated_async(
     Load all pages of a paginated API endpoint in parallel using async client.
 
     Args:
-        client: Authenticated AsyncT3APIClient instance
+        client: Authenticated T3APIClient instance
         endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active")
         max_concurrent: Maximum number of concurrent requests
         rate_limit: Requests per second limit (None to disable)
@@ -251,22 +240,11 @@ def load_all_data_sync(
     Returns:
         Flattened list of all data items across all pages
     """
-    # Create async client from sync client
-    async_client = AsyncT3APIClient(
-        config=client._config,
-        retry_policy=client._retry_policy,
-        logging_hooks=client._logging_hooks,
-        headers=client._extra_headers,
-    )
-    # Set access token if available
-    if client._access_token:
-        async_client.set_access_token(client._access_token)
-
     # Run the async version
     async def _run() -> List[T]:
-        async with async_client:
+        async with client:
             return await load_all_data_async(
-                client=async_client,
+                client=client,
                 endpoint=endpoint,
                 max_concurrent=max_workers,
                 rate_limit=rate_limit,
@@ -277,7 +255,7 @@ def load_all_data_sync(
 
 
 async def load_all_data_async(
-    client: AsyncT3APIClient,
+    client: T3APIClient,
     endpoint: str,
     max_concurrent: Optional[int] = 10,
     rate_limit: Optional[float] = 10.0,
@@ -291,7 +269,7 @@ async def load_all_data_async(
     with data extraction.
 
     Args:
-        client: Authenticated AsyncT3APIClient instance
+        client: Authenticated T3APIClient instance
         endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active")
         max_concurrent: Maximum number of concurrent requests
         rate_limit: Requests per second limit (None to disable)

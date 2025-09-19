@@ -14,7 +14,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any, Dict, List, Literal, Optional, Union, cast
 
-from t3api_utils.api.client import AsyncT3APIClient, T3APIClient
+from t3api_utils.api.client import T3APIClient
 from t3api_utils.api.interfaces import MetrcCollectionResponse
 from t3api_utils.http.utils import T3HTTPError, arequest_json
 
@@ -29,7 +29,7 @@ def get_data(
     headers: Optional[Dict[str, str]] = None,
     expected_status: Union[int, tuple[int, ...]] = 200,
 ) -> Any:
-    """Generic data retrieval from any T3 API endpoint using a sync client.
+    """Generic data retrieval from any T3 API endpoint (sync wrapper).
 
     This is the most flexible operation that doesn't assume any specific
     parameter structure or response format.
@@ -49,22 +49,11 @@ def get_data(
     Raises:
         T3HTTPError: If request fails or client not authenticated
     """
-    # Create async client from sync client
-    async_client = AsyncT3APIClient(
-        config=client._config,
-        retry_policy=client._retry_policy,
-        logging_hooks=client._logging_hooks,
-        headers=client._extra_headers,
-    )
-    # Set access token if available
-    if client._access_token:
-        async_client.set_access_token(client._access_token)
-
     # Run the async version
     async def _run() -> Any:
-        async with async_client:
+        async with client:
             return await get_data_async(
-                client=async_client,
+                client=client,
                 endpoint=endpoint,
                 method=method,
                 params=params,
@@ -89,7 +78,7 @@ def get_collection(
     filter: Optional[List[str]] = None,
     **kwargs: Any,
 ) -> MetrcCollectionResponse:
-    """Get a collection from any T3 API endpoint using a sync client.
+    """Get a collection from any T3 API endpoint (sync wrapper).
 
     This is a wrapper around the async implementation using asyncio.
 
@@ -111,22 +100,11 @@ def get_collection(
     Raises:
         T3HTTPError: If request fails or client not authenticated
     """
-    # Create async client from sync client
-    async_client = AsyncT3APIClient(
-        config=client._config,
-        retry_policy=client._retry_policy,
-        logging_hooks=client._logging_hooks,
-        headers=client._extra_headers,
-    )
-    # Set access token if available
-    if client._access_token:
-        async_client.set_access_token(client._access_token)
-
     # Run the async version
     async def _run() -> MetrcCollectionResponse:
-        async with async_client:
+        async with client:
             return await get_collection_async(
-                client=async_client,
+                client=client,
                 endpoint=endpoint,
                 license_number=license_number,
                 page=page,
@@ -142,7 +120,7 @@ def get_collection(
 
 
 async def get_collection_async(
-    client: AsyncT3APIClient,
+    client: T3APIClient,
     endpoint: str,
     *,
     license_number: str,
@@ -157,7 +135,7 @@ async def get_collection_async(
     """Get a collection from any T3 API endpoint using an async client.
 
     Args:
-        client: Authenticated AsyncT3APIClient instance
+        client: Authenticated T3APIClient instance
         endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active")
         license_number: The unique identifier for the license (required)
         page: Page number (1-based, default: 1)
@@ -210,7 +188,7 @@ async def get_collection_async(
 
 
 async def get_data_async(
-    client: AsyncT3APIClient,
+    client: T3APIClient,
     endpoint: str,
     *,
     method: str = "GET",
@@ -225,7 +203,7 @@ async def get_data_async(
     parameter structure or response format.
 
     Args:
-        client: Authenticated AsyncT3APIClient instance
+        client: Authenticated T3APIClient instance
         endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active", "/v2/facilities/123")
         method: HTTP method (default: "GET")
         params: Query parameters (optional)

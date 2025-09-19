@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from t3api_utils.api.client import AsyncT3APIClient, T3APIClient
+from t3api_utils.api.client import T3APIClient, T3APIClient
 from t3api_utils.api.interfaces import MetrcCollectionResponse
 from t3api_utils.api.parallel import (RateLimiter, load_all_data_async,
                                       load_all_data_sync,
@@ -187,7 +187,7 @@ class TestParallelLoadPaginatedAsync:
 
     def setup_method(self):
         """Set up test fixtures."""
-        self.mock_client = MagicMock(spec=AsyncT3APIClient)
+        self.mock_client = MagicMock(spec=T3APIClient)
         self.mock_client.is_authenticated = True
 
     @pytest.mark.asyncio
@@ -331,7 +331,7 @@ class TestLoadAllDataAsync:
 
     def setup_method(self):
         """Set up test fixtures."""
-        self.mock_client = MagicMock(spec=AsyncT3APIClient)
+        self.mock_client = MagicMock(spec=T3APIClient)
         self.mock_client.is_authenticated = True
 
     @pytest.mark.asyncio

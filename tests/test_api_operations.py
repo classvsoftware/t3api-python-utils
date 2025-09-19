@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
-from t3api_utils.api.client import AsyncT3APIClient, T3APIClient
+from t3api_utils.api.client import T3APIClient
 from t3api_utils.api.operations import (get_collection, get_collection_async,
                                         get_data, get_data_async)
 from t3api_utils.http.utils import T3HTTPError
@@ -186,7 +186,7 @@ class TestAsyncOperations:
         }
         mock_request.return_value = mock_response
 
-        client = AsyncT3APIClient()
+        client = T3APIClient()
         client.set_access_token("test_token")
 
         result = await get_data_async(client, "/v2/licenses")
@@ -204,7 +204,7 @@ class TestAsyncOperations:
     @pytest.mark.asyncio
     async def test_get_data_async_not_authenticated(self):
         """Test async get_data without authentication."""
-        client = AsyncT3APIClient()
+        client = T3APIClient()
 
         with pytest.raises(T3HTTPError) as exc_info:
             await get_data_async(client, "/v2/licenses")
@@ -214,7 +214,7 @@ class TestAsyncOperations:
     @pytest.mark.asyncio
     async def test_get_collection_async_not_authenticated(self):
         """Test async collection retrieval without authentication."""
-        client = AsyncT3APIClient()
+        client = T3APIClient()
 
         with pytest.raises(T3HTTPError) as exc_info:
             await get_collection_async(client, "/v2/packages/active", license_number="LIC-001")
@@ -239,7 +239,7 @@ class TestAsyncOperations:
         }
         mock_request.return_value = mock_response
 
-        client = AsyncT3APIClient()
+        client = T3APIClient()
         client.set_access_token("test_token")
 
         result = await get_collection_async(client, "/v2/packages/active", license_number="LIC-001")
@@ -257,7 +257,7 @@ class TestAsyncOperations:
     @pytest.mark.asyncio
     async def test_get_packages_not_authenticated(self):
         """Test async packages retrieval without authentication."""
-        client = AsyncT3APIClient()
+        client = T3APIClient()
 
         with pytest.raises(T3HTTPError) as exc_info:
             await get_collection_async(client, "/v2/packages/active", license_number="LIC-001")
