@@ -101,8 +101,7 @@ client = create_credentials_authenticated_client_or_error(hostname="...", userna
 - **Async Support**: `AsyncT3APIClient` for high-performance concurrent operations
 - **Rate Limiting**: Configurable requests-per-second limits to avoid API throttling
 - **Enhanced Error Handling**: Better error messages and retry policies with exponential backoff
-- **Batching**: Process large datasets in configurable batch sizes
-- **Parallel Loading**: Improved parallel data fetching with `load_all_licenses()`, `load_all_packages()`, etc.
+- **Batching**: Process large datasets in configurable batch sizesetc.
 
 ### Auto-Generated TypedDict Interfaces
 
