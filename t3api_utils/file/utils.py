@@ -15,7 +15,7 @@ logger = get_logger(__name__)
 
 
 def flatten_dict(
-    d: Dict[str, Any], parent_key: str = "", sep: str = "."
+    *, d: Dict[str, Any], parent_key: str = "", sep: str = "."
 ) -> Dict[str, Any]:
     """
     Recursively flattens a nested dictionary using dot notation.
@@ -27,13 +27,13 @@ def flatten_dict(
     for k, v in d.items():
         new_key = f"{parent_key}{sep}{k}" if parent_key else k
         if isinstance(v, dict):
-            result.update(flatten_dict(v, new_key, sep=sep))
+            result.update(flatten_dict(d=v, parent_key=new_key, sep=sep))
         else:
             result[new_key] = v
     return result
 
 
-def prioritized_fieldnames(dicts: List[Dict[str, Any]]) -> List[str]:
+def prioritized_fieldnames(*, dicts: List[Dict[str, Any]]) -> List[str]:
     """
     Orders CSV fieldnames by priority list, then appends any additional keys sorted alphabetically.
     """
@@ -43,7 +43,7 @@ def prioritized_fieldnames(dicts: List[Dict[str, Any]]) -> List[str]:
     return prioritized + remaining
 
 
-def collection_to_dicts(objects: List[SerializableObject]) -> List[Dict[str, Any]]:
+def collection_to_dicts(*, objects: List[SerializableObject]) -> List[Dict[str, Any]]:
     """
     Converts a collection of SerializableObject instances to a list of dicts using `.to_dict()`.
     """
@@ -52,7 +52,7 @@ def collection_to_dicts(objects: List[SerializableObject]) -> List[Dict[str, Any
     return [obj.to_dict() for obj in objects]
 
 
-def default_json_serializer(obj: object) -> str:
+def default_json_serializer(*, obj: object) -> str:
     """
     Fallback serializer for non-JSON-native types.
     Currently handles datetime objects by converting them to ISO format.
@@ -63,7 +63,7 @@ def default_json_serializer(obj: object) -> str:
 
 
 def generate_output_path(
-    model_name: str, license_number: str, output_dir: str, extension: str
+    *, model_name: str, license_number: str, output_dir: str, extension: str
 ) -> Path:
     """
     Constructs the output file path with consistent naming:
@@ -77,6 +77,7 @@ def generate_output_path(
 
 
 def save_dicts_to_json(
+    *,
     dicts: List[Dict[str, Any]],
     model_name: str,
     license_number: str,
@@ -88,11 +89,11 @@ def save_dicts_to_json(
     if not dicts:
         raise ValueError("Input list is empty")
 
-    filepath = generate_output_path(model_name, license_number, output_dir, "json")
+    filepath = generate_output_path(model_name=model_name, license_number=license_number, output_dir=output_dir, extension="json")
 
     with open(filepath, "w", encoding="utf-8") as f:
         json.dump(
-            dicts, f, ensure_ascii=False, indent=2, default=default_json_serializer
+            dicts, f, ensure_ascii=False, indent=2, default=lambda obj: default_json_serializer(obj=obj)
         )
 
     logger.info(f"Wrote {len(dicts)} {model_name} objects to {filepath}")
@@ -100,6 +101,7 @@ def save_dicts_to_json(
 
 
 def save_dicts_to_csv(
+    *,
     dicts: List[Dict[str, Any]],
     model_name: str,
     license_number: str,
@@ -120,7 +122,7 @@ def save_dicts_to_csv(
     if not dicts:
         raise ValueError("Input list is empty")
 
-    flat_dicts = [flatten_dict(d) for d in dicts]
+    flat_dicts = [flatten_dict(d=d) for d in dicts]
 
     if strip_empty_columns:
         # Determine which fields are completely empty
@@ -134,8 +136,8 @@ def save_dicts_to_csv(
             {k: v for k, v in d.items() if k in non_empty_keys} for d in flat_dicts
         ]
 
-    fieldnames = prioritized_fieldnames(flat_dicts)
-    filepath = generate_output_path(model_name, license_number, output_dir, "csv")
+    fieldnames = prioritized_fieldnames(dicts=flat_dicts)
+    filepath = generate_output_path(model_name=model_name, license_number=license_number, output_dir=output_dir, extension="csv")
 
     with open(filepath, mode="w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -146,7 +148,7 @@ def save_dicts_to_csv(
     return filepath
 
 
-def open_file(path: Path) -> None:
+def open_file(*, path: Path) -> None:
     """
     Opens a file using the default application for the OS.
     """

@@ -32,7 +32,7 @@ def test_get_jwt_authenticated_client_or_error_success(mock_create_jwt_client):
     mock_client = MagicMock(name="jwt_authenticated_client")
     mock_create_jwt_client.return_value = mock_client
 
-    result = get_jwt_authenticated_client_or_error(test_token)
+    result = get_jwt_authenticated_client_or_error(jwt_token=test_token)
 
     mock_create_jwt_client.assert_called_once_with(test_token)
     assert result == mock_client
@@ -45,7 +45,7 @@ def test_get_jwt_authenticated_client_or_error_invalid_token(mock_create_jwt_cli
     mock_create_jwt_client.side_effect = ValueError("JWT token cannot be empty or None")
 
     with pytest.raises(AuthenticationError, match="Invalid JWT token"):
-        get_jwt_authenticated_client_or_error(test_token)
+        get_jwt_authenticated_client_or_error(jwt_token=test_token)
 
     mock_create_jwt_client.assert_called_once_with(test_token)
 
@@ -57,7 +57,7 @@ def test_get_jwt_authenticated_client_or_error_unexpected_error(mock_create_jwt_
     mock_create_jwt_client.side_effect = RuntimeError("Unexpected error")
 
     with pytest.raises(RuntimeError, match="Unexpected error"):
-        get_jwt_authenticated_client_or_error(test_token)
+        get_jwt_authenticated_client_or_error(jwt_token=test_token)
 
     mock_create_jwt_client.assert_called_once_with(test_token)
 
@@ -103,7 +103,7 @@ def test_load_collection_flattens_data(mock_parallel, mock_extract):
     result = load_collection(fake_method)
     assert result == ["a", "b"]
     mock_parallel.assert_called_once()
-    mock_extract.assert_called_once_with(mock_response)
+    mock_extract.assert_called_once_with(responses=mock_response)
 
 
 @patch("t3api_utils.main.utils.open_file")
@@ -116,10 +116,10 @@ def test_save_collection_to_json_success(mock_convert, mock_save, mock_open):
     mock_convert.return_value = [{"some": "dict"}]
     mock_save.return_value = Path("/tmp/output.json")
 
-    result = save_collection_to_json([fake_obj], open_after=True)
+    result = save_collection_to_json(objects=[fake_obj], output_dir=".", open_after=True)
 
     assert result == Path("/tmp/output.json")
-    mock_open.assert_called_once_with(Path("/tmp/output.json"))
+    mock_open.assert_called_once_with(path=Path("/tmp/output.json"))
 
 
 @patch("t3api_utils.main.utils.open_file")
@@ -132,17 +132,17 @@ def test_save_collection_to_csv_success(mock_convert, mock_save, mock_open):
     mock_convert.return_value = [{"some": "dict"}]
     mock_save.return_value = Path("/tmp/output.csv")
 
-    result = save_collection_to_csv([fake_obj], open_after=True, strip_empty_columns=True)
+    result = save_collection_to_csv(objects=[fake_obj], output_dir=".", open_after=True, strip_empty_columns=True)
 
     assert result == Path("/tmp/output.csv")
-    mock_open.assert_called_once_with(Path("/tmp/output.csv"))
+    mock_open.assert_called_once_with(path=Path("/tmp/output.csv"))
 
 
 def test_save_collection_to_json_raises_on_empty():
     with pytest.raises(ValueError, match="Cannot serialize an empty list of objects"):
-        save_collection_to_json([])
+        save_collection_to_json(objects=[], output_dir=".")
 
 
 def test_save_collection_to_csv_raises_on_empty():
     with pytest.raises(ValueError, match="Cannot serialize an empty list of objects"):
-        save_collection_to_csv([])
+        save_collection_to_csv(objects=[], output_dir=".")

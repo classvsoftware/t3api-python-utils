@@ -37,15 +37,15 @@ def main():
 
     # Load data into DuckDB
     con = duckdb.connect()
-    load_db(con, all_packages)
+    load_db(con=con, data=all_packages)
 
     # Export and print database schema
-    print(export_duckdb_schema(con))
+    print(export_duckdb_schema(con=con))
 
     # Save packages to CSV using the direct file utility
     if all_packages:
         csv_path = save_dicts_to_csv(
-            all_packages,
+            dicts=all_packages,
             model_name="packages",
             license_number=license["licenseNumber"],
             output_dir="output",
@@ -54,7 +54,7 @@ def main():
         print(f"Saved {len(all_packages)} packages to {csv_path}")
 
         # Optionally open the file
-        open_file(csv_path)
+        open_file(path=csv_path)
     else:
         print("No packages found for this license.")
 

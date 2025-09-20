@@ -61,7 +61,7 @@ def parallel_load_collection(
     return [r for r in responses if r is not None]
 
 
-def extract_data(responses: List[HasData[T]]) -> List[T]:
+def extract_data(*, responses: List[HasData[T]]) -> List[T]:
     """
     Flatten a list of response-like objects that each have a `.data` property
     into a single list of data items, preserving their type.

@@ -79,7 +79,7 @@ def get_authenticated_client_or_error() -> T3APIClient:
     return asyncio.run(get_authenticated_client_or_error_async())
 
 
-def get_jwt_authenticated_client_or_error(jwt_token: str) -> T3APIClient:
+def get_jwt_authenticated_client_or_error(*, jwt_token: str) -> T3APIClient:
     """
     High-level method to return a JWT-authenticated httpx-based T3 API client.
 
@@ -167,10 +167,11 @@ def load_collection(
         List[T]: A flattened list of all items across all pages.
     """
     all_responses = parallel_load_collection(method, max_workers, *args, **kwargs)
-    return extract_data(all_responses)
+    return extract_data(responses=all_responses)
 
 
 def save_collection_to_json(
+    *,
     objects: List[SerializableObject],
     output_dir: str = "output",
     open_after: bool = False,
@@ -184,21 +185,22 @@ def save_collection_to_json(
     if not objects:
         raise ValueError("Cannot serialize an empty list of objects")
 
-    dicts = collection_to_dicts(objects)
+    dicts = collection_to_dicts(objects=objects)
     file_path = save_dicts_to_json(
-        dicts,
+        dicts=dicts,
         model_name=filename_override or objects[0].index,
         license_number=objects[0].license_number,
         output_dir=output_dir,
     )
 
     if open_after:
-        open_file(file_path)
+        open_file(path=file_path)
 
     return file_path
 
 
 def save_collection_to_csv(
+    *,
     objects: List[SerializableObject],
     output_dir: str = "output",
     open_after: bool = False,
@@ -213,9 +215,9 @@ def save_collection_to_csv(
     if not objects:
         raise ValueError("Cannot serialize an empty list of objects")
 
-    dicts = collection_to_dicts(objects)
+    dicts = collection_to_dicts(objects=objects)
     file_path = save_dicts_to_csv(
-        dicts,
+        dicts=dicts,
         model_name=filename_override or objects[0].index,
         license_number=objects[0].license_number,
         output_dir=output_dir,
@@ -223,7 +225,7 @@ def save_collection_to_csv(
     )
 
     if open_after:
-        open_file(file_path)
+        open_file(path=file_path)
 
     return file_path
 
@@ -234,7 +236,7 @@ from typing import Any, Dict, List
 import duckdb
 
 
-def load_db(con: duckdb.DuckDBPyConnection, data: List[Dict[str, Any]]) -> None:
+def load_db(*, con: duckdb.DuckDBPyConnection, data: List[Dict[str, Any]]) -> None:
     """
     Loads a list of nested dictionaries into DuckDB, creating separate tables
     for each distinct data_model found within nested objects or arrays.
@@ -256,13 +258,13 @@ def load_db(con: duckdb.DuckDBPyConnection, data: List[Dict[str, Any]]) -> None:
     extracted_tables: Dict[str, Dict[Any, Dict[str, Any]]] = defaultdict(dict)
 
     # Flatten top-level data and extract nested tables
-    flat_data = flatten_and_extract(data, extracted_tables)
+    flat_data = flatten_and_extract(data=data, extracted_tables=extracted_tables)
 
     # Create main/root table from the flattened top-level data
-    create_table_from_data(con, flat_data)
+    create_table_from_data(con=con, data_dict=flat_data)
 
     # Create one table per nested data_model
     for _, data_dict in extracted_tables.items():
-        create_table_from_data(con, data_dict)
+        create_table_from_data(con=con, data_dict=data_dict)
     for _, data_dict in extracted_tables.items():
-        create_table_from_data(con, data_dict)
+        create_table_from_data(con=con, data_dict=data_dict)

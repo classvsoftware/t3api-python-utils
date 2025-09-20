@@ -8,6 +8,7 @@ from t3api_utils.db.consts import ID_KEY, ID_SUFFIX, MODEL_KEY, SCHEMA_NAME
 
 
 def flatten_and_extract(
+    *,
     data: List[Dict[str, Any]],
     extracted_tables: Dict[str, Dict[Any, Dict[str, Any]]],
 ) -> List[Dict[str, Any]]:
@@ -90,7 +91,7 @@ def _extract_nested_list(
         extracted_tables[table_name][item[ID_KEY]] = item_copy
 
 
-def export_duckdb_schema(con: duckdb.DuckDBPyConnection) -> str:
+def export_duckdb_schema(*, con: duckdb.DuckDBPyConnection) -> str:
     """
     Exports a human-readable representation of the DuckDB schema,
     including inferred foreign key-like relationships.
@@ -157,7 +158,7 @@ def export_duckdb_schema(con: duckdb.DuckDBPyConnection) -> str:
     return "\n".join(schema_output)
 
 
-def export_duckdb_constraints(con: duckdb.DuckDBPyConnection) -> List[Tuple[Any, ...]]:
+def export_duckdb_constraints(*, con: duckdb.DuckDBPyConnection) -> List[Tuple[Any, ...]]:
     """
     Retrieves all schema constraints (including primary and foreign keys).
 
@@ -177,6 +178,7 @@ def export_duckdb_constraints(con: duckdb.DuckDBPyConnection) -> List[Tuple[Any,
 
 
 def create_table_from_data(
+    *,
     con: duckdb.DuckDBPyConnection,
     data_dict: Union[Dict[Any, Dict[str, Any]], List[Dict[str, Any]]],
     name: str | None = None,
