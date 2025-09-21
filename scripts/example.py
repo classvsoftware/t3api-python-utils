@@ -13,11 +13,9 @@
 from typing import Any, Dict, List
 
 from t3api_utils.api.parallel import load_all_data_sync
-from t3api_utils.db.utils import create_duckdb_connection, export_duckdb_schema
-from t3api_utils.file.utils import open_file, save_dicts_to_csv
 from t3api_utils.main.utils import (
     get_authenticated_client_or_error,
-    load_db,
+    interactive_collection_handler,
     pick_license,
 )
 
@@ -36,28 +34,13 @@ def main():
         license_number=license["licenseNumber"],
     )
 
-    # Load data into DuckDB using the new connection method
-    con = create_duckdb_connection()
-    load_db(con=con, data=all_packages)
-
-    # Export and print database schema
-    print(export_duckdb_schema(con=con))
-
-    return
-
-    # Save packages to CSV using the direct file utility
+    # Use the interactive collection handler to let user choose what to do
     if all_packages:
-        csv_path = save_dicts_to_csv(
-            dicts=all_packages,
-            model_name="packages",
-            license_number=license["licenseNumber"],
-            output_dir="output",
-            strip_empty_columns=True,
+        interactive_collection_handler(
+            data=all_packages,
+            collection_name="packages",
+            license_number=license["licenseNumber"]
         )
-        print(f"Saved {len(all_packages)} packages to {csv_path}")
-
-        # Optionally open the file
-        open_file(path=csv_path)
     else:
         print("No packages found for this license.")
 
