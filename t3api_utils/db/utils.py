@@ -105,6 +105,8 @@ def export_duckdb_schema(*, con: duckdb.DuckDBPyConnection) -> str:
     Exports a human-readable representation of the DuckDB schema,
     including inferred foreign key-like relationships.
 
+    Useful for creating AI-generated queries based on the schema.
+
     Args:
         con: An active DuckDB connection.
 
@@ -167,7 +169,9 @@ def export_duckdb_schema(*, con: duckdb.DuckDBPyConnection) -> str:
     return "\n".join(schema_output)
 
 
-def export_duckdb_constraints(*, con: duckdb.DuckDBPyConnection) -> List[Tuple[Any, ...]]:
+def export_duckdb_constraints(
+    *, con: duckdb.DuckDBPyConnection
+) -> List[Tuple[Any, ...]]:
     """
     Retrieves all schema constraints (including primary and foreign keys).
 
