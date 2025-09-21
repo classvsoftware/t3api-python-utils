@@ -1,10 +1,35 @@
-from collections import defaultdict
 from typing import Any, Dict, List, Set, Tuple, Union
 
 import duckdb
 import pyarrow as pa  # type: ignore[import-untyped]
 
 from t3api_utils.db.consts import ID_KEY, ID_SUFFIX, MODEL_KEY, SCHEMA_NAME
+
+
+def create_duckdb_connection(
+    *,
+    database: str = ":memory:",
+    read_only: bool = False,
+) -> duckdb.DuckDBPyConnection:
+    """
+    Creates and returns a DuckDB connection with configurable settings.
+
+    This provides a centralized way to create DuckDB connections that can be
+    extended with additional configuration options as needed.
+
+    Args:
+        database: Database path or ":memory:" for in-memory database (default: ":memory:")
+        read_only: Whether to open the database in read-only mode (default: False)
+
+    Returns:
+        DuckDB connection object
+
+    Example:
+        >>> con = create_duckdb_connection()  # In-memory database
+        >>> con = create_duckdb_connection(database="mydata.db")  # File-based database
+        >>> con = create_duckdb_connection(database="mydata.db", read_only=True)  # Read-only
+    """
+    return duckdb.connect(database=database, read_only=read_only)
 
 
 def flatten_and_extract(
@@ -49,11 +74,6 @@ def flatten_and_extract(
     return flat_data
 
 
-def _is_nested_dict(value: Any) -> bool:
-    """Check if a value is a nested dict with an ID and data_model."""
-    return isinstance(value, dict) and ID_KEY in value and MODEL_KEY in value
-
-
 def _is_list_of_nested_dicts(value: Any) -> bool:
     """Check if a value is a list of nested dicts with IDs and data_models."""
     return (
@@ -64,17 +84,6 @@ def _is_list_of_nested_dicts(value: Any) -> bool:
             for item in value
         )
     )
-
-
-def _extract_nested_dict(
-    value: Dict[str, Any],
-    flat_record: Dict[str, Any],
-    extracted_tables: Dict[str, Dict[Any, Dict[str, Any]]],
-) -> None:
-    """Extract a nested dict into its own table and add a foreign key reference."""
-    table_name = value[MODEL_KEY]
-    extracted_tables[table_name][value[ID_KEY]] = value
-    flat_record[f"{table_name}{ID_SUFFIX}"] = value[ID_KEY]
 
 
 def _extract_nested_list(

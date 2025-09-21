@@ -12,13 +12,14 @@
 
 from typing import Any, Dict, List
 
-import duckdb
-
 from t3api_utils.api.parallel import load_all_data_sync
-from t3api_utils.db.utils import export_duckdb_schema
+from t3api_utils.db.utils import create_duckdb_connection, export_duckdb_schema
 from t3api_utils.file.utils import open_file, save_dicts_to_csv
-from t3api_utils.main.utils import (get_authenticated_client_or_error, load_db,
-                                    pick_license)
+from t3api_utils.main.utils import (
+    get_authenticated_client_or_error,
+    load_db,
+    pick_license,
+)
 
 
 def main():
@@ -35,12 +36,14 @@ def main():
         license_number=license["licenseNumber"],
     )
 
-    # Load data into DuckDB
-    con = duckdb.connect()
+    # Load data into DuckDB using the new connection method
+    con = create_duckdb_connection()
     load_db(con=con, data=all_packages)
 
     # Export and print database schema
     print(export_duckdb_schema(con=con))
+
+    return
 
     # Save packages to CSV using the direct file utility
     if all_packages:
@@ -49,7 +52,7 @@ def main():
             model_name="packages",
             license_number=license["licenseNumber"],
             output_dir="output",
-            strip_empty_columns=True
+            strip_empty_columns=True,
         )
         print(f"Saved {len(all_packages)} packages to {csv_path}")
 

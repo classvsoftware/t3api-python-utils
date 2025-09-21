@@ -230,10 +230,8 @@ def save_collection_to_csv(
     return file_path
 
 
-from collections import defaultdict
-from typing import Any, Dict, List
-
 import duckdb
+from collections import defaultdict
 
 
 def load_db(*, con: duckdb.DuckDBPyConnection, data: List[Dict[str, Any]]) -> None:
@@ -264,7 +262,5 @@ def load_db(*, con: duckdb.DuckDBPyConnection, data: List[Dict[str, Any]]) -> No
     create_table_from_data(con=con, data_dict=flat_data)
 
     # Create one table per nested data_model
-    for _, data_dict in extracted_tables.items():
-        create_table_from_data(con=con, data_dict=data_dict)
     for _, data_dict in extracted_tables.items():
         create_table_from_data(con=con, data_dict=data_dict)
