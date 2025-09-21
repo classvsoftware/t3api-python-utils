@@ -217,6 +217,8 @@ def create_table_from_data(
         name = table_data[0][MODEL_KEY]
 
     table = pa.Table.from_pylist(table_data)
-    con.execute(f"DROP TABLE IF EXISTS {name}")
+    # Drop both view and table to ensure clean slate (view first, then table)
+    con.execute(f'DROP VIEW IF EXISTS "{name}"')
+    con.execute(f'DROP TABLE IF EXISTS "{name}"')
     con.register(name, table)
-    con.execute(f"CREATE TABLE {name} AS SELECT * FROM {name}")
+    con.execute(f'CREATE TABLE "{name}" AS SELECT * FROM "{name}"')
