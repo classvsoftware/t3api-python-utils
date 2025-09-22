@@ -42,7 +42,7 @@ def main():
     if all_data:
         interactive_collection_handler(
             data=all_data,
-            collection_name=selected_collection["name"].lower().replace(" ", "_"),
+            collection_name=selected_collection["name"],
             license_number=license["licenseNumber"]
         )
     else:

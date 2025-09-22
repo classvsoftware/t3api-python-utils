@@ -636,7 +636,7 @@ def interactive_collection_handler(
 
     # Initialize state
     state = _HandlerState(
-        collection_name=collection_name,
+        collection_name=collection_name.lower().replace(" ", "_"),
         license_number=license_number or "unknown"
     )
 
