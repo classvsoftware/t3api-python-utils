@@ -18,6 +18,7 @@ class EnvKeys(str, Enum):
     METRC_EMAIL = "METRC_EMAIL"
     JWT_TOKEN = "JWT_TOKEN"
     API_KEY = "API_KEY"
+    API_STATE_CODE = "API_STATE_CODE"
 
     # API connection settings
     T3_API_HOST = "T3_API_HOST"

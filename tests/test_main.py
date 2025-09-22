@@ -178,30 +178,43 @@ def test_get_jwt_authenticated_client_or_error_with_validation_unexpected_error(
     mock_get_data.assert_not_called()
 
 
-@patch("t3api_utils.main.utils.create_api_key_authenticated_client")
-def test_get_api_key_authenticated_client_or_error_not_implemented(mock_create_api_key_client):
-    """Test API key authentication raises NotImplementedError."""
+@patch("t3api_utils.main.utils.create_api_key_authenticated_client_or_error")
+def test_get_api_key_authenticated_client_or_error_success(mock_create_api_key_client):
+    """Test successful API key authentication."""
     test_api_key = "test-api-key-123"
-    mock_create_api_key_client.side_effect = NotImplementedError(
-        "API key authentication is not yet implemented."
+    test_state_code = "CA"
+    mock_client = MagicMock(name="api_key_authenticated_client")
+    mock_create_api_key_client.return_value = mock_client
+
+    result = get_api_key_authenticated_client_or_error(
+        api_key=test_api_key,
+        state_code=test_state_code
     )
 
-    with pytest.raises(NotImplementedError, match="API key authentication is not yet implemented"):
-        get_api_key_authenticated_client_or_error(api_key=test_api_key)
+    assert result == mock_client
+    mock_create_api_key_client.assert_called_once_with(
+        api_key=test_api_key,
+        state_code=test_state_code
+    )
 
-    mock_create_api_key_client.assert_called_once_with(test_api_key)
 
-
-@patch("t3api_utils.main.utils.create_api_key_authenticated_client")
+@patch("t3api_utils.main.utils.create_api_key_authenticated_client_or_error")
 def test_get_api_key_authenticated_client_or_error_invalid_key(mock_create_api_key_client):
     """Test API key authentication with invalid key."""
     test_api_key = ""
+    test_state_code = "CA"
     mock_create_api_key_client.side_effect = ValueError("API key cannot be empty or None")
 
-    with pytest.raises(AuthenticationError, match="Invalid API key"):
-        get_api_key_authenticated_client_or_error(api_key=test_api_key)
+    with pytest.raises(AuthenticationError, match="Invalid API key or state code"):
+        get_api_key_authenticated_client_or_error(
+            api_key=test_api_key,
+            state_code=test_state_code
+        )
 
-    mock_create_api_key_client.assert_called_once_with(test_api_key)
+    mock_create_api_key_client.assert_called_once_with(
+        api_key=test_api_key,
+        state_code=test_state_code
+    )
 
 
 @patch("typer.prompt")

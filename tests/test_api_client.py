@@ -151,6 +151,56 @@ class TestT3APIClient:
         assert "Authentication failed" in str(exc_info.value)
         assert not client.is_authenticated
 
+    @patch('t3api_utils.api.client.arequest_json')
+    @pytest.mark.asyncio
+    async def test_authenticate_with_api_key_success(self, mock_request):
+        """Test successful API key authentication."""
+        mock_response = {
+            "accessToken": "test_api_key_token",
+            "refreshToken": "test_refresh_token",
+            "expiresIn": 3600
+        }
+        mock_request.return_value = mock_response
+
+        client = T3APIClient()
+
+        result = await client.authenticate_with_api_key(
+            api_key="test-api-key",
+            state_code="CA"
+        )
+
+        # Verify request was made correctly
+        mock_request.assert_called_once()
+        call_args = mock_request.call_args
+        assert call_args[1]["method"] == "POST"
+        assert call_args[1]["url"] == "/v2/auth/apikey"
+        assert call_args[1]["json_body"] == {
+            "apiKey": "test-api-key",
+            "stateCode": "CA"
+        }
+
+        # Verify response handling
+        assert result["accessToken"] == "test_api_key_token"
+        assert client.is_authenticated
+        assert client.access_token == "test_api_key_token"
+
+    @patch('t3api_utils.api.client.arequest_json')
+    @pytest.mark.asyncio
+    async def test_authenticate_with_api_key_failure(self, mock_request):
+        """Test API key authentication failure."""
+        mock_request.side_effect = T3HTTPError("Invalid API key")
+
+        client = T3APIClient()
+
+        with pytest.raises(T3HTTPError) as exc_info:
+            await client.authenticate_with_api_key(
+                api_key="invalid-key",
+                state_code="CA"
+            )
+
+        assert "API key authentication failed: Invalid API key" in str(exc_info.value)
+        assert not client.is_authenticated
+
 
 
 

@@ -112,8 +112,11 @@ METRC_EMAIL={metrc_email}
 # Alternative authentication methods (optional)
 # Pre-existing JWT token (bypasses credentials)
 JWT_TOKEN={jwt_token}
-# API key authentication (when implemented)
+# API key authentication
+# Your API key for T3 API
 API_KEY={api_key}
+# State code for API key (e.g., CA, MO, CO, MI)
+API_STATE_CODE={api_state_code}
 
 # =============================================================================
 # API CONNECTION CONFIGURATION
@@ -217,6 +220,7 @@ DEFAULT_FILE_FORMAT={default_file_format}
             metrc_email=existing_values.get(EnvKeys.METRC_EMAIL.value, ""),
             jwt_token=existing_values.get(EnvKeys.JWT_TOKEN.value, ""),
             api_key=existing_values.get(EnvKeys.API_KEY.value, ""),
+            api_state_code=existing_values.get(EnvKeys.API_STATE_CODE.value, ""),
 
             # API Connection
             t3_api_host=existing_values.get(EnvKeys.T3_API_HOST.value, DEFAULT_T3_API_HOST),
@@ -305,14 +309,24 @@ config_manager = ConfigManager()
 def load_credentials_from_env() -> Dict[str, str]:
     """
     Load credential values from the environment file (.env).
+
+    Returns all available authentication values including Metrc credentials,
+    JWT tokens, and API key credentials.
     """
     load_dotenv(dotenv_path=DEFAULT_ENV_PATH)
 
     creds = {}
+
+    # Metrc credentials
     hostname = (os.getenv(EnvKeys.METRC_HOSTNAME.value) or "").strip()
     username = (os.getenv(EnvKeys.METRC_USERNAME.value) or "").strip()
     password = (os.getenv(EnvKeys.METRC_PASSWORD.value) or "").strip()
     email = (os.getenv(EnvKeys.METRC_EMAIL.value) or "").strip()
+
+    # Alternative authentication methods
+    jwt_token = (os.getenv(EnvKeys.JWT_TOKEN.value) or "").strip()
+    api_key = (os.getenv(EnvKeys.API_KEY.value) or "").strip()
+    api_state_code = (os.getenv(EnvKeys.API_STATE_CODE.value) or "").strip()
 
     if hostname:
         creds["hostname"] = hostname
@@ -322,6 +336,12 @@ def load_credentials_from_env() -> Dict[str, str]:
         creds["password"] = password
     if email:
         creds["email"] = email
+    if jwt_token:
+        creds["jwt_token"] = jwt_token
+    if api_key:
+        creds["api_key"] = api_key
+    if api_state_code:
+        creds["api_state_code"] = api_state_code
 
     return creds
 

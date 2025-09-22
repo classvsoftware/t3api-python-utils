@@ -19,7 +19,7 @@ from t3api_utils.api.parallel import (load_all_data_sync,
                                       parallel_load_collection_enhanced)
 from t3api_utils.auth.interfaces import T3Credentials
 from t3api_utils.auth.utils import (
-    create_api_key_authenticated_client,
+    create_api_key_authenticated_client_or_error,
     create_credentials_authenticated_client_or_error,
     create_credentials_authenticated_client_or_error_async,
     create_jwt_authenticated_client)
@@ -60,7 +60,7 @@ def _pick_authentication_method() -> str:
     auth_options = [
         ("credentials", "Credentials", "Username/password authentication"),
         ("jwt", "JWT Token", "Pre-existing JWT token (with validation)"),
-        ("api_key", "API Key", "API key authentication (not yet implemented)"),
+        ("api_key", "API Key", "API key + state code authentication"),
     ]
 
     # Create table following CLI picker standards
@@ -129,13 +129,19 @@ def _authenticate_with_jwt() -> T3APIClient:
 
 
 def _authenticate_with_api_key() -> T3APIClient:
-    """Helper function for API key authentication (placeholder)."""
+    """Helper function for API key authentication."""
     print_subheader("API Key Authentication")
 
-    # Get API key from user
+    # Get API key and state code from user
     api_key = typer.prompt("Enter API key", hide_input=True)
+    state_code = typer.prompt("Enter state code (e.g., CA, MO, CO, MI)").upper().strip()
 
-    return get_api_key_authenticated_client_or_error(api_key=api_key)
+    # Validate state code format (basic validation)
+    if not state_code or len(state_code) != 2 or not state_code.isalpha():
+        print_error("Invalid state code. Please enter a 2-letter state code like CA, MO, CO, MI.")
+        raise AuthenticationError(f"Invalid state code: {state_code}")
+
+    return get_api_key_authenticated_client_or_error(api_key=api_key, state_code=state_code)
 
 
 async def get_authenticated_client_or_error_async() -> T3APIClient:
@@ -275,32 +281,36 @@ def get_jwt_authenticated_client_or_error_with_validation(*, jwt_token: str) -> 
         raise AuthenticationError(f"Unexpected authentication error: {str(e)}") from e
 
 
-def get_api_key_authenticated_client_or_error(*, api_key: str) -> T3APIClient:
+def get_api_key_authenticated_client_or_error(*, api_key: str, state_code: str) -> T3APIClient:
     """
-    High-level method to return an API key-authenticated httpx-based T3 API client (PLACEHOLDER).
+    High-level method to return an API key-authenticated httpx-based T3 API client.
 
-    This function provides a placeholder for future API key authentication support.
-    Currently raises NotImplementedError with guidance for users.
+    This function provides API key authentication using the /v2/auth/apikey endpoint
+    with proper error handling and logging.
 
     Args:
         api_key: API key for the T3 API
+        state_code: State code (e.g., "CA", "MO", "CO", "MI")
 
     Returns:
         T3APIClient: Authenticated httpx-based client
 
     Raises:
-        ValueError: If api_key is empty or None
-        NotImplementedError: Always raised - API key authentication not yet implemented
+        ValueError: If api_key or state_code is empty or None
+        AuthenticationError: If authentication fails
     """
     try:
-        api_client = create_api_key_authenticated_client(api_key)
+        api_client = create_api_key_authenticated_client_or_error(
+            api_key=api_key,
+            state_code=state_code
+        )
         logger.info("[bold green]Successfully authenticated with T3 API using API key.[/]")
         return api_client
     except ValueError as e:
         logger.error(f"API key validation error: {e}")
-        raise AuthenticationError(f"Invalid API key: {e}") from e
-    except NotImplementedError as e:
-        logger.error(f"API key authentication not implemented: {e}")
+        raise AuthenticationError(f"Invalid API key or state code: {e}") from e
+    except AuthenticationError:
+        # Re-raise authentication errors as-is
         raise
     except Exception as e:
         logger.exception("Unexpected error while creating API key authenticated client.")

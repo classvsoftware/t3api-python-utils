@@ -148,3 +148,47 @@ class T3APIClient:
             # Re-raise with more context
             raise T3HTTPError(f"Authentication failed: {e}", response=e.response) from e
 
+    async def authenticate_with_api_key(
+        self,
+        *,
+        api_key: str,
+        state_code: str,
+    ) -> AuthResponseData:
+        """Authenticate with T3 API using API key.
+
+        Args:
+            api_key: API key for the T3 API
+            state_code: State code (e.g., "CA", "MO", "CO", "MI")
+
+        Returns:
+            AuthResponseData containing access token and metadata
+
+        Raises:
+            T3HTTPError: If authentication fails
+        """
+        # Prepare request payload
+        payload = {
+            "apiKey": api_key,
+            "stateCode": state_code,
+        }
+
+        # Make the request
+        try:
+            response_data = await arequest_json(
+                aclient=self._client,
+                method="POST",
+                url="/v2/auth/apikey",
+                json_body=payload,
+                policy=self._retry_policy,
+                expected_status=200,
+            )
+
+            # Set the token for future requests
+            self.set_access_token(response_data["accessToken"])
+
+            return cast(AuthResponseData, response_data)
+
+        except T3HTTPError as e:
+            # Re-raise with more context
+            raise T3HTTPError(f"API key authentication failed: {e}", response=e.response) from e
+
