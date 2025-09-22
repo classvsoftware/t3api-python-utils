@@ -6,8 +6,8 @@ from typing import Any, Dict, List
 from textual import on
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Container, Horizontal
-from textual.widgets import Button, Footer, Header, Input, Static
+from textual.containers import Container
+from textual.widgets import Footer, Header, Input, Static
 from textual.containers import VerticalScroll
 from textual.reactive import reactive
 
