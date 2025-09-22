@@ -18,7 +18,6 @@ from t3api_utils.style import (
     print_header,
     print_info,
     print_labeled_info,
-    print_menu_item,
     print_progress,
     print_state_info,
     print_subheader,
@@ -307,6 +306,10 @@ def _action_save_csv(*, data: List[Dict[str, Any]], state: _HandlerState) -> Non
         state.csv_file_path = csv_path
         print_success(f"Saved {len(data)} records to {csv_path}")
 
+        # Automatically open the file
+        open_file(path=csv_path)
+        print_success(f"Opened {csv_path}")
+
     except Exception as e:
         print_error(f"Error saving CSV: {e}")
 
@@ -337,6 +340,10 @@ def _action_save_json(*, data: List[Dict[str, Any]], state: _HandlerState) -> No
 
         state.json_file_path = json_path
         print_success(f"Saved {len(data)} records to {json_path}")
+
+        # Automatically open the file
+        open_file(path=json_path)
+        print_success(f"Opened {json_path}")
 
     except Exception as e:
         print_error(f"Error saving JSON: {e}")
@@ -386,31 +393,6 @@ def _action_export_schema(*, state: _HandlerState) -> None:
         print_error(f"Error exporting schema: {e}")
 
 
-def _action_open_csv(*, state: _HandlerState) -> None:
-    """Open saved CSV file."""
-    if not state.csv_file_path or not state.csv_file_path.exists():
-        print_error("No CSV file available to open")
-        return
-
-    try:
-        open_file(path=state.csv_file_path)
-        print_success(f"Opened {state.csv_file_path}")
-    except Exception as e:
-        print_error(f"Error opening CSV file: {e}")
-
-
-def _action_open_json(*, state: _HandlerState) -> None:
-    """Open saved JSON file."""
-    if not state.json_file_path or not state.json_file_path.exists():
-        print_error("No JSON file available to open")
-        return
-
-    try:
-        open_file(path=state.json_file_path)
-        print_success(f"Opened {state.json_file_path}")
-    except Exception as e:
-        print_error(f"Error opening JSON file: {e}")
-
 
 def _action_inspect_collection(*, data: List[Dict[str, Any]], state: _HandlerState) -> None:
     """Launch collection inspector."""
@@ -428,12 +410,6 @@ def _get_menu_options(*, state: _HandlerState) -> List[tuple[str, str]]:
     options.append(("Load into database", "load_db"))
     options.append(("Export database schema", "export_schema"))
 
-    # File opening options - show if files exist
-    if _file_exists_and_readable(file_path=state.csv_file_path) and state.csv_file_path:
-        options.append((f"Open CSV file ({state.csv_file_path.name})", "open_csv"))
-
-    if _file_exists_and_readable(file_path=state.json_file_path) and state.json_file_path:
-        options.append((f"Open JSON file ({state.json_file_path.name})", "open_json"))
 
     options.append(("Exit", "exit"))
 
@@ -477,8 +453,6 @@ def interactive_collection_handler(
         "json": lambda: _action_save_json(data=data, state=state),
         "load_db": lambda: _action_load_db(data=data, state=state),
         "export_schema": lambda: _action_export_schema(state=state),
-        "open_csv": lambda: _action_open_csv(state=state),
-        "open_json": lambda: _action_open_json(state=state),
         "exit": lambda: None
     }
 
@@ -498,9 +472,14 @@ def interactive_collection_handler(
         # Get and display menu options
         options = _get_menu_options(state=state)
 
-        console.print("\n[magenta]Options:[/magenta]")
+        table = Table(title="Collection Handler Options", border_style="magenta", header_style="bold magenta")
+        table.add_column("#", style="magenta", justify="right")
+        table.add_column("Action", style="bright_white")
+
         for i, (text, _) in enumerate(options, 1):
-            print_menu_item(i, text)
+            table.add_row(str(i), text)
+
+        console.print(table)
 
         # Get user choice
         try:
@@ -553,10 +532,6 @@ def _db_has_data(*, con: duckdb.DuckDBPyConnection) -> bool:
     except Exception:
         return False
 
-
-def _file_exists_and_readable(*, file_path: Path | None) -> bool:
-    """Check if a file path exists and is readable."""
-    return file_path is not None and file_path.exists() and file_path.is_file()
 
 
 def load_db(*, con: duckdb.DuckDBPyConnection, data: List[Dict[str, Any]]) -> None:

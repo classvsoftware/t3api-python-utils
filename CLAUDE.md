@@ -273,6 +273,58 @@ password = typer.prompt("[magenta]Password[/magenta]", hide_input=True)
 
 This style guide ensures a professional, cohesive purple-themed interface across all CLI interactions.
 
+## CLI Picker Standards
+
+All CLI selection interfaces (license picker, collection picker, menu options, etc.) should use consistent Rich Table formatting for professional appearance and usability.
+
+### Standard CLI Picker Format
+
+**Required Elements:**
+- Rich Table with magenta border styling: `border_style="magenta", header_style="bold magenta"`
+- Numbered selection column: `"#"` with `style="magenta", justify="right"`
+- Primary content column with descriptive header and `style="bright_white"`
+- Optional third column for additional info with `style="cyan"`
+
+**Implementation Pattern:**
+```python
+from rich.table import Table
+from t3api_utils.style import console
+
+def pick_something(items: List[SomeType]) -> SomeType:
+    """Standard picker implementation."""
+    table = Table(title="Available Items", border_style="magenta", header_style="bold magenta")
+    table.add_column("#", style="magenta", justify="right")
+    table.add_column("Name", style="bright_white")
+    table.add_column("Details", style="cyan")  # Optional third column
+
+    for i, item in enumerate(items, 1):
+        table.add_row(str(i), item.name, item.details)
+
+    console.print(table)
+
+    choice = typer.prompt("Select item (number)", type=int)
+    # ... validation and return logic
+```
+
+**Examples in Codebase:**
+- **License Picker**: `pick_license()` in `t3api_utils/main/utils.py`
+- **Collection Category Picker**: `_pick_category()` in `t3api_utils/openapi/collection_picker.py`
+- **Collection Endpoint Picker**: `_pick_from_category()` in `t3api_utils/openapi/collection_picker.py`
+- **Collection Handler Menu**: `interactive_collection_handler()` in `t3api_utils/main/utils.py`
+
+**Key Benefits:**
+- Consistent visual hierarchy across all CLI interactions
+- Professional appearance with clear numbered selections
+- Easy scanning with proper color coding
+- Standardized user experience
+
+**Requirements:**
+- Never use plain text lists for selection menus
+- Always include clear table titles
+- Always use numbered selection starting from 1
+- Always validate user input range
+- Always handle keyboard interruption gracefully
+
 ## Textual TUI Style Guide
 
 When building Textual applications, use minimal styling for a barebones interface. Avoid colors and complex CSS - rely on Textual's default appearance.
