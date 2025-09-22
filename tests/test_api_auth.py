@@ -150,7 +150,7 @@ class TestAuthenticateAndGetToken:
             hostname="test.example.com",
             username="testuser",
             password="testpass",
-            host="https://api.trackandtrace.tools",
+            host=None,
             otp=None,
             email=None
         )
