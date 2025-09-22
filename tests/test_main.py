@@ -9,6 +9,7 @@ from t3api_utils.exceptions import AuthenticationError
 from t3api_utils.interfaces import SerializableObject
 from t3api_utils.main.utils import (get_authenticated_client_or_error,
                                     get_jwt_authenticated_client_or_error,
+                                    get_jwt_authenticated_client_or_error_with_validation,
                                     load_collection, pick_license,
                                     save_collection_to_csv,
                                     save_collection_to_json)
@@ -60,6 +61,115 @@ def test_get_jwt_authenticated_client_or_error_unexpected_error(mock_create_jwt_
         get_jwt_authenticated_client_or_error(jwt_token=test_token)
 
     mock_create_jwt_client.assert_called_once_with(test_token)
+
+
+@patch("t3api_utils.main.utils.get_data")
+@patch("t3api_utils.main.utils.create_jwt_authenticated_client")
+def test_get_jwt_authenticated_client_or_error_with_validation_success(mock_create_jwt_client, mock_get_data):
+    """Test successful JWT authentication with validation."""
+    test_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test.signature"
+    mock_client = MagicMock(name="jwt_authenticated_client")
+    mock_create_jwt_client.return_value = mock_client
+    mock_get_data.return_value = {"username": "testuser", "id": "123"}
+
+    result = get_jwt_authenticated_client_or_error_with_validation(jwt_token=test_token)
+
+    mock_create_jwt_client.assert_called_once_with(test_token)
+    mock_get_data.assert_called_once_with(mock_client, "/v2/auth/whoami")
+    assert result == mock_client
+
+
+@patch("t3api_utils.main.utils.get_data")
+@patch("t3api_utils.main.utils.create_jwt_authenticated_client")
+def test_get_jwt_authenticated_client_or_error_with_validation_invalid_token(mock_create_jwt_client, mock_get_data):
+    """Test JWT authentication with validation when token is invalid."""
+    test_token = ""
+    mock_create_jwt_client.side_effect = ValueError("JWT token cannot be empty or None")
+
+    with pytest.raises(AuthenticationError, match="Invalid JWT token"):
+        get_jwt_authenticated_client_or_error_with_validation(jwt_token=test_token)
+
+    mock_create_jwt_client.assert_called_once_with(test_token)
+    mock_get_data.assert_not_called()
+
+
+@patch("asyncio.run")
+@patch("t3api_utils.main.utils.get_data")
+@patch("t3api_utils.main.utils.create_jwt_authenticated_client")
+def test_get_jwt_authenticated_client_or_error_with_validation_unauthorized(mock_create_jwt_client, mock_get_data, mock_asyncio_run):
+    """Test JWT authentication with validation when token is unauthorized."""
+    test_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.expired.signature"
+    mock_client = MagicMock(name="jwt_authenticated_client")
+    mock_create_jwt_client.return_value = mock_client
+
+    # Simulate 401 Unauthorized response
+    from t3api_utils.http.utils import T3HTTPError
+    mock_get_data.side_effect = T3HTTPError("401 Unauthorized")
+
+    with pytest.raises(AuthenticationError, match="JWT token is invalid or expired"):
+        get_jwt_authenticated_client_or_error_with_validation(jwt_token=test_token)
+
+    mock_create_jwt_client.assert_called_once_with(test_token)
+    mock_get_data.assert_called_once_with(mock_client, "/v2/auth/whoami")
+    # Verify client was closed on validation failure
+    mock_asyncio_run.assert_called_once()
+
+
+@patch("asyncio.run")
+@patch("t3api_utils.main.utils.get_data")
+@patch("t3api_utils.main.utils.create_jwt_authenticated_client")
+def test_get_jwt_authenticated_client_or_error_with_validation_forbidden(mock_create_jwt_client, mock_get_data, mock_asyncio_run):
+    """Test JWT authentication with validation when token has insufficient permissions."""
+    test_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.limited.signature"
+    mock_client = MagicMock(name="jwt_authenticated_client")
+    mock_create_jwt_client.return_value = mock_client
+
+    # Simulate 403 Forbidden response
+    from t3api_utils.http.utils import T3HTTPError
+    mock_get_data.side_effect = T3HTTPError("403 Forbidden")
+
+    with pytest.raises(AuthenticationError, match="JWT token does not have sufficient permissions"):
+        get_jwt_authenticated_client_or_error_with_validation(jwt_token=test_token)
+
+    mock_create_jwt_client.assert_called_once_with(test_token)
+    mock_get_data.assert_called_once_with(mock_client, "/v2/auth/whoami")
+    # Verify client was closed on validation failure
+    mock_asyncio_run.assert_called_once()
+
+
+@patch("asyncio.run")
+@patch("t3api_utils.main.utils.get_data")
+@patch("t3api_utils.main.utils.create_jwt_authenticated_client")
+def test_get_jwt_authenticated_client_or_error_with_validation_generic_error(mock_create_jwt_client, mock_get_data, mock_asyncio_run):
+    """Test JWT authentication with validation for generic validation errors."""
+    test_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test.signature"
+    mock_client = MagicMock(name="jwt_authenticated_client")
+    mock_create_jwt_client.return_value = mock_client
+
+    # Simulate generic network error
+    mock_get_data.side_effect = RuntimeError("Network connection failed")
+
+    with pytest.raises(AuthenticationError, match="JWT token validation failed: Network connection failed"):
+        get_jwt_authenticated_client_or_error_with_validation(jwt_token=test_token)
+
+    mock_create_jwt_client.assert_called_once_with(test_token)
+    mock_get_data.assert_called_once_with(mock_client, "/v2/auth/whoami")
+    # Verify client was closed on validation failure
+    mock_asyncio_run.assert_called_once()
+
+
+@patch("t3api_utils.main.utils.get_data")
+@patch("t3api_utils.main.utils.create_jwt_authenticated_client")
+def test_get_jwt_authenticated_client_or_error_with_validation_unexpected_error(mock_create_jwt_client, mock_get_data):
+    """Test JWT authentication with validation when unexpected error occurs."""
+    test_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test.signature"
+    mock_create_jwt_client.side_effect = RuntimeError("Unexpected system error")
+
+    with pytest.raises(AuthenticationError, match="Unexpected authentication error: Unexpected system error"):
+        get_jwt_authenticated_client_or_error_with_validation(jwt_token=test_token)
+
+    mock_create_jwt_client.assert_called_once_with(test_token)
+    mock_get_data.assert_not_called()
 
 
 @patch("t3api_utils.main.utils.console.print")

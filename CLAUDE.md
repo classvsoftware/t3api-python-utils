@@ -92,16 +92,54 @@ The `t3api_utils` package is organized into focused modules:
 
 **Usage:**
 ```python
-# Create authenticated client
+# Create authenticated client using credentials
 client = get_authenticated_client_or_error()
 client = create_credentials_authenticated_client_or_error(hostname="...", username="...", password="...")
+
+# Alternative: Create authenticated client using pre-existing JWT token
+client = get_jwt_authenticated_client_or_error(jwt_token="your_jwt_token_here")
+
+# Create authenticated client with JWT validation (recommended for production)
+client = get_jwt_authenticated_client_or_error_with_validation(jwt_token="your_jwt_token_here")
 ```
 
 **Key Features:**
 - **Async Support**: `AsyncT3APIClient` for high-performance concurrent operations
 - **Rate Limiting**: Configurable requests-per-second limits to avoid API throttling
 - **Enhanced Error Handling**: Better error messages and retry policies with exponential backoff
-- **Batching**: Process large datasets in configurable batch sizesetc.
+- **Batching**: Process large datasets in configurable batch sizes
+- **JWT Authentication**: Support for pre-existing JWT tokens with optional validation
+
+### JWT Authentication Options
+
+The library supports two JWT authentication methods:
+
+**1. Basic JWT Authentication:**
+```python
+from t3api_utils.main.utils import get_jwt_authenticated_client_or_error
+
+# Create client with JWT token (no validation)
+client = get_jwt_authenticated_client_or_error(jwt_token="your_jwt_token_here")
+```
+
+**2. JWT Authentication with Validation (Recommended):**
+```python
+from t3api_utils.main.utils import get_jwt_authenticated_client_or_error_with_validation
+
+# Create client with JWT token validation via /whoami endpoint
+client = get_jwt_authenticated_client_or_error_with_validation(jwt_token="your_jwt_token_here")
+```
+
+**JWT Validation Benefits:**
+- **Token Validity Check**: Ensures JWT is not expired or invalid
+- **Permission Verification**: Confirms token has required API access
+- **Early Error Detection**: Fails fast with clear error messages
+- **Production Safety**: Recommended for production environments
+
+**Error Handling:**
+- `AuthenticationError` raised for invalid/expired tokens
+- Clear error messages for different failure scenarios (401, 403, etc.)
+- Automatic client cleanup on validation failure
 
 ### Auto-Generated TypedDict Interfaces
 

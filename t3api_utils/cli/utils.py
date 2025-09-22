@@ -54,11 +54,15 @@ def offer_to_save_credentials(*, credentials: T3Credentials) -> None:
     hostname_differs = credentials["hostname"] != current_hostname
     username_differs = credentials["username"] != current_username
     password_differs = credentials["password"] != current_password
-    email_differs = credentials.get("email") != current_email
+
+    # Only check email differences if the hostname requires email
+    email_differs = False
+    if credentials["hostname"] in CREDENTIAL_EMAIL_WHITELIST:
+        email_differs = credentials.get("email") != current_email
 
     if not env_exists:
         if typer.confirm(
-            f"No credentials file found. Save these values to [bold]{DEFAULT_ENV_PATH}[/]?",
+            f"No credentials file found. Save these values to {DEFAULT_ENV_PATH}?",
             default=True,
         ):
             logger.info("[green]Saving credentials to new environment file.[/green]")
@@ -78,7 +82,7 @@ def offer_to_save_credentials(*, credentials: T3Credentials) -> None:
                 )
     elif hostname_differs or username_differs or password_differs or email_differs:
         if typer.confirm(
-            f"Some credential values differ from those in [bold]{DEFAULT_ENV_PATH}[/]. Update them?",
+            f"Some credential values differ from those in {DEFAULT_ENV_PATH}. Update them?",
             default=True,
         ):
             logger.info("[cyan]Updating credentials in environment file.[/cyan]")

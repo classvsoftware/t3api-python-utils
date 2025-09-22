@@ -122,6 +122,60 @@ def get_jwt_authenticated_client_or_error(*, jwt_token: str) -> T3APIClient:
         raise
 
 
+def get_jwt_authenticated_client_or_error_with_validation(*, jwt_token: str) -> T3APIClient:
+    """
+    High-level method to return a JWT-authenticated httpx-based T3 API client with validation.
+
+    This function creates an authenticated client using a pre-existing JWT token and
+    validates it by making a test call to the /v2/auth/whoami endpoint to ensure the
+    token is valid and not expired.
+
+    Args:
+        jwt_token: Valid JWT access token for the T3 API
+
+    Returns:
+        T3APIClient: Authenticated httpx-based client that has been validated
+
+    Raises:
+        ValueError: If jwt_token is empty or None
+        AuthenticationError: If JWT token is invalid, expired, or authentication fails
+    """
+    try:
+        # Create the JWT authenticated client
+        api_client = create_jwt_authenticated_client(jwt_token)
+
+        # Validate the JWT token by calling /whoami endpoint
+        try:
+            whoami_response = get_data(api_client, "/v2/auth/whoami")
+            logger.info("[bold green]Successfully authenticated and validated JWT token with T3 API.[/]")
+            logger.info(f"Authenticated as: {whoami_response.get('username', 'Unknown user')}")
+            return api_client
+
+        except Exception as validation_error:
+            # Close the client on validation failure
+            import asyncio
+            asyncio.run(api_client.close())
+
+            # Determine the type of validation error
+            error_msg = str(validation_error).lower()
+            if "401" in error_msg or "unauthorized" in error_msg:
+                raise AuthenticationError("JWT token is invalid or expired") from validation_error
+            elif "403" in error_msg or "forbidden" in error_msg:
+                raise AuthenticationError("JWT token does not have sufficient permissions") from validation_error
+            else:
+                raise AuthenticationError(f"JWT token validation failed: {validation_error}") from validation_error
+
+    except ValueError as e:
+        logger.error(f"JWT token validation error: {e}")
+        raise AuthenticationError(f"Invalid JWT token: {e}") from e
+    except AuthenticationError:
+        # Re-raise authentication errors as-is
+        raise
+    except Exception as e:
+        logger.exception("Unexpected error while creating and validating JWT authenticated client.")
+        raise AuthenticationError(f"Unexpected authentication error: {str(e)}") from e
+
+
 def pick_license(*, api_client: T3APIClient) -> Dict[str, Any]:
     """
     Interactive license picker using httpx-based T3 API client.

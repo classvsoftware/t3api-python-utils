@@ -164,6 +164,50 @@ def test_prompt_for_credentials_no_email_for_non_whitelisted_hostname(mock_offer
     mock_offer.assert_not_called()
 
 
+@patch.dict(os.environ, {
+    EnvKeys.METRC_HOSTNAME.value: "mo.metrc.com",
+    EnvKeys.METRC_USERNAME.value: "user",
+    EnvKeys.METRC_PASSWORD.value: "pass",
+})
+@patch("typer.confirm", return_value=False)
+@patch("t3api_utils.cli.utils.set_key")
+def test_offer_to_save_credentials_email_differs_only_for_whitelisted_hostname(mock_set_key, mock_confirm):
+    """Test that email differences are only checked for whitelisted hostnames."""
+    # For non-whitelisted hostname, email differences should be ignored
+    credentials: T3Credentials = {
+        "hostname": "mo.metrc.com",  # Not in CREDENTIAL_EMAIL_WHITELIST
+        "username": "user",
+        "password": "pass",
+        "otp": None,
+        "email": "different@example.com",  # Different from stored (empty), but should be ignored
+    }
+    cli.offer_to_save_credentials(credentials=credentials)
+    # Should not prompt for update since email differences are ignored for non-whitelisted hostnames
+    mock_confirm.assert_not_called()
+
+
+@patch.dict(os.environ, {
+    EnvKeys.METRC_HOSTNAME.value: "co.metrc.com",
+    EnvKeys.METRC_USERNAME.value: "user",
+    EnvKeys.METRC_PASSWORD.value: "pass",
+})
+@patch("typer.confirm", return_value=False)
+@patch("t3api_utils.cli.utils.set_key")
+def test_offer_to_save_credentials_email_differs_detected_for_whitelisted_hostname(mock_set_key, mock_confirm):
+    """Test that email differences are detected for whitelisted hostnames."""
+    # For whitelisted hostname, email differences should trigger update prompt
+    credentials: T3Credentials = {
+        "hostname": "co.metrc.com",  # In CREDENTIAL_EMAIL_WHITELIST
+        "username": "user",
+        "password": "pass",
+        "otp": None,
+        "email": "different@example.com",  # Different from stored (empty), should trigger update
+    }
+    cli.offer_to_save_credentials(credentials=credentials)
+    # Should prompt for update since email differs and hostname requires email
+    mock_confirm.assert_called_once()
+
+
 @patch("t3api_utils.cli.utils.prompt_for_credentials_or_error")
 @patch("t3api_utils.cli.utils.offer_to_save_credentials")
 def test_resolve_auth_inputs_from_prompt(mock_save_credentials, mock_prompt):
