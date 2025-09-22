@@ -1,4 +1,6 @@
 """Main utilities for T3 API data operations using httpx-based API client."""
+import csv
+import json
 import os
 import subprocess
 import sys
@@ -6,7 +8,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import (Any, Callable, Dict, List, Optional, ParamSpec, TypeVar,
-                    cast)
+                    Union, cast)
 
 import duckdb
 import typer
@@ -791,3 +793,315 @@ def inspect_collection(
     from t3api_utils.inspector import inspect_collection as textual_inspect
 
     textual_inspect(data=data, collection_name=collection_name)
+
+
+def _discover_data_files(
+    *,
+    search_directory: str,
+    file_extensions: List[str],
+    include_subdirectories: bool = False
+) -> List[Path]:
+    """
+    Discover data files in the specified directory.
+
+    Args:
+        search_directory: Directory to search
+        file_extensions: List of file extensions to include
+        include_subdirectories: Whether to search recursively
+
+    Returns:
+        List of Path objects for found files, sorted by modification time (newest first)
+    """
+    search_path = Path(search_directory).resolve()
+
+    if not search_path.exists():
+        return []
+
+    found_files: List[Path] = []
+
+    # Create patterns for each extension
+    patterns = []
+    for ext in file_extensions:
+        if not ext.startswith('.'):
+            ext = f'.{ext}'
+        if include_subdirectories:
+            patterns.append(f"**/*{ext}")
+        else:
+            patterns.append(f"*{ext}")
+
+    # Find files matching any pattern
+    for pattern in patterns:
+        found_files.extend(search_path.glob(pattern))
+
+    # Filter out hidden files and directories
+    visible_files = [f for f in found_files if not any(part.startswith('.') for part in f.parts)]
+
+    # Remove duplicates and sort by modification time (newest first)
+    unique_files = list(set(visible_files))
+    try:
+        unique_files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    except (OSError, FileNotFoundError):
+        # If we can't get stats, just sort by name
+        unique_files.sort(key=lambda p: p.name.lower())
+
+    return unique_files
+
+
+def _format_file_size(size_bytes: int) -> str:
+    """Format file size in human-readable format."""
+    if size_bytes == 0:
+        return "0 B"
+
+    units = ["B", "KB", "MB", "GB"]
+    unit_index = 0
+    size = float(size_bytes)
+
+    while size >= 1024 and unit_index < len(units) - 1:
+        size /= 1024
+        unit_index += 1
+
+    if unit_index == 0:
+        return f"{int(size)} {units[unit_index]}"
+    else:
+        return f"{size:.1f} {units[unit_index]}"
+
+
+def _format_file_time(timestamp: float) -> str:
+    """Format file modification time in readable format."""
+    try:
+        dt = datetime.fromtimestamp(timestamp)
+        now = datetime.now()
+
+        # If today, show time only
+        if dt.date() == now.date():
+            return dt.strftime("%H:%M")
+        # If this year, show month and day
+        elif dt.year == now.year:
+            return dt.strftime("%m-%d")
+        # Otherwise show year
+        else:
+            return dt.strftime("%Y")
+    except (OSError, ValueError):
+        return "Unknown"
+
+
+def _load_file_content(file_path: Path) -> Dict[str, Any]:
+    """
+    Load and parse file content based on extension.
+
+    Args:
+        file_path: Path to the file to load
+
+    Returns:
+        Dictionary with keys: path, content, format, size
+    """
+    if not file_path.exists():
+        raise FileNotFoundError(f"File not found: {file_path}")
+
+    if not file_path.is_file():
+        raise ValueError(f"Path is not a file: {file_path}")
+
+    extension = file_path.suffix.lower()
+    file_format = extension[1:] if extension else "unknown"
+
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            if extension in ['.json']:
+                content = json.load(f)
+            elif extension in ['.jsonl', '.ndjson']:
+                # JSON Lines format
+                content = []
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        content.append(json.loads(line))
+            elif extension in ['.csv', '.tsv']:
+                # Reset file pointer
+                f.seek(0)
+                delimiter = '\t' if extension == '.tsv' else ','
+                reader = csv.DictReader(f, delimiter=delimiter)
+                content = list(reader)
+            else:
+                # Plain text
+                f.seek(0)
+                content = f.read()
+
+        return {
+            "path": file_path,
+            "content": content,
+            "format": file_format,
+            "size": file_path.stat().st_size
+        }
+
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON in file {file_path}: {e}")
+    except csv.Error as e:
+        raise ValueError(f"Invalid CSV in file {file_path}: {e}")
+    except UnicodeDecodeError as e:
+        raise ValueError(f"Cannot read file {file_path} as text: {e}")
+    except Exception as e:
+        raise ValueError(f"Error reading file {file_path}: {e}")
+
+
+def pick_file(
+    *,
+    search_directory: str = ".",
+    file_extensions: List[str] = [".csv", ".json", ".txt", ".tsv", ".jsonl"],
+    include_subdirectories: bool = False,
+    allow_custom_path: bool = True,
+    load_content: bool = False,
+) -> Union[Path, Dict[str, Any]]:
+    """
+    Interactive file picker for selecting data files.
+
+    Searches the specified directory for files with given extensions and presents
+    them in a Rich table picker following the project's CLI standards. Optionally
+    allows custom file path input and automatic content loading.
+
+    Args:
+        search_directory: Directory to search for files (default: current directory)
+        file_extensions: List of file extensions to include (default: common data formats)
+        include_subdirectories: Whether to search subdirectories recursively (default: False)
+        allow_custom_path: Whether to show "Enter custom path" option (default: True)
+        load_content: If True, return file content; if False, return Path object (default: False)
+
+    Returns:
+        If load_content=False: Path object pointing to selected file
+        If load_content=True: Dict with keys: {"path": Path, "content": Any, "format": str, "size": int}
+
+    Raises:
+        typer.Exit: If user cancels or no files found and custom path not allowed
+        FileNotFoundError: If custom path doesn't exist
+        ValueError: If file cannot be read or parsed
+    """
+    print_subheader("File Picker")
+
+    # Discover files
+    found_files = _discover_data_files(
+        search_directory=search_directory,
+        file_extensions=file_extensions,
+        include_subdirectories=include_subdirectories
+    )
+
+    # Prepare options list
+    options: List[tuple[str, str, str, str, Path]] = []  # display_name, size, modified, type, path
+
+    for file_path in found_files:
+        try:
+            stat = file_path.stat()
+            size_str = _format_file_size(stat.st_size)
+            modified_str = _format_file_time(stat.st_mtime)
+            file_type = file_path.suffix[1:].upper() if file_path.suffix else "FILE"
+
+            # Show relative path if it's shorter, otherwise show name only
+            try:
+                rel_path = file_path.relative_to(Path(search_directory))
+                display_name = str(rel_path)
+            except ValueError:
+                display_name = file_path.name
+
+            options.append((display_name, size_str, modified_str, file_type, file_path))
+
+        except (OSError, FileNotFoundError):
+            # Skip files we can't access
+            continue
+
+    # Add custom path option if enabled
+    if allow_custom_path:
+        options.append(("Enter custom path...", "", "", "CUSTOM", Path("")))
+
+    # Check if we have any options
+    if not options:
+        if allow_custom_path:
+            print_warning("No files found in directory. Please enter a custom path.")
+            return _handle_custom_path_input(load_content=load_content)
+        else:
+            print_error("No data files found in the specified directory.")
+            raise typer.Exit(code=1)
+
+    # Create and display table following CLI picker standards
+    table = Table(title="Available Data Files", border_style="magenta", header_style="bold magenta")
+    table.add_column("#", style="magenta", justify="right")
+    table.add_column("File", style="bright_white")
+    table.add_column("Size", style="cyan", justify="right")
+    table.add_column("Modified", style="cyan", justify="right")
+    table.add_column("Type", style="cyan", justify="center")
+
+    for idx, (display_name, size_str, modified_str, file_type, _) in enumerate(options, start=1):
+        table.add_row(str(idx), display_name, size_str, modified_str, file_type)
+
+    console.print(table)
+
+    # Get user choice
+    while True:
+        try:
+            choice = typer.prompt("Select file (number)", type=int)
+            if 1 <= choice <= len(options):
+                selected_option = options[choice - 1]
+
+                # Handle custom path option
+                if selected_option[4] == Path(""):  # Custom path marker
+                    return _handle_custom_path_input(load_content=load_content)
+
+                # Handle regular file selection
+                selected_path: Path = selected_option[4]
+                print_success(f"Selected: {selected_path}")
+
+                if load_content:
+                    print_progress("Loading file content...")
+                    try:
+                        file_data = _load_file_content(selected_path)
+                        print_success(f"Loaded {file_data['format'].upper()} file ({_format_file_size(file_data['size'])})")
+                        return file_data
+                    except Exception as e:
+                        print_error(f"Error loading file: {e}")
+                        raise
+                else:
+                    return selected_path
+
+            else:
+                print_error(f"Invalid selection. Please choose 1-{len(options)}.")
+
+        except (ValueError, typer.Abort, KeyboardInterrupt):
+            print_error("Invalid input or operation cancelled.")
+            raise typer.Exit(code=1)
+
+
+def _handle_custom_path_input(*, load_content: bool) -> Union[Path, Dict[str, Any]]:
+    """Handle custom file path input."""
+    print_subheader("Custom File Path")
+
+    while True:
+        try:
+            path_input = typer.prompt("Enter file path")
+            file_path = Path(path_input.strip()).expanduser().resolve()
+
+            if not file_path.exists():
+                print_error("File does not exist. Please try again.")
+                continue
+
+            if not file_path.is_file():
+                print_error("Path is not a file. Please try again.")
+                continue
+
+            print_success(f"Selected: {file_path}")
+
+            if load_content:
+                print_progress("Loading file content...")
+                try:
+                    file_data = _load_file_content(file_path)
+                    print_success(f"Loaded {file_data['format'].upper()} file ({_format_file_size(file_data['size'])})")
+                    return file_data
+                except Exception as e:
+                    print_error(f"Error loading file: {e}")
+                    # Ask if user wants to try a different path
+                    try_again = typer.confirm("Try a different file?")
+                    if not try_again:
+                        raise typer.Exit(code=1)
+                    continue
+            else:
+                return file_path
+
+        except (typer.Abort, KeyboardInterrupt):
+            print_error("Operation cancelled.")
+            raise typer.Exit(code=1)

@@ -11,9 +11,11 @@ from t3api_utils.main.utils import (get_authenticated_client_or_error,
                                     get_api_key_authenticated_client_or_error,
                                     get_jwt_authenticated_client_or_error,
                                     get_jwt_authenticated_client_or_error_with_validation,
-                                    load_collection, pick_license,
+                                    load_collection, pick_file, pick_license,
                                     save_collection_to_csv,
                                     save_collection_to_json,
+                                    _discover_data_files, _format_file_size,
+                                    _format_file_time, _load_file_content,
                                     _pick_authentication_method)
 
 
@@ -413,3 +415,449 @@ def test_save_collection_to_json_raises_on_empty():
 def test_save_collection_to_csv_raises_on_empty():
     with pytest.raises(ValueError, match="Cannot serialize an empty list of objects"):
         save_collection_to_csv(objects=[], output_dir=".")
+
+
+# File Picker Tests
+class TestFilePickerUtilities:
+    """Test file picker utility functions."""
+
+    def test_format_file_size_bytes(self):
+        """Test file size formatting for byte values."""
+        assert _format_file_size(0) == "0 B"
+        assert _format_file_size(512) == "512 B"
+        assert _format_file_size(1023) == "1023 B"
+
+    def test_format_file_size_kilobytes(self):
+        """Test file size formatting for kilobyte values."""
+        assert _format_file_size(1024) == "1.0 KB"
+        assert _format_file_size(1536) == "1.5 KB"
+        assert _format_file_size(1048575) == "1024.0 KB"
+
+    def test_format_file_size_megabytes(self):
+        """Test file size formatting for megabyte values."""
+        assert _format_file_size(1048576) == "1.0 MB"
+        assert _format_file_size(1572864) == "1.5 MB"
+
+    def test_format_file_size_gigabytes(self):
+        """Test file size formatting for gigabyte values."""
+        assert _format_file_size(1073741824) == "1.0 GB"
+        assert _format_file_size(2147483648) == "2.0 GB"
+
+    @patch('t3api_utils.main.utils.datetime')
+    def test_format_file_time_today(self, mock_datetime):
+        """Test file time formatting for today's files."""
+        from datetime import datetime
+        now = datetime(2023, 12, 15, 14, 30, 0)
+        mock_datetime.now.return_value = now
+        mock_datetime.fromtimestamp.return_value = datetime(2023, 12, 15, 10, 15, 0)
+
+        result = _format_file_time(1702638900.0)  # Mock timestamp
+        assert result == "10:15"
+
+    @patch('t3api_utils.main.utils.datetime')
+    def test_format_file_time_this_year(self, mock_datetime):
+        """Test file time formatting for files from this year."""
+        from datetime import datetime
+        now = datetime(2023, 12, 15, 14, 30, 0)
+        mock_datetime.now.return_value = now
+        mock_datetime.fromtimestamp.return_value = datetime(2023, 11, 10, 10, 15, 0)
+
+        result = _format_file_time(1699610100.0)  # Mock timestamp
+        assert result == "11-10"
+
+    @patch('t3api_utils.main.utils.datetime')
+    def test_format_file_time_previous_year(self, mock_datetime):
+        """Test file time formatting for files from previous years."""
+        from datetime import datetime
+        now = datetime(2023, 12, 15, 14, 30, 0)
+        mock_datetime.now.return_value = now
+        mock_datetime.fromtimestamp.return_value = datetime(2022, 11, 10, 10, 15, 0)
+
+        result = _format_file_time(1668074100.0)  # Mock timestamp
+        assert result == "2022"
+
+    @patch('t3api_utils.main.utils.datetime')
+    def test_format_file_time_invalid_timestamp(self, mock_datetime):
+        """Test file time formatting with invalid timestamp."""
+        mock_datetime.fromtimestamp.side_effect = OSError("Invalid timestamp")
+        result = _format_file_time(1234567890.0)
+        assert result == "Unknown"
+
+    @patch('t3api_utils.main.utils.Path')
+    def test_discover_data_files_directory_not_exists(self, mock_path):
+        """Test file discovery when directory doesn't exist."""
+        mock_search_path = MagicMock()
+        mock_search_path.exists.return_value = False
+        mock_path.return_value.resolve.return_value = mock_search_path
+
+        result = _discover_data_files(
+            search_directory="/nonexistent",
+            file_extensions=[".csv", ".json"]
+        )
+
+        assert result == []
+
+    @patch('t3api_utils.main.utils.Path')
+    def test_discover_data_files_with_files(self, mock_path):
+        """Test file discovery with existing files."""
+        # Setup mock files
+        mock_file1 = MagicMock()
+        mock_file1.parts = ("data", "file1.csv")
+        mock_file1.stat.return_value.st_mtime = 1609459200.0  # 2021-01-01
+
+        mock_file2 = MagicMock()
+        mock_file2.parts = ("data", "file2.json")
+        mock_file2.stat.return_value.st_mtime = 1609545600.0  # 2021-01-02
+
+        mock_search_path = MagicMock()
+        mock_search_path.exists.return_value = True
+        mock_search_path.glob.side_effect = [
+            [mock_file1],  # *.csv files
+            [mock_file2]   # *.json files
+        ]
+
+        mock_path.return_value.resolve.return_value = mock_search_path
+
+        result = _discover_data_files(
+            search_directory="/data",
+            file_extensions=[".csv", ".json"]
+        )
+
+        # Should return files sorted by modification time (newest first)
+        assert len(result) == 2
+        assert result[0] == mock_file2  # Newer file first
+        assert result[1] == mock_file1
+
+    @patch('t3api_utils.main.utils.Path')
+    def test_discover_data_files_filters_hidden(self, mock_path):
+        """Test that hidden files are filtered out."""
+        mock_visible_file = MagicMock()
+        mock_visible_file.parts = ("data", "file.csv")
+        mock_visible_file.stat.return_value.st_mtime = 1609459200.0
+
+        mock_hidden_file = MagicMock()
+        mock_hidden_file.parts = ("data", ".hidden.csv")
+
+        mock_search_path = MagicMock()
+        mock_search_path.exists.return_value = True
+        mock_search_path.glob.return_value = [mock_visible_file, mock_hidden_file]
+
+        mock_path.return_value.resolve.return_value = mock_search_path
+
+        result = _discover_data_files(
+            search_directory="/data",
+            file_extensions=[".csv"]
+        )
+
+        assert len(result) == 1
+        assert result[0] == mock_visible_file
+
+    def test_load_file_content_file_not_found(self):
+        """Test loading content from non-existent file."""
+        from pathlib import Path
+        non_existent_path = Path("/nonexistent/file.csv")
+
+        with pytest.raises(FileNotFoundError, match="File not found"):
+            _load_file_content(non_existent_path)
+
+    @patch('builtins.open')
+    @patch('t3api_utils.main.utils.json.load')
+    def test_load_file_content_json(self, mock_json_load, mock_open):
+        """Test loading JSON file content."""
+        from pathlib import Path
+
+        mock_data = {"key": "value", "numbers": [1, 2, 3]}
+        mock_json_load.return_value = mock_data
+
+        # Mock Path methods
+        mock_path = MagicMock(spec=Path)
+        mock_path.exists.return_value = True
+        mock_path.is_file.return_value = True
+        mock_path.suffix = ".json"
+        mock_path.stat.return_value.st_size = 100
+
+        result = _load_file_content(mock_path)
+
+        assert result["content"] == mock_data
+        assert result["format"] == "json"
+        assert result["size"] == 100
+        assert result["path"] == mock_path
+
+    @patch('builtins.open')
+    @patch('t3api_utils.main.utils.csv.DictReader')
+    def test_load_file_content_csv(self, mock_csv_reader, mock_open):
+        """Test loading CSV file content."""
+        from pathlib import Path
+
+        mock_data = [{"name": "Alice", "age": "30"}, {"name": "Bob", "age": "25"}]
+        mock_csv_reader.return_value = iter(mock_data)
+
+        # Mock Path methods
+        mock_path = MagicMock(spec=Path)
+        mock_path.exists.return_value = True
+        mock_path.is_file.return_value = True
+        mock_path.suffix = ".csv"
+        mock_path.stat.return_value.st_size = 50
+
+        result = _load_file_content(mock_path)
+
+        assert result["content"] == mock_data
+        assert result["format"] == "csv"
+        assert result["size"] == 50
+
+    @patch('builtins.open')
+    def test_load_file_content_txt(self, mock_open):
+        """Test loading plain text file content."""
+        from pathlib import Path
+
+        mock_file = MagicMock()
+        mock_file.read.return_value = "This is plain text content"
+        mock_open.return_value.__enter__.return_value = mock_file
+
+        # Mock Path methods
+        mock_path = MagicMock(spec=Path)
+        mock_path.exists.return_value = True
+        mock_path.is_file.return_value = True
+        mock_path.suffix = ".txt"
+        mock_path.stat.return_value.st_size = 25
+
+        result = _load_file_content(mock_path)
+
+        assert result["content"] == "This is plain text content"
+        assert result["format"] == "txt"
+
+    @patch('builtins.open')
+    @patch('t3api_utils.main.utils.json.loads')
+    def test_load_file_content_jsonl(self, mock_json_loads, mock_open):
+        """Test loading JSONL file content."""
+        from pathlib import Path
+
+        # Mock file content with JSON lines
+        mock_file = MagicMock()
+        mock_file.__iter__.return_value = ['{"id": 1}\n', '{"id": 2}\n', '\n']
+        mock_open.return_value.__enter__.return_value = mock_file
+
+        mock_json_loads.side_effect = [{"id": 1}, {"id": 2}]
+
+        # Mock Path methods
+        mock_path = MagicMock(spec=Path)
+        mock_path.exists.return_value = True
+        mock_path.is_file.return_value = True
+        mock_path.suffix = ".jsonl"
+        mock_path.stat.return_value.st_size = 20
+
+        result = _load_file_content(mock_path)
+
+        assert result["content"] == [{"id": 1}, {"id": 2}]
+        assert result["format"] == "jsonl"
+
+    @patch('builtins.open')
+    @patch('t3api_utils.main.utils.json.load')
+    def test_load_file_content_invalid_json(self, mock_json_load, mock_open):
+        """Test loading invalid JSON file."""
+        from pathlib import Path
+        import json
+
+        mock_json_load.side_effect = json.JSONDecodeError("Invalid JSON", "doc", 0)
+
+        # Mock Path methods
+        mock_path = MagicMock(spec=Path)
+        mock_path.exists.return_value = True
+        mock_path.is_file.return_value = True
+        mock_path.suffix = ".json"
+
+        with pytest.raises(ValueError, match="Invalid JSON in file"):
+            _load_file_content(mock_path)
+
+
+class TestPickFile:
+    """Test the main pick_file function."""
+
+    @patch('t3api_utils.main.utils.typer.prompt')
+    @patch('t3api_utils.main.utils.console.print')
+    @patch('t3api_utils.main.utils._discover_data_files')
+    def test_pick_file_single_file_selection(self, mock_discover, mock_console, mock_prompt):
+        """Test selecting a single file from the picker."""
+        from pathlib import Path
+
+        # Mock discovered file
+        mock_file = MagicMock(spec=Path)
+        mock_file.name = "test.csv"
+        mock_file.suffix = ".csv"
+        mock_file.stat.return_value.st_size = 1024
+        mock_file.stat.return_value.st_mtime = 1609459200.0
+        mock_file.relative_to.return_value = Path("test.csv")
+
+        mock_discover.return_value = [mock_file]
+        mock_prompt.return_value = 1
+
+        result = pick_file(load_content=False)
+
+        assert result == mock_file
+        mock_discover.assert_called_once()
+        mock_prompt.assert_called_once_with("Select file (number)", type=int)
+
+    @patch('t3api_utils.main.utils.typer.prompt')
+    @patch('t3api_utils.main.utils.console.print')
+    @patch('t3api_utils.main.utils._discover_data_files')
+    @patch('t3api_utils.main.utils._load_file_content')
+    def test_pick_file_with_content_loading(self, mock_load_content, mock_discover, mock_console, mock_prompt):
+        """Test selecting a file and loading its content."""
+        from pathlib import Path
+
+        # Mock discovered file
+        mock_file = MagicMock(spec=Path)
+        mock_file.name = "test.json"
+        mock_file.suffix = ".json"
+        mock_file.stat.return_value.st_size = 512
+        mock_file.stat.return_value.st_mtime = 1609459200.0
+        mock_file.relative_to.return_value = Path("test.json")
+
+        mock_discover.return_value = [mock_file]
+        mock_prompt.return_value = 1
+
+        mock_file_data = {
+            "path": mock_file,
+            "content": {"key": "value"},
+            "format": "json",
+            "size": 512
+        }
+        mock_load_content.return_value = mock_file_data
+
+        result = pick_file(load_content=True)
+
+        assert result == mock_file_data
+        mock_load_content.assert_called_once_with(mock_file)
+
+    @patch('t3api_utils.main.utils._handle_custom_path_input')
+    @patch('t3api_utils.main.utils.typer.prompt')
+    @patch('t3api_utils.main.utils.console.print')
+    @patch('t3api_utils.main.utils._discover_data_files')
+    def test_pick_file_custom_path_selection(self, mock_discover, mock_console, mock_prompt, mock_custom_path):
+        """Test selecting the custom path option."""
+        from pathlib import Path
+
+        # Mock one regular file plus custom option
+        mock_file = MagicMock(spec=Path)
+        mock_file.name = "test.csv"
+        mock_file.suffix = ".csv"
+        mock_file.stat.return_value.st_size = 1024
+        mock_file.stat.return_value.st_mtime = 1609459200.0
+        mock_file.relative_to.return_value = Path("test.csv")
+
+        mock_discover.return_value = [mock_file]
+        mock_prompt.return_value = 2  # Select custom path option
+
+        mock_custom_file = Path("/custom/path/file.json")
+        mock_custom_path.return_value = mock_custom_file
+
+        result = pick_file(allow_custom_path=True, load_content=False)
+
+        assert result == mock_custom_file
+        mock_custom_path.assert_called_once_with(load_content=False)
+
+    @patch('t3api_utils.main.utils.print_error')
+    @patch('t3api_utils.main.utils._discover_data_files')
+    def test_pick_file_no_files_no_custom_path(self, mock_discover, mock_print_error):
+        """Test behavior when no files found and custom path disabled."""
+        mock_discover.return_value = []
+
+        with pytest.raises(Exit):
+            pick_file(allow_custom_path=False)
+
+        mock_print_error.assert_called_once_with("No data files found in the specified directory.")
+
+    @patch('t3api_utils.main.utils.typer.prompt')
+    @patch('t3api_utils.main.utils._handle_custom_path_input')
+    @patch('t3api_utils.main.utils.console.print')
+    @patch('t3api_utils.main.utils._discover_data_files')
+    def test_pick_file_no_files_with_custom_path(self, mock_discover, mock_console, mock_custom_path, mock_prompt):
+        """Test behavior when no files found but custom path enabled."""
+        from pathlib import Path
+
+        mock_discover.return_value = []
+        mock_custom_file = Path("/custom/file.csv")
+        mock_custom_path.return_value = mock_custom_file
+        mock_prompt.return_value = 1  # Select the only option (custom path)
+
+        result = pick_file(allow_custom_path=True)
+
+        assert result == mock_custom_file
+        mock_custom_path.assert_called_once_with(load_content=False)
+
+    @patch('t3api_utils.main.utils.typer.prompt')
+    @patch('t3api_utils.main.utils.console.print')
+    @patch('t3api_utils.main.utils._discover_data_files')
+    def test_pick_file_invalid_selection(self, mock_discover, mock_console, mock_prompt):
+        """Test handling invalid file selection."""
+        from pathlib import Path
+
+        mock_file = MagicMock(spec=Path)
+        mock_file.name = "test.csv"
+        mock_file.suffix = ".csv"
+        mock_file.stat.return_value.st_size = 1024
+        mock_file.stat.return_value.st_mtime = 1609459200.0
+        mock_file.relative_to.return_value = Path("test.csv")
+
+        mock_discover.return_value = [mock_file]
+        mock_prompt.side_effect = [99, 1]  # Invalid selection first, then valid
+
+        result = pick_file(load_content=False)
+
+        assert result == mock_file
+        assert mock_prompt.call_count == 2
+
+    @patch('t3api_utils.main.utils.typer.prompt')
+    @patch('t3api_utils.main.utils._discover_data_files')
+    def test_pick_file_keyboard_interrupt(self, mock_discover, mock_prompt):
+        """Test handling keyboard interrupt."""
+        from pathlib import Path
+
+        # Mock file with proper string returns for rendering
+        mock_file = MagicMock(spec=Path)
+        mock_file.name = "test.csv"
+        mock_file.suffix = ".csv"
+        mock_file.stat.return_value.st_size = 1024
+        mock_file.stat.return_value.st_mtime = 1609459200.0
+        mock_file.relative_to.return_value = Path("test.csv")
+
+        mock_discover.return_value = [mock_file]
+        mock_prompt.side_effect = KeyboardInterrupt()
+
+        with pytest.raises(Exit):
+            pick_file()
+
+    def test_pick_file_with_custom_extensions(self):
+        """Test pick_file with custom file extensions."""
+        with patch('t3api_utils.main.utils._discover_data_files') as mock_discover:
+            mock_discover.return_value = []
+
+            with pytest.raises(Exit):
+                pick_file(
+                    file_extensions=[".xml", ".yaml"],
+                    allow_custom_path=False
+                )
+
+            mock_discover.assert_called_once_with(
+                search_directory=".",
+                file_extensions=[".xml", ".yaml"],
+                include_subdirectories=False
+            )
+
+    def test_pick_file_include_subdirectories(self):
+        """Test pick_file with subdirectory search enabled."""
+        with patch('t3api_utils.main.utils._discover_data_files') as mock_discover:
+            mock_discover.return_value = []
+
+            with pytest.raises(Exit):
+                pick_file(
+                    search_directory="/data",
+                    include_subdirectories=True,
+                    allow_custom_path=False
+                )
+
+            mock_discover.assert_called_once_with(
+                search_directory="/data",
+                file_extensions=[".csv", ".json", ".txt", ".tsv", ".jsonl"],
+                include_subdirectories=True
+            )
