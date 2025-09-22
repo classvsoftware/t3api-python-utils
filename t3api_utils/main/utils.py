@@ -12,19 +12,6 @@ import duckdb
 import typer
 from rich.table import Table
 
-from t3api_utils.style import (
-    console,
-    print_error,
-    print_header,
-    print_info,
-    print_labeled_info,
-    print_progress,
-    print_state_info,
-    print_subheader,
-    print_success,
-    print_warning,
-)
-
 from t3api_utils.api.client import T3APIClient
 from t3api_utils.api.interfaces import MetrcCollectionResponse, MetrcObject
 from t3api_utils.api.operations import get_data
@@ -32,32 +19,74 @@ from t3api_utils.api.parallel import (load_all_data_sync,
                                       parallel_load_collection_enhanced)
 from t3api_utils.auth.interfaces import T3Credentials
 from t3api_utils.auth.utils import (
+    create_api_key_authenticated_client,
     create_credentials_authenticated_client_or_error,
     create_credentials_authenticated_client_or_error_async,
     create_jwt_authenticated_client)
 from t3api_utils.cli.utils import resolve_auth_inputs_or_error
 from t3api_utils.collection.utils import extract_data, parallel_load_collection
-from t3api_utils.db.utils import (create_duckdb_connection, create_table_from_data,
-                                  export_duckdb_schema, flatten_and_extract)
+from t3api_utils.db.utils import (create_duckdb_connection,
+                                  create_table_from_data, export_duckdb_schema,
+                                  flatten_and_extract)
 from t3api_utils.exceptions import AuthenticationError
 from t3api_utils.file.utils import (collection_to_dicts, open_file,
                                     save_dicts_to_csv, save_dicts_to_json)
 from t3api_utils.interfaces import HasData, P, SerializableObject, T
 from t3api_utils.logging import get_logger
+from t3api_utils.style import (console, print_error, print_header, print_info,
+                               print_labeled_info, print_progress,
+                               print_state_info, print_subheader,
+                               print_success, print_warning)
 
 logger = get_logger(__name__)
 
 
-async def get_authenticated_client_or_error_async() -> T3APIClient:
+def _pick_authentication_method() -> str:
     """
-    High-level method to return an authenticated httpx-based T3 API client (async).
+    Interactive picker for selecting authentication method.
 
     Returns:
-        T3APIClient: Authenticated httpx-based client
+        Selected authentication method: 'credentials', 'jwt', or 'api_key'
 
     Raises:
-        AuthenticationError: If authentication fails
+        typer.Exit: If user provides invalid selection
     """
+    print_subheader("Authentication Method")
+
+    # Define authentication options
+    auth_options = [
+        ("credentials", "Credentials", "Username/password authentication"),
+        ("jwt", "JWT Token", "Pre-existing JWT token (with validation)"),
+        ("api_key", "API Key", "API key authentication (not yet implemented)"),
+    ]
+
+    # Create table following CLI picker standards
+    table = Table(title="Available Authentication Methods", border_style="magenta", header_style="bold magenta")
+    table.add_column("#", style="magenta", justify="right")
+    table.add_column("Method", style="bright_white")
+    table.add_column("Description", style="cyan")
+
+    for idx, (_, method, description) in enumerate(auth_options, start=1):
+        table.add_row(str(idx), method, description)
+
+    console.print(table)
+
+    # Get user choice
+    while True:
+        try:
+            choice = typer.prompt("Select authentication method (number)", type=int)
+            if 1 <= choice <= len(auth_options):
+                selected_method: str = auth_options[choice - 1][0]
+                return selected_method
+            else:
+                print_error(f"Invalid selection. Please choose 1-{len(auth_options)}.")
+        except (ValueError, typer.Abort, KeyboardInterrupt):
+            print_error("Invalid input or operation cancelled.")
+            raise typer.Exit(code=1)
+
+
+async def _authenticate_with_credentials_async() -> T3APIClient:
+    """Helper function for credential-based authentication (async)."""
     try:
         credentials: T3Credentials = resolve_auth_inputs_or_error()
     except AuthenticationError as e:
@@ -69,7 +98,7 @@ async def get_authenticated_client_or_error_async() -> T3APIClient:
 
     try:
         api_client = await create_credentials_authenticated_client_or_error_async(**credentials)
-        logger.info("[bold green]Successfully authenticated with T3 API.[/]")
+        logger.info("[bold green]Successfully authenticated with T3 API using credentials.[/]")
         return api_client
     except AuthenticationError as e:
         logger.error(f"Authentication failed: {e}")
@@ -79,18 +108,85 @@ async def get_authenticated_client_or_error_async() -> T3APIClient:
         raise
 
 
-def get_authenticated_client_or_error() -> T3APIClient:
+def _authenticate_with_credentials() -> T3APIClient:
+    """Helper function for credential-based authentication (sync wrapper)."""
+    import asyncio
+    return asyncio.run(_authenticate_with_credentials_async())
+
+
+def _authenticate_with_jwt() -> T3APIClient:
+    """Helper function for JWT token authentication."""
+    print_subheader("JWT Token Authentication")
+
+    # Get JWT token from user
+    jwt_token = typer.prompt("Enter JWT token", hide_input=True)
+
+    # Always validate JWT token using /whoami endpoint
+    return get_jwt_authenticated_client_or_error_with_validation(jwt_token=jwt_token)
+
+
+def _authenticate_with_api_key() -> T3APIClient:
+    """Helper function for API key authentication (placeholder)."""
+    print_subheader("API Key Authentication")
+
+    # Get API key from user
+    api_key = typer.prompt("Enter API key", hide_input=True)
+
+    return get_api_key_authenticated_client_or_error(api_key=api_key)
+
+
+async def get_authenticated_client_or_error_async() -> T3APIClient:
     """
-    High-level method to return an authenticated httpx-based T3 API client (sync wrapper).
+    High-level method to return an authenticated httpx-based T3 API client (async).
+
+    Displays an interactive picker for authentication method selection and routes to
+    the appropriate authentication method based on user choice.
 
     Returns:
         T3APIClient: Authenticated httpx-based client
 
     Raises:
         AuthenticationError: If authentication fails
+        typer.Exit: If user cancels or provides invalid input
     """
-    import asyncio
-    return asyncio.run(get_authenticated_client_or_error_async())
+    auth_method = _pick_authentication_method()
+
+    if auth_method == "credentials":
+        return await _authenticate_with_credentials_async()
+    elif auth_method == "jwt":
+        # JWT auth is sync only, so we need to handle it specially
+        return _authenticate_with_jwt()
+    elif auth_method == "api_key":
+        return _authenticate_with_api_key()
+    else:
+        raise AuthenticationError(f"Unknown authentication method: {auth_method}")
+
+
+def get_authenticated_client_or_error(*, auth_method: Optional[str] = None) -> T3APIClient:
+    """
+    High-level method to return an authenticated httpx-based T3 API client (sync wrapper).
+
+    Displays an interactive picker for authentication method selection and routes to
+    the appropriate authentication method based on user choice.
+
+    Returns:
+        T3APIClient: Authenticated httpx-based client
+
+    Raises:
+        AuthenticationError: If authentication fails
+        typer.Exit: If user cancels or provides invalid input
+    """
+    if auth_method is None:
+        auth_method = _pick_authentication_method()
+
+    if auth_method == "credentials":
+        return _authenticate_with_credentials()
+    elif auth_method == "jwt":
+        return _authenticate_with_jwt()
+    elif auth_method == "api_key":
+        return _authenticate_with_api_key()
+    else:
+        raise AuthenticationError(f"Unknown authentication method: {auth_method}")
 
 
 def get_jwt_authenticated_client_or_error(*, jwt_token: str) -> T3APIClient:
@@ -111,7 +207,7 @@ def get_jwt_authenticated_client_or_error(*, jwt_token: str) -> T3APIClient:
         AuthenticationError: If authentication fails
     """
     try:
-        api_client = create_jwt_authenticated_client(jwt_token)
+        api_client = create_jwt_authenticated_client(jwt_token=jwt_token)
         logger.info("[bold green]Successfully authenticated with T3 API using JWT token.[/]")
         return api_client
     except ValueError as e:
@@ -142,7 +238,7 @@ def get_jwt_authenticated_client_or_error_with_validation(*, jwt_token: str) -> 
     """
     try:
         # Create the JWT authenticated client
-        api_client = create_jwt_authenticated_client(jwt_token)
+        api_client = create_jwt_authenticated_client(jwt_token=jwt_token)
 
         # Validate the JWT token by calling /whoami endpoint
         try:
@@ -173,6 +269,38 @@ def get_jwt_authenticated_client_or_error_with_validation(*, jwt_token: str) -> 
         raise
     except Exception as e:
         logger.exception("Unexpected error while creating and validating JWT authenticated client.")
+        raise AuthenticationError(f"Unexpected authentication error: {str(e)}") from e
+
+
+def get_api_key_authenticated_client_or_error(*, api_key: str) -> T3APIClient:
+    """
+    High-level method to return an API key-authenticated httpx-based T3 API client (PLACEHOLDER).
+
+    This function provides a placeholder for future API key authentication support.
+    Currently raises NotImplementedError with guidance for users.
+
+    Args:
+        api_key: API key for the T3 API
+
+    Returns:
+        T3APIClient: Authenticated httpx-based client
+
+    Raises:
+        ValueError: If api_key is empty or None
+        NotImplementedError: Always raised - API key authentication not yet implemented
+    """
+    try:
+        api_client = create_api_key_authenticated_client(api_key)
+        logger.info("[bold green]Successfully authenticated with T3 API using API key.[/]")
+        return api_client
+    except ValueError as e:
+        logger.error(f"API key validation error: {e}")
+        raise AuthenticationError(f"Invalid API key: {e}") from e
+    except NotImplementedError as e:
+        logger.error(f"API key authentication not implemented: {e}")
+        raise
+    except Exception as e:
+        logger.exception("Unexpected error while creating API key authenticated client.")
         raise AuthenticationError(f"Unexpected authentication error: {str(e)}") from e
 
 
@@ -346,8 +474,9 @@ def _action_save_csv(*, data: List[Dict[str, Any]], state: _HandlerState) -> Non
 
     try:
         # Use file/utils functions to flatten and save directly to user's path
-        from t3api_utils.file.utils import flatten_dict, prioritized_fieldnames
         import csv
+
+        from t3api_utils.file.utils import flatten_dict, prioritized_fieldnames
 
         flat_dicts = [flatten_dict(d=d) for d in data]
         fieldnames = prioritized_fieldnames(dicts=flat_dicts)
@@ -380,8 +509,9 @@ def _action_save_json(*, data: List[Dict[str, Any]], state: _HandlerState) -> No
 
     try:
         # Save directly to user's chosen path
-        from t3api_utils.file.utils import default_json_serializer
         import json
+
+        from t3api_utils.file.utils import default_json_serializer
 
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(

@@ -92,54 +92,88 @@ The `t3api_utils` package is organized into focused modules:
 
 **Usage:**
 ```python
-# Create authenticated client using credentials
-client = get_authenticated_client_or_error()
+# Interactive authentication method picker (recommended for CLI usage)
+client = get_authenticated_client_or_error()  # Shows picker menu
+
+# Direct authentication methods (for programmatic usage)
 client = create_credentials_authenticated_client_or_error(hostname="...", username="...", password="...")
-
-# Alternative: Create authenticated client using pre-existing JWT token
 client = get_jwt_authenticated_client_or_error(jwt_token="your_jwt_token_here")
-
-# Create authenticated client with JWT validation (recommended for production)
 client = get_jwt_authenticated_client_or_error_with_validation(jwt_token="your_jwt_token_here")
+client = get_api_key_authenticated_client_or_error(api_key="your_api_key_here")  # Not yet implemented
 ```
 
 **Key Features:**
+- **Interactive Authentication**: Smart picker for authentication method selection
+- **Multiple Auth Methods**: Credentials, JWT tokens, and API keys (placeholder)
 - **Async Support**: `AsyncT3APIClient` for high-performance concurrent operations
 - **Rate Limiting**: Configurable requests-per-second limits to avoid API throttling
 - **Enhanced Error Handling**: Better error messages and retry policies with exponential backoff
 - **Batching**: Process large datasets in configurable batch sizes
-- **JWT Authentication**: Support for pre-existing JWT tokens with optional validation
+- **JWT Validation**: Token verification via /whoami endpoint
 
-### JWT Authentication Options
+### Interactive Authentication Picker
 
-The library supports two JWT authentication methods:
+The main authentication functions now provide an interactive picker for method selection:
 
-**1. Basic JWT Authentication:**
 ```python
-from t3api_utils.main.utils import get_jwt_authenticated_client_or_error
+from t3api_utils.main.utils import get_authenticated_client_or_error
 
-# Create client with JWT token (no validation)
-client = get_jwt_authenticated_client_or_error(jwt_token="your_jwt_token_here")
+# Shows interactive picker with these options:
+# 1. Credentials - Username/password authentication
+# 2. JWT Token - Pre-existing JWT token
+# 3. API Key - API key authentication (not yet implemented)
+client = get_authenticated_client_or_error()
 ```
 
-**2. JWT Authentication with Validation (Recommended):**
-```python
-from t3api_utils.main.utils import get_jwt_authenticated_client_or_error_with_validation
+**Picker Features:**
+- **Rich Table Display**: Consistent styling with other CLI pickers
+- **Clear Descriptions**: Each method includes helpful description
+- **Input Validation**: Handles invalid selections gracefully
+- **Keyboard Interrupts**: Clean exit on Ctrl+C
+- **Method Routing**: Automatically routes to appropriate auth flow
 
-# Create client with JWT token validation via /whoami endpoint
+### Authentication Method Details
+
+**1. Credentials Authentication:**
+- Interactive prompts for hostname, username, password
+- Conditional email/OTP collection based on hostname
+- Automatic credential saving to `.t3.env` file
+- Environment variable support for automation
+
+**2. JWT Token Authentication:**
+- Automatic token validation via `/v2/auth/whoami` endpoint
+- Support for pre-existing tokens from external auth flows
+- Clear error messages for expired/invalid tokens
+- Ensures token validity before proceeding with operations
+
+**3. API Key Authentication (Placeholder):**
+- Currently raises `NotImplementedError` with helpful guidance
+- Interactive prompt for API key input
+- Future implementation planned for API key support
+
+### Direct Authentication Methods
+
+For programmatic usage, bypass the picker with direct method calls:
+
+```python
+# Direct JWT authentication options
+from t3api_utils.main.utils import (
+    get_jwt_authenticated_client_or_error,
+    get_jwt_authenticated_client_or_error_with_validation
+)
+
+# Basic JWT authentication (no validation)
+client = get_jwt_authenticated_client_or_error(jwt_token="your_jwt_token_here")
+
+# JWT authentication with validation (recommended)
 client = get_jwt_authenticated_client_or_error_with_validation(jwt_token="your_jwt_token_here")
 ```
-
-**JWT Validation Benefits:**
-- **Token Validity Check**: Ensures JWT is not expired or invalid
-- **Permission Verification**: Confirms token has required API access
-- **Early Error Detection**: Fails fast with clear error messages
-- **Production Safety**: Recommended for production environments
 
 **Error Handling:**
 - `AuthenticationError` raised for invalid/expired tokens
 - Clear error messages for different failure scenarios (401, 403, etc.)
 - Automatic client cleanup on validation failure
+- `typer.Exit` raised for user cancellation
 
 ### Auto-Generated TypedDict Interfaces
 

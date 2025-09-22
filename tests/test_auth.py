@@ -3,11 +3,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from t3api_utils.auth.utils import create_jwt_authenticated_client
 from t3api_utils.api.client import T3APIClient
+from t3api_utils.auth.utils import create_jwt_authenticated_client
 from t3api_utils.http.utils import HTTPConfig, RetryPolicy
-
-
 
 
 class TestCreateJwtAuthenticatedClient:
@@ -21,7 +19,7 @@ class TestCreateJwtAuthenticatedClient:
             mock_client = MagicMock(spec=T3APIClient)
             mock_client_class.return_value = mock_client
 
-            result = create_jwt_authenticated_client(test_token)
+            result = create_jwt_authenticated_client(jwt_token=test_token)
 
             assert result == mock_client
 
@@ -48,7 +46,7 @@ class TestCreateJwtAuthenticatedClient:
             mock_client = MagicMock(spec=T3APIClient)
             mock_client_class.return_value = mock_client
 
-            result = create_jwt_authenticated_client(test_token, host=custom_host)
+            result = create_jwt_authenticated_client(jwt_token=test_token, host=custom_host)
 
             assert result == mock_client
 
@@ -71,7 +69,7 @@ class TestCreateJwtAuthenticatedClient:
             mock_client = MagicMock(spec=T3APIClient)
             mock_client_class.return_value = mock_client
 
-            result = create_jwt_authenticated_client(test_token, config=custom_config)
+            result = create_jwt_authenticated_client(jwt_token=test_token, config=custom_config)
 
             assert result == mock_client
 
@@ -95,7 +93,7 @@ class TestCreateJwtAuthenticatedClient:
             mock_client_class.return_value = mock_client
 
             result = create_jwt_authenticated_client(
-                test_token,
+                jwt_token=test_token,
                 host=specified_host,
                 config=original_config
             )
@@ -125,7 +123,7 @@ class TestCreateJwtAuthenticatedClient:
             mock_client_class.return_value = mock_client
 
             result = create_jwt_authenticated_client(
-                test_token,
+                jwt_token=test_token,
                 config=custom_config,
                 retry_policy=custom_retry,
                 logging_hooks=None,
@@ -152,7 +150,7 @@ class TestCreateJwtAuthenticatedClient:
             mock_client = MagicMock(spec=T3APIClient)
             mock_client_class.return_value = mock_client
 
-            result = create_jwt_authenticated_client(test_token)
+            result = create_jwt_authenticated_client(jwt_token=test_token)
 
             assert result == mock_client
             mock_client.set_access_token.assert_called_once_with(expected_token)
@@ -160,16 +158,16 @@ class TestCreateJwtAuthenticatedClient:
     def test_jwt_authentication_empty_token_raises_error(self):
         """Test that empty JWT token raises ValueError."""
         with pytest.raises(ValueError, match="JWT token cannot be empty or None"):
-            create_jwt_authenticated_client("")
+            create_jwt_authenticated_client(jwt_token="")
 
     def test_jwt_authentication_none_token_raises_error(self):
         """Test that None JWT token raises ValueError."""
         with pytest.raises(ValueError, match="JWT token cannot be empty or None"):
-            create_jwt_authenticated_client(None)  # type: ignore
+            create_jwt_authenticated_client(jwt_token=None)  # type: ignore
 
     def test_jwt_authentication_whitespace_only_token_raises_error(self):
         """Test that whitespace-only JWT token raises ValueError."""
         with pytest.raises(ValueError, match="JWT token cannot be empty or None"):
-            create_jwt_authenticated_client("   ")
+            create_jwt_authenticated_client(jwt_token="   ")
 
 

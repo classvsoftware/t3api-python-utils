@@ -8,22 +8,28 @@ from typer import Exit
 from t3api_utils.exceptions import AuthenticationError
 from t3api_utils.interfaces import SerializableObject
 from t3api_utils.main.utils import (get_authenticated_client_or_error,
+                                    get_api_key_authenticated_client_or_error,
                                     get_jwt_authenticated_client_or_error,
                                     get_jwt_authenticated_client_or_error_with_validation,
                                     load_collection, pick_license,
                                     save_collection_to_csv,
-                                    save_collection_to_json)
+                                    save_collection_to_json,
+                                    _pick_authentication_method)
 
 
-@patch("t3api_utils.main.utils.get_authenticated_client_or_error_async")
-def test_get_authenticated_client_or_error(mock_get_client_async):
+@patch("t3api_utils.main.utils._authenticate_with_credentials")
+@patch("t3api_utils.main.utils._pick_authentication_method")
+def test_get_authenticated_client_or_error(mock_pick, mock_auth_creds):
+    """Test get_authenticated_client_or_error with credentials selection."""
+    mock_pick.return_value = "credentials"
     mock_client = MagicMock(name="authenticated_client")
-    mock_get_client_async.return_value = mock_client
+    mock_auth_creds.return_value = mock_client
 
     result = get_authenticated_client_or_error()
 
-    mock_get_client_async.assert_called_once()
     assert result == mock_client
+    mock_pick.assert_called_once()
+    mock_auth_creds.assert_called_once()
 
 
 @patch("t3api_utils.main.utils.create_jwt_authenticated_client")
@@ -35,7 +41,7 @@ def test_get_jwt_authenticated_client_or_error_success(mock_create_jwt_client):
 
     result = get_jwt_authenticated_client_or_error(jwt_token=test_token)
 
-    mock_create_jwt_client.assert_called_once_with(test_token)
+    mock_create_jwt_client.assert_called_once_with(jwt_token=test_token)
     assert result == mock_client
 
 
@@ -48,7 +54,7 @@ def test_get_jwt_authenticated_client_or_error_invalid_token(mock_create_jwt_cli
     with pytest.raises(AuthenticationError, match="Invalid JWT token"):
         get_jwt_authenticated_client_or_error(jwt_token=test_token)
 
-    mock_create_jwt_client.assert_called_once_with(test_token)
+    mock_create_jwt_client.assert_called_once_with(jwt_token=test_token)
 
 
 @patch("t3api_utils.main.utils.create_jwt_authenticated_client")
@@ -60,7 +66,7 @@ def test_get_jwt_authenticated_client_or_error_unexpected_error(mock_create_jwt_
     with pytest.raises(RuntimeError, match="Unexpected error"):
         get_jwt_authenticated_client_or_error(jwt_token=test_token)
 
-    mock_create_jwt_client.assert_called_once_with(test_token)
+    mock_create_jwt_client.assert_called_once_with(jwt_token=test_token)
 
 
 @patch("t3api_utils.main.utils.get_data")
@@ -74,7 +80,7 @@ def test_get_jwt_authenticated_client_or_error_with_validation_success(mock_crea
 
     result = get_jwt_authenticated_client_or_error_with_validation(jwt_token=test_token)
 
-    mock_create_jwt_client.assert_called_once_with(test_token)
+    mock_create_jwt_client.assert_called_once_with(jwt_token=test_token)
     mock_get_data.assert_called_once_with(mock_client, "/v2/auth/whoami")
     assert result == mock_client
 
@@ -89,7 +95,7 @@ def test_get_jwt_authenticated_client_or_error_with_validation_invalid_token(moc
     with pytest.raises(AuthenticationError, match="Invalid JWT token"):
         get_jwt_authenticated_client_or_error_with_validation(jwt_token=test_token)
 
-    mock_create_jwt_client.assert_called_once_with(test_token)
+    mock_create_jwt_client.assert_called_once_with(jwt_token=test_token)
     mock_get_data.assert_not_called()
 
 
@@ -109,7 +115,7 @@ def test_get_jwt_authenticated_client_or_error_with_validation_unauthorized(mock
     with pytest.raises(AuthenticationError, match="JWT token is invalid or expired"):
         get_jwt_authenticated_client_or_error_with_validation(jwt_token=test_token)
 
-    mock_create_jwt_client.assert_called_once_with(test_token)
+    mock_create_jwt_client.assert_called_once_with(jwt_token=test_token)
     mock_get_data.assert_called_once_with(mock_client, "/v2/auth/whoami")
     # Verify client was closed on validation failure
     mock_asyncio_run.assert_called_once()
@@ -131,7 +137,7 @@ def test_get_jwt_authenticated_client_or_error_with_validation_forbidden(mock_cr
     with pytest.raises(AuthenticationError, match="JWT token does not have sufficient permissions"):
         get_jwt_authenticated_client_or_error_with_validation(jwt_token=test_token)
 
-    mock_create_jwt_client.assert_called_once_with(test_token)
+    mock_create_jwt_client.assert_called_once_with(jwt_token=test_token)
     mock_get_data.assert_called_once_with(mock_client, "/v2/auth/whoami")
     # Verify client was closed on validation failure
     mock_asyncio_run.assert_called_once()
@@ -152,7 +158,7 @@ def test_get_jwt_authenticated_client_or_error_with_validation_generic_error(moc
     with pytest.raises(AuthenticationError, match="JWT token validation failed: Network connection failed"):
         get_jwt_authenticated_client_or_error_with_validation(jwt_token=test_token)
 
-    mock_create_jwt_client.assert_called_once_with(test_token)
+    mock_create_jwt_client.assert_called_once_with(jwt_token=test_token)
     mock_get_data.assert_called_once_with(mock_client, "/v2/auth/whoami")
     # Verify client was closed on validation failure
     mock_asyncio_run.assert_called_once()
@@ -168,8 +174,146 @@ def test_get_jwt_authenticated_client_or_error_with_validation_unexpected_error(
     with pytest.raises(AuthenticationError, match="Unexpected authentication error: Unexpected system error"):
         get_jwt_authenticated_client_or_error_with_validation(jwt_token=test_token)
 
-    mock_create_jwt_client.assert_called_once_with(test_token)
+    mock_create_jwt_client.assert_called_once_with(jwt_token=test_token)
     mock_get_data.assert_not_called()
+
+
+@patch("t3api_utils.main.utils.create_api_key_authenticated_client")
+def test_get_api_key_authenticated_client_or_error_not_implemented(mock_create_api_key_client):
+    """Test API key authentication raises NotImplementedError."""
+    test_api_key = "test-api-key-123"
+    mock_create_api_key_client.side_effect = NotImplementedError(
+        "API key authentication is not yet implemented."
+    )
+
+    with pytest.raises(NotImplementedError, match="API key authentication is not yet implemented"):
+        get_api_key_authenticated_client_or_error(api_key=test_api_key)
+
+    mock_create_api_key_client.assert_called_once_with(test_api_key)
+
+
+@patch("t3api_utils.main.utils.create_api_key_authenticated_client")
+def test_get_api_key_authenticated_client_or_error_invalid_key(mock_create_api_key_client):
+    """Test API key authentication with invalid key."""
+    test_api_key = ""
+    mock_create_api_key_client.side_effect = ValueError("API key cannot be empty or None")
+
+    with pytest.raises(AuthenticationError, match="Invalid API key"):
+        get_api_key_authenticated_client_or_error(api_key=test_api_key)
+
+    mock_create_api_key_client.assert_called_once_with(test_api_key)
+
+
+@patch("typer.prompt")
+@patch("t3api_utils.main.utils.print_error")
+@patch("t3api_utils.main.utils.console.print")
+def test_pick_authentication_method_credentials(mock_console, mock_print_error, mock_prompt):
+    """Test authentication picker returns credentials."""
+    mock_prompt.return_value = 1
+    result = _pick_authentication_method()
+    assert result == "credentials"
+    mock_prompt.assert_called_once()
+
+
+@patch("typer.prompt")
+@patch("t3api_utils.main.utils.print_error")
+@patch("t3api_utils.main.utils.console.print")
+def test_pick_authentication_method_jwt(mock_console, mock_print_error, mock_prompt):
+    """Test authentication picker returns jwt."""
+    mock_prompt.return_value = 2
+    result = _pick_authentication_method()
+    assert result == "jwt"
+    mock_prompt.assert_called_once()
+
+
+@patch("typer.prompt")
+@patch("t3api_utils.main.utils.print_error")
+@patch("t3api_utils.main.utils.console.print")
+def test_pick_authentication_method_api_key(mock_console, mock_print_error, mock_prompt):
+    """Test authentication picker returns api_key."""
+    mock_prompt.return_value = 3
+    result = _pick_authentication_method()
+    assert result == "api_key"
+    mock_prompt.assert_called_once()
+
+
+@patch("typer.prompt")
+@patch("t3api_utils.main.utils.print_error")
+@patch("t3api_utils.main.utils.console.print")
+def test_pick_authentication_method_invalid_choice(mock_console, mock_print_error, mock_prompt):
+    """Test authentication picker handles invalid choice."""
+    mock_prompt.side_effect = [4, 1]  # Invalid choice first, then valid
+    result = _pick_authentication_method()
+    assert result == "credentials"
+    assert mock_prompt.call_count == 2
+    mock_print_error.assert_called_once_with("Invalid selection. Please choose 1-3.")
+
+
+@patch("typer.prompt")
+@patch("t3api_utils.main.utils.print_error")
+@patch("t3api_utils.main.utils.console.print")
+def test_pick_authentication_method_keyboard_interrupt(mock_console, mock_print_error, mock_prompt):
+    """Test authentication picker handles keyboard interrupt."""
+    mock_prompt.side_effect = KeyboardInterrupt()
+    with pytest.raises(Exit):
+        _pick_authentication_method()
+    mock_print_error.assert_called_once_with("Invalid input or operation cancelled.")
+
+
+@patch("t3api_utils.main.utils._authenticate_with_credentials")
+@patch("t3api_utils.main.utils._pick_authentication_method")
+def test_get_authenticated_client_or_error_routes_to_credentials(mock_pick, mock_auth_creds):
+    """Test main auth function routes to credentials authentication."""
+    mock_pick.return_value = "credentials"
+    mock_client = MagicMock()
+    mock_auth_creds.return_value = mock_client
+
+    result = get_authenticated_client_or_error()
+
+    assert result == mock_client
+    mock_pick.assert_called_once()
+    mock_auth_creds.assert_called_once()
+
+
+@patch("t3api_utils.main.utils._authenticate_with_jwt")
+@patch("t3api_utils.main.utils._pick_authentication_method")
+def test_get_authenticated_client_or_error_routes_to_jwt(mock_pick, mock_auth_jwt):
+    """Test main auth function routes to JWT authentication."""
+    mock_pick.return_value = "jwt"
+    mock_client = MagicMock()
+    mock_auth_jwt.return_value = mock_client
+
+    result = get_authenticated_client_or_error()
+
+    assert result == mock_client
+    mock_pick.assert_called_once()
+    mock_auth_jwt.assert_called_once()
+
+
+@patch("t3api_utils.main.utils._authenticate_with_api_key")
+@patch("t3api_utils.main.utils._pick_authentication_method")
+def test_get_authenticated_client_or_error_routes_to_api_key(mock_pick, mock_auth_api_key):
+    """Test main auth function routes to API key authentication."""
+    mock_pick.return_value = "api_key"
+    mock_client = MagicMock()
+    mock_auth_api_key.return_value = mock_client
+
+    result = get_authenticated_client_or_error()
+
+    assert result == mock_client
+    mock_pick.assert_called_once()
+    mock_auth_api_key.assert_called_once()
+
+
+@patch("t3api_utils.main.utils._pick_authentication_method")
+def test_get_authenticated_client_or_error_unknown_method(mock_pick):
+    """Test main auth function handles unknown authentication method."""
+    mock_pick.return_value = "unknown"
+
+    with pytest.raises(AuthenticationError, match="Unknown authentication method: unknown"):
+        get_authenticated_client_or_error()
+
+    mock_pick.assert_called_once()
 
 
 @patch("t3api_utils.main.utils.console.print")

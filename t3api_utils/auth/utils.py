@@ -278,8 +278,8 @@ def authenticate_and_get_response(
 
 
 def create_jwt_authenticated_client(
-    jwt_token: str,
     *,
+    jwt_token: str,
     host: Optional[str] = None,
     config: Optional[HTTPConfig] = None,
     retry_policy: Optional[RetryPolicy] = None,
@@ -308,7 +308,7 @@ def create_jwt_authenticated_client(
 
     Example:
         >>> token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-        >>> client = create_jwt_authenticated_client(token)
+        >>> client = create_jwt_authenticated_client(jwt_token=token)
         >>> # Client is ready to use for API calls (note: it's async)
     """
     if not jwt_token or not jwt_token.strip():
@@ -342,3 +342,47 @@ def create_jwt_authenticated_client(
     client.set_access_token(jwt_token.strip())
 
     return client
+
+
+def create_api_key_authenticated_client(
+    api_key: str,
+    *,
+    host: Optional[str] = None,
+    config: Optional[HTTPConfig] = None,
+    retry_policy: Optional[RetryPolicy] = None,
+    logging_hooks: Optional[LoggingHooks] = None,
+    headers: Optional[Dict[str, str]] = None,
+) -> T3APIClient:
+    """
+    Creates an authenticated T3 API client using an API key (PLACEHOLDER IMPLEMENTATION).
+
+    This function is a placeholder for future API key authentication support.
+    Currently raises NotImplementedError with guidance for users.
+
+    Args:
+        api_key: API key for the T3 API
+        host: API host URL (optional, defaults to production if no config provided)
+        config: Optional HTTP configuration (timeout, etc.)
+        retry_policy: Optional retry policy for failed requests
+        logging_hooks: Optional request/response logging hooks
+        headers: Optional additional headers to include with requests
+
+    Returns:
+        T3APIClient: An authenticated async client instance
+
+    Raises:
+        NotImplementedError: Always raised - API key authentication not yet implemented
+        ValueError: If api_key is empty or None
+
+    Example:
+        >>> # This will raise NotImplementedError
+        >>> client = create_api_key_authenticated_client("your-api-key")
+    """
+    if not api_key or not api_key.strip():
+        raise ValueError("API key cannot be empty or None")
+
+    raise NotImplementedError(
+        "API key authentication is not yet implemented. "
+        "Please use credential-based authentication or JWT token authentication instead. "
+        "Available methods: get_authenticated_client_or_error() or get_jwt_authenticated_client_or_error()"
+    )
