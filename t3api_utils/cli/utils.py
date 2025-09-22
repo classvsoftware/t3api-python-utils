@@ -5,7 +5,7 @@ import typer
 from dotenv import load_dotenv, set_key
 
 from t3api_utils.auth.interfaces import T3Credentials
-from t3api_utils.cli.consts import DEFAULT_ENV_PATH, OTP_WHITELIST, EnvKeys
+from t3api_utils.cli.consts import DEFAULT_ENV_PATH, OTP_WHITELIST, CREDENTIAL_EMAIL_WHITELIST, EnvKeys
 from t3api_utils.exceptions import AuthenticationError
 from t3api_utils.logging import get_logger
 from t3api_utils.style import print_error, print_info, print_subheader
@@ -25,6 +25,7 @@ def load_credentials_from_env() -> Dict[str, str]:
     hostname = (os.getenv(EnvKeys.METRC_HOSTNAME.value) or "").strip()
     username = (os.getenv(EnvKeys.METRC_USERNAME.value) or "").strip()
     password = (os.getenv(EnvKeys.METRC_PASSWORD.value) or "").strip()
+    email = (os.getenv(EnvKeys.METRC_EMAIL.value) or "").strip()
 
     if hostname:
         creds["hostname"] = hostname
@@ -32,6 +33,8 @@ def load_credentials_from_env() -> Dict[str, str]:
         creds["username"] = username
     if password:
         creds["password"] = password
+    if email:
+        creds["email"] = email
 
     return creds
 
@@ -46,10 +49,12 @@ def offer_to_save_credentials(*, credentials: T3Credentials) -> None:
     current_hostname = os.getenv(EnvKeys.METRC_HOSTNAME.value, "").strip()
     current_username = os.getenv(EnvKeys.METRC_USERNAME.value, "").strip()
     current_password = os.getenv(EnvKeys.METRC_PASSWORD.value, "").strip()
+    current_email = os.getenv(EnvKeys.METRC_EMAIL.value, "").strip()
 
     hostname_differs = credentials["hostname"] != current_hostname
     username_differs = credentials["username"] != current_username
     password_differs = credentials["password"] != current_password
+    email_differs = credentials.get("email") != current_email
 
     if not env_exists:
         if typer.confirm(
@@ -66,7 +71,12 @@ def offer_to_save_credentials(*, credentials: T3Credentials) -> None:
             set_key(
                 DEFAULT_ENV_PATH, EnvKeys.METRC_PASSWORD.value, credentials["password"]
             )
-    elif hostname_differs or username_differs or password_differs:
+            email_value = credentials.get("email")
+            if email_value:
+                set_key(
+                    DEFAULT_ENV_PATH, EnvKeys.METRC_EMAIL.value, email_value
+                )
+    elif hostname_differs or username_differs or password_differs or email_differs:
         if typer.confirm(
             f"Some credential values differ from those in [bold]{DEFAULT_ENV_PATH}[/]. Update them?",
             default=True,
@@ -81,6 +91,11 @@ def offer_to_save_credentials(*, credentials: T3Credentials) -> None:
             set_key(
                 DEFAULT_ENV_PATH, EnvKeys.METRC_PASSWORD.value, credentials["password"]
             )
+            email_value = credentials.get("email")
+            if email_value:
+                set_key(
+                    DEFAULT_ENV_PATH, EnvKeys.METRC_EMAIL.value, email_value
+                )
 
 
 def prompt_for_credentials_or_error(**kwargs: object) -> T3Credentials:
@@ -90,6 +105,7 @@ def prompt_for_credentials_or_error(**kwargs: object) -> T3Credentials:
     hostname = str(kwargs.get("hostname", "")) if kwargs.get("hostname") else None
     username = str(kwargs.get("username", "")) if kwargs.get("username") else None
     password = str(kwargs.get("password", "")) if kwargs.get("password") else None
+    email = str(kwargs.get("email", "")) if kwargs.get("email") else None
 
     if hostname:
         print_info(f"Using stored value for hostname: {hostname}")
@@ -120,6 +136,17 @@ def prompt_for_credentials_or_error(**kwargs: object) -> T3Credentials:
             print_error("Invalid 2-factor authentication entered.")
             raise AuthenticationError(f"Invalid 2-factor authentication: {otp}")
         credentials["otp"] = otp
+
+    if hostname in CREDENTIAL_EMAIL_WHITELIST:
+        if email:
+            print_info(f"Using stored value for email: {email}")
+            credentials["email"] = email
+        else:
+            email_input = typer.prompt("Enter Metrc email address")
+            if not email_input or "@" not in email_input:
+                print_error("Invalid email address entered.")
+                raise AuthenticationError(f"Invalid email address: {email_input}")
+            credentials["email"] = email_input
 
     for key, value in credentials.items():
         if key not in ("otp", "email") and (not isinstance(value, str) or not value.strip()):
