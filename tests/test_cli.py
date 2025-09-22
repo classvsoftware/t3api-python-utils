@@ -5,7 +5,7 @@ import pytest
 
 from t3api_utils.auth.interfaces import T3Credentials
 from t3api_utils.cli import utils as cli
-from t3api_utils.cli.consts import REQUIRED_ENV_KEYS, EnvKeys
+from t3api_utils.cli.consts import EnvKeys
 from t3api_utils.exceptions import AuthenticationError
 
 
