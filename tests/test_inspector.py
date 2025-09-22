@@ -120,25 +120,23 @@ class TestStatusBar:
         status_bar = StatusBar("Test")
 
         # Mock the update method to avoid Textual widget issues
-        status_bar.update = MagicMock()
+        with patch.object(status_bar, 'update') as mock_update:
+            status_bar.set_position(current=5, filtered=10, total=20)
 
-        status_bar.set_position(current=5, filtered=10, total=20)
-
-        assert status_bar.current_index == 5
-        assert status_bar.filtered_count == 10
-        assert status_bar.total_count == 20
+            assert status_bar.current_index == 5
+            assert status_bar.filtered_count == 10
+            assert status_bar.total_count == 20
 
     def test_status_bar_set_search(self):
         """Test setting search information."""
         status_bar = StatusBar("Test")
 
         # Mock the update method
-        status_bar.update = MagicMock()
+        with patch.object(status_bar, 'update') as mock_update:
+            status_bar.set_search("test query", 5)
 
-        status_bar.set_search("test query", 5)
-
-        assert status_bar.search_query == "test query"
-        assert status_bar.filtered_count == 5
+            assert status_bar.search_query == "test query"
+            assert status_bar.filtered_count == 5
 
     def test_status_bar_update_status_no_search(self):
         """Test status update without search."""
@@ -148,12 +146,11 @@ class TestStatusBar:
         status_bar.total_count = 15
 
         # Mock the update method
-        status_bar.update = MagicMock()
+        with patch.object(status_bar, 'update') as mock_update:
+            status_bar.update_status()
 
-        status_bar.update_status()
-
-        expected_text = "Collection: My Collection | Position: 3/10"
-        status_bar.update.assert_called_once_with(expected_text)
+            expected_text = "Collection: My Collection | Position: 3/10"
+            mock_update.assert_called_once_with(expected_text)
 
     def test_status_bar_update_status_with_search(self):
         """Test status update with search query."""
@@ -164,12 +161,11 @@ class TestStatusBar:
         status_bar.search_query = "search term"
 
         # Mock the update method
-        status_bar.update = MagicMock()
+        with patch.object(status_bar, 'update') as mock_update:
+            status_bar.update_status()
 
-        status_bar.update_status()
-
-        expected_text = "Collection: My Collection | Position: 2/5 | Search: 'search term' (5/20)"
-        status_bar.update.assert_called_once_with(expected_text)
+            expected_text = "Collection: My Collection | Position: 2/5 | Search: 'search term' (5/20)"
+            mock_update.assert_called_once_with(expected_text)
 
     def test_status_bar_update_status_empty_collection(self):
         """Test status update with empty collection."""
@@ -179,12 +175,11 @@ class TestStatusBar:
         status_bar.total_count = 0
 
         # Mock the update method
-        status_bar.update = MagicMock()
+        with patch.object(status_bar, 'update') as mock_update:
+            status_bar.update_status()
 
-        status_bar.update_status()
-
-        expected_text = "Collection: Empty Collection | Position: 0/0"
-        status_bar.update.assert_called_once_with(expected_text)
+            expected_text = "Collection: Empty Collection | Position: 0/0"
+            mock_update.assert_called_once_with(expected_text)
 
 
 class TestCollectionInspectorApp:
@@ -258,13 +253,12 @@ class TestCollectionInspectorApp:
         app = CollectionInspectorApp(data=test_data)
 
         # Mock _update_display to avoid Textual widget issues
-        app._update_display = MagicMock()
+        with patch.object(app, '_update_display'):
+            app._apply_search_filter(query="")
 
-        app._apply_search_filter(query="")
-
-        assert app.search_query == ""
-        assert app.filtered_data == test_data
-        assert app.current_index == 0
+            assert app.search_query == ""
+            assert app.filtered_data == test_data
+            assert app.current_index == 0
 
     def test_app_apply_search_filter_with_matches(self):
         """Test applying search filter with matches."""
@@ -276,15 +270,14 @@ class TestCollectionInspectorApp:
         app = CollectionInspectorApp(data=test_data)
 
         # Mock _update_display to avoid Textual widget issues
-        app._update_display = MagicMock()
+        with patch.object(app, '_update_display'):
+            app._apply_search_filter(query="a")  # Should match Apple and Banana
 
-        app._apply_search_filter(query="a")  # Should match Apple and Banana
-
-        assert app.search_query == "a"
-        assert len(app.filtered_data) == 2
-        assert app.filtered_data[0]["name"] == "Apple"
-        assert app.filtered_data[1]["name"] == "Banana"
-        assert app.current_index == 0
+            assert app.search_query == "a"
+            assert len(app.filtered_data) == 2
+            assert app.filtered_data[0]["name"] == "Apple"
+            assert app.filtered_data[1]["name"] == "Banana"
+            assert app.current_index == 0
 
     def test_app_apply_search_filter_no_matches(self):
         """Test applying search filter with no matches."""
@@ -292,13 +285,12 @@ class TestCollectionInspectorApp:
         app = CollectionInspectorApp(data=test_data)
 
         # Mock _update_display to avoid Textual widget issues
-        app._update_display = MagicMock()
+        with patch.object(app, '_update_display'):
+            app._apply_search_filter(query="xyz")
 
-        app._apply_search_filter(query="xyz")
-
-        assert app.search_query == "xyz"
-        assert app.filtered_data == []
-        assert app.current_index == 0
+            assert app.search_query == "xyz"
+            assert app.filtered_data == []
+            assert app.current_index == 0
 
     def test_app_action_navigation(self):
         """Test navigation actions."""
@@ -306,26 +298,25 @@ class TestCollectionInspectorApp:
         app = CollectionInspectorApp(data=test_data)
 
         # Mock _update_display to avoid Textual widget issues
-        app._update_display = MagicMock()
+        with patch.object(app, '_update_display'):
+            # Test next navigation
+            app.action_next()
+            assert app.current_index == 1
 
-        # Test next navigation
-        app.action_next()
-        assert app.current_index == 1
+            app.action_next()
+            assert app.current_index == 2
 
-        app.action_next()
-        assert app.current_index == 2
+            # Test previous navigation
+            app.action_previous()
+            assert app.current_index == 1
 
-        # Test previous navigation
-        app.action_previous()
-        assert app.current_index == 1
+            # Test first navigation
+            app.action_first()
+            assert app.current_index == 0
 
-        # Test first navigation
-        app.action_first()
-        assert app.current_index == 0
-
-        # Test last navigation
-        app.action_last()
-        assert app.current_index == 4
+            # Test last navigation
+            app.action_last()
+            assert app.current_index == 4
 
     def test_app_action_navigation_bounds(self):
         """Test navigation actions with boundary conditions."""
@@ -333,32 +324,30 @@ class TestCollectionInspectorApp:
         app = CollectionInspectorApp(data=test_data)
 
         # Mock _update_display
-        app._update_display = MagicMock()
+        with patch.object(app, '_update_display'):
+            # At first position, previous should do nothing
+            app.current_index = 0
+            app.action_previous()
+            assert app.current_index == 0
 
-        # At first position, previous should do nothing
-        app.current_index = 0
-        app.action_previous()
-        assert app.current_index == 0
-
-        # At last position, next should do nothing
-        app.current_index = 1
-        app.action_next()
-        assert app.current_index == 1
+            # At last position, next should do nothing
+            app.current_index = 1
+            app.action_next()
+            assert app.current_index == 1
 
     def test_app_action_navigation_empty_data(self):
         """Test navigation actions with empty data."""
         app = CollectionInspectorApp(data=[])
 
         # Mock _update_display
-        app._update_display = MagicMock()
+        with patch.object(app, '_update_display'):
+            # All navigation should be safe with empty data
+            app.action_next()
+            app.action_previous()
+            app.action_first()
+            app.action_last()
 
-        # All navigation should be safe with empty data
-        app.action_next()
-        app.action_previous()
-        app.action_first()
-        app.action_last()
-
-        assert app.current_index == 0
+            assert app.current_index == 0
 
     @patch('t3api_utils.inspector.app.Input')
     def test_app_action_clear(self, mock_input_class):
@@ -370,19 +359,19 @@ class TestCollectionInspectorApp:
         mock_input = MagicMock()
         mock_status = MagicMock()
 
-        app.query_one = MagicMock()
-        app.query_one.side_effect = lambda selector, widget_type=None: {
-            "#search-input": mock_input,
-            "#status": mock_status
-        }[selector]
+        with patch.object(app, 'query_one') as mock_query_one, \
+             patch.object(app, '_apply_search_filter') as mock_apply_filter:
 
-        app._apply_search_filter = MagicMock()
+            mock_query_one.side_effect = lambda selector, widget_type=None: {
+                "#search-input": mock_input,
+                "#status": mock_status
+            }[selector]
 
-        app.action_clear()
+            app.action_clear()
 
-        mock_input.value = ""
-        app._apply_search_filter.assert_called_once_with(query="")
-        mock_status.set_search.assert_called_once()
+            mock_input.value = ""
+            mock_apply_filter.assert_called_once_with(query="")
+            mock_status.set_search.assert_called_once()
 
     @patch('t3api_utils.inspector.app.Input')
     def test_app_action_focus_search(self, mock_input_class):
@@ -392,12 +381,11 @@ class TestCollectionInspectorApp:
 
         # Mock the input widget and query method
         mock_input = MagicMock()
-        app.query_one = MagicMock(return_value=mock_input)
+        with patch.object(app, 'query_one', return_value=mock_input) as mock_query_one:
+            app.action_focus_search()
 
-        app.action_focus_search()
-
-        app.query_one.assert_called_once()
-        mock_input.focus.assert_called_once()
+            mock_query_one.assert_called_once()
+            mock_input.focus.assert_called_once()
 
     def test_app_action_help(self):
         """Test help action."""
@@ -405,14 +393,13 @@ class TestCollectionInspectorApp:
         app = CollectionInspectorApp(data=test_data)
 
         # Mock notify method
-        app.notify = MagicMock()
+        with patch.object(app, 'notify') as mock_notify:
+            app.action_help()
 
-        app.action_help()
-
-        app.notify.assert_called_once()
-        args, kwargs = app.notify.call_args
-        assert "Navigation" in args[0]
-        assert kwargs.get("severity") == "information"
+            mock_notify.assert_called_once()
+            args, kwargs = mock_notify.call_args
+            assert "Navigation" in args[0]
+            assert kwargs.get("severity") == "information"
 
 
 class TestInspectCollection:
@@ -493,7 +480,7 @@ class TestInspectorIntegration:
     def test_end_to_end_workflow(self):
         """Test complete inspector workflow simulation."""
         # Simulate real-world data
-        test_data = [
+        test_data: List[Dict[str, Any]] = [
             {"id": "PKG123", "type": "Package", "status": "Active", "quantity": 100},
             {"id": "PKG456", "type": "Package", "status": "Inactive", "quantity": 0},
             {"id": "PLT789", "type": "Plant", "status": "Growing", "strain": "OG Kush"}
@@ -502,29 +489,28 @@ class TestInspectorIntegration:
         app = CollectionInspectorApp(data=test_data, collection_name="Cannabis Inventory")
 
         # Mock _update_display to avoid Textual issues
-        app._update_display = MagicMock()
+        with patch.object(app, '_update_display'):
+            # Test search functionality
+            app._apply_search_filter(query="Package")
+            assert len(app.filtered_data) == 2
+            assert all("Package" in str(item.values()) for item in app.filtered_data)
 
-        # Test search functionality
-        app._apply_search_filter(query="Package")
-        assert len(app.filtered_data) == 2
-        assert all("Package" in str(item.values()) for item in app.filtered_data)
+            app._apply_search_filter(query="Active")
+            # "Active" should match PKG123 with status "Active", and "Inactive" contains "Active"
+            assert len(app.filtered_data) == 2
 
-        app._apply_search_filter(query="Active")
-        # "Active" should match PKG123 with status "Active", and "Inactive" contains "Active"
-        assert len(app.filtered_data) == 2
+            # Test navigation after filtering
+            app.action_first()
+            assert app.current_index == 0
 
-        # Test navigation after filtering
-        app.action_first()
-        assert app.current_index == 0
-
-        # Clear filter
-        app._apply_search_filter(query="")
-        assert len(app.filtered_data) == 3
-        assert app.filtered_data == test_data
+            # Clear filter
+            app._apply_search_filter(query="")
+            assert len(app.filtered_data) == 3
+            assert app.filtered_data == test_data
 
     def test_search_edge_cases(self):
         """Test search functionality edge cases."""
-        test_data = [
+        test_data: List[Dict[str, Any]] = [
             {"id": 123, "name": None, "active": True},
             {"nested": {"deep": {"value": "hidden"}}},
             {"list_field": [1, "two", {"three": 3}]}
@@ -533,23 +519,22 @@ class TestInspectorIntegration:
         app = CollectionInspectorApp(data=test_data)
 
         # Mock _update_display to avoid Textual widget issues
-        app._update_display = MagicMock()
+        with patch.object(app, '_update_display'):
+            # Search for numeric values
+            app._apply_search_filter(query="123")
+            assert len(app.filtered_data) == 1
 
-        # Search for numeric values
-        app._apply_search_filter(query="123")
-        assert len(app.filtered_data) == 1
+            # Search in nested objects
+            app._apply_search_filter(query="hidden")
+            assert len(app.filtered_data) == 1
 
-        # Search in nested objects
-        app._apply_search_filter(query="hidden")
-        assert len(app.filtered_data) == 1
+            # Search in lists
+            app._apply_search_filter(query="two")
+            assert len(app.filtered_data) == 1
 
-        # Search in lists
-        app._apply_search_filter(query="two")
-        assert len(app.filtered_data) == 1
-
-        # Search for boolean values
-        app._apply_search_filter(query="true")
-        assert len(app.filtered_data) == 1
+            # Search for boolean values
+            app._apply_search_filter(query="true")
+            assert len(app.filtered_data) == 1
 
     def test_large_dataset_performance(self):
         """Test inspector with large dataset."""
@@ -562,12 +547,11 @@ class TestInspectorIntegration:
         app = CollectionInspectorApp(data=large_data, collection_name="Large Dataset")
 
         # Mock _update_display
-        app._update_display = MagicMock()
+        with patch.object(app, '_update_display'):
+            # Test that filtering still works efficiently
+            app._apply_search_filter(query="CAT_5")
+            assert len(app.filtered_data) == 100  # Every 10th item
 
-        # Test that filtering still works efficiently
-        app._apply_search_filter(query="CAT_5")
-        assert len(app.filtered_data) == 100  # Every 10th item
-
-        # Test navigation with large filtered dataset
-        app.action_last()
-        assert app.current_index == 99  # Last item in filtered set
+            # Test navigation with large filtered dataset
+            app.action_last()
+            assert app.current_index == 99  # Last item in filtered set

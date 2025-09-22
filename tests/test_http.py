@@ -3,6 +3,7 @@
 import asyncio
 import json
 import ssl
+from typing import Dict, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 import httpx
@@ -196,9 +197,9 @@ class TestHelperFunctions:
     def test_merge_headers_with_none_values(self):
         """Test _merge_headers filters out None values."""
         base = {"User-Agent": "test"}
-        extra = {"Authorization": "Bearer token", "Custom": None}
+        extra: Dict[str, Optional[str]] = {"Authorization": "Bearer token", "Custom": None}
 
-        result = _merge_headers(base, extra)
+        result = _merge_headers(base, extra)  # type: ignore[arg-type]
 
         assert result["User-Agent"] == "test"
         assert result["Authorization"] == "Bearer token"
