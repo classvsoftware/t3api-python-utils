@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from typing import Dict, Set, Any, Optional
 
+import pyotp
 import typer
 from dotenv import load_dotenv, set_key
 
@@ -17,7 +18,7 @@ from t3api_utils.exceptions import AuthenticationError
 from t3api_utils.logging import get_logger
 from t3api_utils.style import print_error, print_info, print_subheader
 
-__all__ = ["DEFAULT_ENV_PATH", "ConfigManager", "config_manager", "load_credentials_from_env", "offer_to_save_credentials", "prompt_for_credentials_or_error", "resolve_auth_inputs_or_error"]
+__all__ = ["DEFAULT_ENV_PATH", "ConfigManager", "config_manager", "generate_otp_from_seed", "load_credentials_from_env", "offer_to_save_credentials", "prompt_for_credentials_or_error", "resolve_auth_inputs_or_error"]
 
 logger = get_logger(__name__)
 
@@ -168,6 +169,12 @@ RETRY_MIN_WAIT={retry_min_wait}
 # Comma-separated list of hostnames
 OTP_WHITELIST={otp_whitelist}
 
+# TOTP seed for automatic OTP generation (optional)
+# Base32-encoded seed from your authenticator app setup
+# If set, OTP will be generated automatically for whitelisted hostnames
+# If empty, you will be prompted to enter OTP manually
+OTP_SEED={otp_seed}
+
 # Metrc hostnames requiring email during authentication
 # Comma-separated list of hostnames
 EMAIL_WHITELIST={email_whitelist}
@@ -240,6 +247,7 @@ DEFAULT_FILE_FORMAT={default_file_format}
 
             # Hostname behavior
             otp_whitelist=existing_values.get(EnvKeys.OTP_WHITELIST.value, "mi.metrc.com"),
+            otp_seed=existing_values.get(EnvKeys.OTP_SEED.value, ""),
             email_whitelist=existing_values.get(EnvKeys.EMAIL_WHITELIST.value, "co.metrc.com"),
 
             # Development
@@ -301,9 +309,39 @@ DEFAULT_FILE_FORMAT={default_file_format}
         host = self.get_config_value(EnvKeys.T3_API_HOST)
         return host if host else DEFAULT_T3_API_HOST
 
+    def get_otp_seed(self) -> Optional[str]:
+        """Get OTP seed for TOTP generation."""
+        seed = self.get_config_value(EnvKeys.OTP_SEED)
+        return seed.strip() if seed else None
+
 
 # Global configuration manager instance
 config_manager = ConfigManager()
+
+
+def generate_otp_from_seed() -> Optional[str]:
+    """
+    Generate a 6-digit TOTP code from the OTP_SEED environment variable.
+
+    Returns:
+        6-digit OTP string if OTP_SEED is configured, None otherwise.
+
+    Raises:
+        AuthenticationError: If OTP_SEED is malformed or TOTP generation fails.
+    """
+    otp_seed = config_manager.get_otp_seed()
+    if not otp_seed:
+        return None
+
+    try:
+        totp = pyotp.TOTP(otp_seed)
+        otp_code = totp.now()
+
+        # Ensure it's always 6 digits (pad with zeros if needed)
+        return f"{int(otp_code):06d}"
+
+    except Exception as e:
+        raise AuthenticationError(f"Failed to generate OTP from seed: {e}")
 
 
 def load_credentials_from_env() -> Dict[str, str]:
@@ -442,11 +480,17 @@ def prompt_for_credentials_or_error(**kwargs: object) -> T3Credentials:
     }
 
     if hostname in config_manager.get_otp_whitelist():
-        otp = typer.prompt("Enter 6-digit Metrc 2-factor authentication code")
-        if not otp or len(otp) != 6 or not otp.isdigit():
-            print_error("Invalid 2-factor authentication entered.")
-            raise AuthenticationError(f"Invalid 2-factor authentication: {otp}")
-        credentials["otp"] = otp
+        # Try to generate OTP from seed first, otherwise prompt user
+        otp = generate_otp_from_seed()
+        if otp:
+            print_info("Using OTP generated from configured seed")
+            credentials["otp"] = otp
+        else:
+            otp = typer.prompt("Enter 6-digit Metrc 2-factor authentication code")
+            if not otp or len(otp) != 6 or not otp.isdigit():
+                print_error("Invalid 2-factor authentication entered.")
+                raise AuthenticationError(f"Invalid 2-factor authentication: {otp}")
+            credentials["otp"] = otp
 
     if hostname in config_manager.get_email_whitelist():
         if email:

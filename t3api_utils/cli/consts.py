@@ -39,6 +39,7 @@ class EnvKeys(str, Enum):
     # Hostname behavior
     OTP_WHITELIST = "OTP_WHITELIST"
     EMAIL_WHITELIST = "EMAIL_WHITELIST"
+    OTP_SEED = "OTP_SEED"
 
     # Development settings
     LOG_LEVEL = "LOG_LEVEL"

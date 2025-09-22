@@ -221,3 +221,81 @@ def test_resolve_auth_inputs_from_prompt(mock_save_credentials, mock_prompt):
     assert result["hostname"] == "x"
     mock_save_credentials.assert_called_once()
     mock_prompt.assert_called_once()
+
+
+# TOTP/OTP Seed Tests
+
+
+@patch.dict(os.environ, {EnvKeys.OTP_SEED.value: "JBSWY3DPEHPK3PXP"})
+def test_generate_otp_from_seed_with_valid_seed():
+    """Test OTP generation with a valid seed."""
+    otp = cli.generate_otp_from_seed()
+    assert otp is not None
+    assert len(otp) == 6
+    assert otp.isdigit()
+
+
+@patch.dict(os.environ, {}, clear=True)
+def test_generate_otp_from_seed_no_seed():
+    """Test OTP generation when no seed is configured."""
+    otp = cli.generate_otp_from_seed()
+    assert otp is None
+
+
+@patch.dict(os.environ, {EnvKeys.OTP_SEED.value: "INVALID_SEED"})
+def test_generate_otp_from_seed_invalid_seed():
+    """Test OTP generation with an invalid seed raises AuthenticationError."""
+    with pytest.raises(AuthenticationError, match="Failed to generate OTP from seed"):
+        cli.generate_otp_from_seed()
+
+
+@patch.dict(os.environ, {EnvKeys.OTP_SEED.value: "   "})
+def test_generate_otp_from_seed_empty_seed():
+    """Test OTP generation with empty/whitespace seed."""
+    otp = cli.generate_otp_from_seed()
+    assert otp is None
+
+
+@patch.dict(os.environ, {EnvKeys.OTP_SEED.value: "JBSWY3DPEHPK3PXP"})
+@patch("t3api_utils.cli.utils.offer_to_save_credentials")
+def test_prompt_for_credentials_with_otp_seed(mock_offer):
+    """Test that OTP is auto-generated when seed is configured."""
+    with patch("typer.prompt") as mock_prompt:
+        mock_prompt.side_effect = ["mi.metrc.com", "user", "pass"]
+        result = cli.prompt_for_credentials_or_error()
+
+        # Should not prompt for OTP since it was generated from seed
+        assert len(mock_prompt.call_args_list) == 3  # hostname, username, password only
+        assert result["hostname"] == "mi.metrc.com"
+        assert result["username"] == "user"
+        assert result["password"] == "pass"
+        assert result["otp"] is not None
+        assert len(result["otp"]) == 6
+        assert result["otp"].isdigit()
+
+
+@patch.dict(os.environ, {}, clear=True)
+@patch("typer.prompt")
+@patch("t3api_utils.cli.utils.offer_to_save_credentials")
+def test_prompt_for_credentials_without_otp_seed_fallback(mock_offer, mock_prompt):
+    """Test that OTP is prompted when no seed is configured."""
+    mock_prompt.side_effect = ["mi.metrc.com", "user", "pass", "123456"]
+    result = cli.prompt_for_credentials_or_error()
+
+    # Should prompt for all fields including OTP
+    assert len(mock_prompt.call_args_list) == 4  # hostname, username, password, otp
+    assert result["hostname"] == "mi.metrc.com"
+    assert result["username"] == "user"
+    assert result["password"] == "pass"
+    assert result["otp"] == "123456"
+
+
+@patch.dict(os.environ, {EnvKeys.OTP_SEED.value: "INVALID_SEED"})
+@patch("typer.prompt")
+@patch("t3api_utils.cli.utils.offer_to_save_credentials")
+def test_prompt_for_credentials_invalid_seed_raises(mock_offer, mock_prompt):
+    """Test that invalid OTP seed raises AuthenticationError during prompt."""
+    mock_prompt.side_effect = ["mi.metrc.com", "user", "pass"]
+
+    with pytest.raises(AuthenticationError, match="Failed to generate OTP from seed"):
+        cli.prompt_for_credentials_or_error()

@@ -23,6 +23,7 @@ dependencies = [
     "pyarrow>=17.0.0",
     "httpx>=0.25.0",
     "textual>=6.0.0",
+    "pyotp>=2.8.0",
 ]
 
 [project.optional-dependencies]
