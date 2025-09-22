@@ -21,7 +21,7 @@ from t3api_utils.http.utils import T3HTTPError, arequest_json
 
 def get_data(
     client: T3APIClient,
-    endpoint: str,
+    path: str,
     *,
     method: str = "GET",
     params: Optional[Dict[str, Any]] = None,
@@ -36,7 +36,7 @@ def get_data(
 
     Args:
         client: Authenticated T3APIClient instance
-        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active", "/v2/facilities/123")
+        path: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active", "/v2/facilities/123")
         method: HTTP method (default: "GET")
         params: Query parameters (optional)
         json_body: JSON request body for POST/PUT requests (optional)
@@ -84,7 +84,7 @@ def get_data(
         return request_json(
             client=sync_client,
             method=method,
-            url=endpoint,
+            url=path,
             params=params,
             json_body=json_body,
             headers=headers_dict,
@@ -95,7 +95,7 @@ def get_data(
 
 def get_collection(
     client: T3APIClient,
-    endpoint: str,
+    path: str,
     *,
     license_number: str,
     page: int = 1,
@@ -112,7 +112,7 @@ def get_collection(
 
     Args:
         client: Authenticated T3APIClient instance
-        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active")
+        path: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active")
         license_number: The unique identifier for the license (required)
         page: Page number (1-based, default: 1)
         page_size: Number of items per page (default: 100)
@@ -176,7 +176,7 @@ def get_collection(
             response_data = request_json(
                 client=sync_client,
                 method="GET",
-                url=endpoint,
+                url=path,
                 params=params,
                 headers=headers_dict,
                 policy=client._retry_policy,
@@ -186,12 +186,12 @@ def get_collection(
             return cast(MetrcCollectionResponse, response_data)
 
     except T3HTTPError as e:
-        raise T3HTTPError(f"Failed to get collection from {endpoint}: {e}", response=e.response) from e
+        raise T3HTTPError(f"Failed to get collection from {path}: {e}", response=e.response) from e
 
 
 async def get_collection_async(
     client: T3APIClient,
-    endpoint: str,
+    path: str,
     *,
     license_number: str,
     page: int = 1,
@@ -206,7 +206,7 @@ async def get_collection_async(
 
     Args:
         client: Authenticated T3APIClient instance
-        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active")
+        path: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active")
         license_number: The unique identifier for the license (required)
         page: Page number (1-based, default: 1)
         page_size: Number of items per page (default: 100)
@@ -245,7 +245,7 @@ async def get_collection_async(
         response_data = await arequest_json(
             aclient=client._client,
             method="GET",
-            url=endpoint,
+            url=path,
             params=params,
             policy=client._retry_policy,
             expected_status=200,
@@ -254,12 +254,12 @@ async def get_collection_async(
         return cast(MetrcCollectionResponse, response_data)
 
     except T3HTTPError as e:
-        raise T3HTTPError(f"Failed to get collection from {endpoint}: {e}", response=e.response) from e
+        raise T3HTTPError(f"Failed to get collection from {path}: {e}", response=e.response) from e
 
 
 async def get_data_async(
     client: T3APIClient,
-    endpoint: str,
+    path: str,
     *,
     method: str = "GET",
     params: Optional[Dict[str, Any]] = None,
@@ -274,7 +274,7 @@ async def get_data_async(
 
     Args:
         client: Authenticated T3APIClient instance
-        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active", "/v2/facilities/123")
+        path: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active", "/v2/facilities/123")
         method: HTTP method (default: "GET")
         params: Query parameters (optional)
         json_body: JSON request body for POST/PUT requests (optional)
@@ -294,7 +294,7 @@ async def get_data_async(
         response_data = await arequest_json(
             aclient=client._client,
             method=method,
-            url=endpoint,
+            url=path,
             params=params,
             json_body=json_body,
             headers=headers,
@@ -305,4 +305,4 @@ async def get_data_async(
         return response_data
 
     except T3HTTPError as e:
-        raise T3HTTPError(f"Failed to get data from {endpoint}: {e}", response=e.response) from e
+        raise T3HTTPError(f"Failed to get data from {path}: {e}", response=e.response) from e

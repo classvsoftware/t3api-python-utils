@@ -68,7 +68,7 @@ class RateLimiter:
 
 def parallel_load_paginated_sync(
     client: T3APIClient,
-    endpoint: str,
+    path: str,
     max_workers: Optional[int] = None,
     rate_limit: Optional[float] = 10.0,
     **method_kwargs: Any,
@@ -80,7 +80,7 @@ def parallel_load_paginated_sync(
 
     Args:
         client: Authenticated T3APIClient instance
-        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active")
+        path: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active")
         max_workers: Maximum number of threads to use (maps to max_concurrent for async)
         rate_limit: Requests per second limit (None to disable)
         **method_kwargs: Arguments to pass to the API method
@@ -116,7 +116,7 @@ def parallel_load_paginated_sync(
 
             return loop.run_until_complete(parallel_load_paginated_async(
                 client=temp_client,
-                endpoint=endpoint,
+                path=path,
                 max_concurrent=max_workers,
                 rate_limit=rate_limit,
                 **method_kwargs,
@@ -132,7 +132,7 @@ def parallel_load_paginated_sync(
 
 async def parallel_load_paginated_async(
     client: T3APIClient,
-    endpoint: str,
+    path: str,
     max_concurrent: Optional[int] = 10,
     rate_limit: Optional[float] = 10.0,
     batch_size: Optional[int] = None,
@@ -143,7 +143,7 @@ async def parallel_load_paginated_async(
 
     Args:
         client: Authenticated T3APIClient instance
-        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active")
+        path: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active")
         max_concurrent: Maximum number of concurrent requests
         rate_limit: Requests per second limit (None to disable)
         batch_size: Process requests in batches of this size (None for no batching)
@@ -159,7 +159,7 @@ async def parallel_load_paginated_async(
     if not client.is_authenticated:
         raise AttributeError("Client must be authenticated before loading data")
 
-    logger.info(f"Starting parallel async load for {endpoint}")
+    logger.info(f"Starting parallel async load for {path}")
 
     # Set up rate limiter
     rate_limiter = RateLimiter(rate_limit) if rate_limit else None
@@ -168,7 +168,7 @@ async def parallel_load_paginated_async(
     if rate_limiter:
         await rate_limiter.acquire_async()
 
-    first_response = cast(PaginatedT, await get_collection_async(client, endpoint, page=1, **method_kwargs))
+    first_response = cast(PaginatedT, await get_collection_async(client, path, page=1, **method_kwargs))
 
     if 'total' not in first_response or 'pageSize' not in first_response:
         raise ValueError("Response must have 'total' and 'pageSize' fields")
@@ -188,7 +188,7 @@ async def parallel_load_paginated_async(
             await rate_limiter.acquire_async()
 
         logger.debug(f"Fetching page {page_number}")
-        response = cast(PaginatedT, await get_collection_async(client, endpoint, page=page_number, **method_kwargs))
+        response = cast(PaginatedT, await get_collection_async(client, path, page=page_number, **method_kwargs))
         return page_number - 1, response  # Convert to 0-based index
 
     # Prepare responses list
@@ -244,7 +244,7 @@ async def parallel_load_paginated_async(
 
 def load_all_data_sync(
     client: T3APIClient,
-    endpoint: str,
+    path: str,
     max_workers: Optional[int] = None,
     rate_limit: Optional[float] = 10.0,
     **method_kwargs: Any,
@@ -256,7 +256,7 @@ def load_all_data_sync(
 
     Args:
         client: Authenticated T3APIClient instance
-        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active")
+        path: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active")
         max_workers: Maximum number of threads to use (maps to max_concurrent for async)
         rate_limit: Requests per second limit (None to disable)
         **method_kwargs: Arguments to pass to the API method
@@ -288,7 +288,7 @@ def load_all_data_sync(
 
             return loop.run_until_complete(load_all_data_async(
                 client=temp_client,
-                endpoint=endpoint,
+                path=path,
                 max_concurrent=max_workers,
                 rate_limit=rate_limit,
                 **method_kwargs,
@@ -304,7 +304,7 @@ def load_all_data_sync(
 
 async def load_all_data_async(
     client: T3APIClient,
-    endpoint: str,
+    path: str,
     max_concurrent: Optional[int] = 10,
     rate_limit: Optional[float] = 10.0,
     batch_size: Optional[int] = None,
@@ -318,7 +318,7 @@ async def load_all_data_async(
 
     Args:
         client: Authenticated T3APIClient instance
-        endpoint: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active")
+        path: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active")
         max_concurrent: Maximum number of concurrent requests
         rate_limit: Requests per second limit (None to disable)
         batch_size: Process requests in batches of this size (None for no batching)
@@ -329,7 +329,7 @@ async def load_all_data_async(
     """
     responses: List[MetrcCollectionResponse] = await parallel_load_paginated_async(
         client=client,
-        endpoint=endpoint,
+        path=path,
         max_concurrent=max_concurrent,
         rate_limit=rate_limit,
         batch_size=batch_size,

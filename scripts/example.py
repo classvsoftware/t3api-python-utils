@@ -19,6 +19,7 @@ from t3api_utils.main.utils import (
     pick_license,
 )
 from t3api_utils.style import print_warning
+from t3api_utils.openapi import pick_collection
 
 
 def main():
@@ -28,15 +29,12 @@ def main():
     # Pick a license interactively
     license = pick_license(api_client=api_client)
 
-    # Let user pick which collection to load
-    from t3api_utils.openapi import pick_collection
-
     selected_collection = pick_collection()
 
     # Load all data for the selected collection and license
     all_data: List[Dict[str, Any]] = load_all_data_sync(
         client=api_client,
-        endpoint=selected_collection["path"],
+        path=selected_collection["path"],
         license_number=license["licenseNumber"],
     )
 

@@ -104,7 +104,7 @@ class TestParallelLoadPaginatedSync:
 
         result: List[Any] = parallel_load_paginated_sync(
             client=self.mock_client,
-            endpoint="/v2/licenses"
+            path="/v2/licenses"
         )
 
         assert len(result) == 1
@@ -118,7 +118,7 @@ class TestParallelLoadPaginatedSync:
     @patch('t3api_utils.api.parallel.get_collection_async')
     def test_multiple_pages_response(self, mock_get_collection_async):
         """Test loading when there are multiple pages."""
-        def mock_method_side_effect(client, endpoint, page=1, **kwargs):
+        def mock_method_side_effect(client, path, page=1, **kwargs):
             if page == 1:
                 return {
                     "data": [{"id": "1", "licenseNumber": "LIC-001", "licenseName": "Company 1"}],
@@ -145,7 +145,7 @@ class TestParallelLoadPaginatedSync:
 
         result: List[Any] = parallel_load_paginated_sync(
             client=self.mock_client,
-            endpoint="/v2/licenses"
+            path="/v2/licenses"
         )
 
         # Should return 3 pages total (25 items / 10 per page = 3 pages)
@@ -167,7 +167,7 @@ class TestParallelLoadPaginatedSync:
         start_time = time.time()
         result: List[Any] = parallel_load_paginated_sync(
             client=self.mock_client,
-            endpoint="/v2/licenses",
+            path="/v2/licenses",
             rate_limit=1000  # Very high rate limit should still add minimal delay
         )
         end_time = time.time()
@@ -205,7 +205,7 @@ class TestParallelLoadPaginatedAsync:
 
         result: List[Any] = await parallel_load_paginated_async(
             client=self.mock_client,
-            endpoint="/v2/licenses"
+            path="/v2/licenses"
         )
 
         assert len(result) == 1
@@ -216,7 +216,7 @@ class TestParallelLoadPaginatedAsync:
     @patch('t3api_utils.api.parallel.get_collection_async')
     async def test_multiple_pages_response(self, mock_get_collection_async):
         """Test async loading when there are multiple pages."""
-        def mock_method_side_effect(client, endpoint, page=1, **kwargs):
+        def mock_method_side_effect(client, path, page=1, **kwargs):
             if page == 1:
                 return {
                     "data": [{"id": "1", "licenseNumber": "LIC-001", "licenseName": "Company 1"}],
@@ -243,7 +243,7 @@ class TestParallelLoadPaginatedAsync:
 
         result: List[Any] = await parallel_load_paginated_async(
             client=self.mock_client,
-            endpoint="/v2/licenses"
+            path="/v2/licenses"
         )
 
         # Should return 3 pages total (25 items / 10 per page = 3 pages)
@@ -254,7 +254,7 @@ class TestParallelLoadPaginatedAsync:
     @patch('t3api_utils.api.parallel.get_collection_async')
     async def test_batched_processing(self, mock_get_collection_async):
         """Test batched processing functionality."""
-        def mock_method_side_effect(client, endpoint, page=1, **kwargs):
+        def mock_method_side_effect(client, path, page=1, **kwargs):
             return {
                 "data": [{"id": str(page), "licenseNumber": f"LIC-{page:03d}", "licenseName": f"Company {page}"}],
                 "total": 50,  # 5 pages total
@@ -266,7 +266,7 @@ class TestParallelLoadPaginatedAsync:
 
         result: List[Any] = await parallel_load_paginated_async(
             client=self.mock_client,
-            endpoint="/v2/licenses",
+            path="/v2/licenses",
             batch_size=2  # Process in batches of 2
         )
 
@@ -317,7 +317,7 @@ class TestLoadAllDataSync:
         with patch('t3api_utils.api.parallel.parallel_load_paginated_async', return_value=mock_responses):
             result: List[Any] = load_all_data_sync(
                 client=self.mock_client,
-                endpoint="/v2/licenses"
+                path="/v2/licenses"
             )
 
         # Should return flattened data from both pages
@@ -361,7 +361,7 @@ class TestLoadAllDataAsync:
         with patch('t3api_utils.api.parallel.parallel_load_paginated_async', return_value=mock_responses):
             result: List[Any] = await load_all_data_async(
                 client=self.mock_client,
-                endpoint="/v2/licenses"
+                path="/v2/licenses"
             )
 
         # Should return flattened data from both pages
