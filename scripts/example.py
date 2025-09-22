@@ -18,6 +18,7 @@ from t3api_utils.main.utils import (
     interactive_collection_handler,
     pick_license,
 )
+from t3api_utils.style import print_warning
 
 
 def main():
@@ -42,7 +43,7 @@ def main():
             license_number=license["licenseNumber"]
         )
     else:
-        print("No packages found for this license.")
+        print_warning("No packages found for this license.")
 
 
 if __name__ == "__main__":

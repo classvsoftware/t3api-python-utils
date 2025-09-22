@@ -10,8 +10,21 @@ from typing import (Any, Callable, Dict, List, Optional, ParamSpec, TypeVar,
 
 import duckdb
 import typer
-from rich.console import Console
 from rich.table import Table
+
+from t3api_utils.style import (
+    console,
+    print_error,
+    print_header,
+    print_info,
+    print_labeled_info,
+    print_menu_item,
+    print_progress,
+    print_state_info,
+    print_subheader,
+    print_success,
+    print_warning,
+)
 
 from t3api_utils.api.client import T3APIClient
 from t3api_utils.api.interfaces import MetrcCollectionResponse, MetrcObject
@@ -32,8 +45,6 @@ from t3api_utils.file.utils import (collection_to_dicts, open_file,
                                     save_dicts_to_csv, save_dicts_to_json)
 from t3api_utils.interfaces import HasData, P, SerializableObject, T
 from t3api_utils.logging import get_logger
-
-console = Console()
 
 logger = get_logger(__name__)
 
@@ -129,23 +140,23 @@ def pick_license(*, api_client: T3APIClient) -> Dict[str, Any]:
     licenses = licenses_response
 
     if not licenses:
-        typer.echo("No licenses found.")
+        print_error("No licenses found.")
         raise typer.Exit(code=1)
 
-    table = Table(title="Available Licenses")
-    table.add_column("#", style="cyan", justify="right")
-    table.add_column("License Name", style="magenta")
-    table.add_column("License Number", style="green")
+    table = Table(title="Available Licenses", border_style="magenta", header_style="bold magenta")
+    table.add_column("#", style="magenta", justify="right")
+    table.add_column("License Name", style="bright_white")
+    table.add_column("License Number", style="cyan")
 
     for idx, license in enumerate(licenses, start=1):
         table.add_row(str(idx), license["licenseName"], license["licenseNumber"])
 
     console.print(table)
 
-    choice = typer.prompt("Select a license", type=int)
+    choice = typer.prompt("[magenta]Select a license[/magenta]", type=int)
 
     if choice < 1 or choice > len(licenses):
-        typer.echo("Invalid selection.")
+        print_error("Invalid selection.")
         raise typer.Exit(code=1)
 
     selected_license = licenses[choice - 1]
@@ -253,11 +264,11 @@ def _generate_default_path(*, collection_name: str, license_number: str, extensi
 
 def _prompt_for_file_path(*, proposed_path: str, file_type: str) -> Path:
     """Prompt user for file path, allowing them to edit the proposed path."""
-    console.print(f"Save to {file_type}")
-    console.print(f"Proposed path: {proposed_path}")
+    print_subheader(f"Save to {file_type}")
+    print_labeled_info("Proposed path", proposed_path)
 
     user_input = typer.prompt(
-        "Enter path (or press Enter to use proposed)",
+        "[magenta]Enter path (or press Enter to use proposed)[/magenta]",
         default=proposed_path,
         show_default=False
     )
@@ -294,10 +305,10 @@ def _action_save_csv(*, data: List[Dict[str, Any]], state: _HandlerState) -> Non
             writer.writerows(flat_dicts)
 
         state.csv_file_path = csv_path
-        console.print(f"[green]Saved {len(data)} records to {csv_path}")
+        print_success(f"Saved {len(data)} records to {csv_path}")
 
     except Exception as e:
-        console.print(f"[red]Error saving CSV: {e}")
+        print_error(f"Error saving CSV: {e}")
 
 
 def _action_save_json(*, data: List[Dict[str, Any]], state: _HandlerState) -> None:
@@ -325,97 +336,102 @@ def _action_save_json(*, data: List[Dict[str, Any]], state: _HandlerState) -> No
             )
 
         state.json_file_path = json_path
-        console.print(f"[green]Saved {len(data)} records to {json_path}")
+        print_success(f"Saved {len(data)} records to {json_path}")
 
     except Exception as e:
-        console.print(f"[red]Error saving JSON: {e}")
-
-
-def _action_create_db(*, state: _HandlerState) -> None:
-    """Create a DuckDB connection."""
-    try:
-        state.db_connection = create_duckdb_connection()
-        console.print("[green]Created DuckDB connection")
-    except Exception as e:
-        console.print(f"[red]Error creating database connection: {e}")
+        print_error(f"Error saving JSON: {e}")
 
 
 def _action_load_db(*, data: List[Dict[str, Any]], state: _HandlerState) -> None:
-    """Load collection into database."""
+    """Load collection into database (auto-creates DB connection if needed)."""
+    # Auto-setup: Create database connection if needed
     if not state.db_connection:
-        console.print("[red]No database connection available")
-        return
+        print_progress("Creating database connection...")
+        try:
+            state.db_connection = create_duckdb_connection()
+            print_success("Database connection created")
+        except Exception as e:
+            print_error(f"Error creating database connection: {e}")
+            return
 
     try:
         load_db(con=state.db_connection, data=data)
-        console.print(f"[green]Loaded {len(data)} records into database")
+        print_success(f"Loaded {len(data)} records into database")
     except Exception as e:
-        console.print(f"[red]Error loading data into database: {e}")
+        print_error(f"Error loading data into database: {e}")
 
 
 def _action_export_schema(*, state: _HandlerState) -> None:
-    """Export and print database schema."""
+    """Export and print database schema (auto-creates connection and checks for data)."""
+    # Auto-setup: Create database connection if needed
     if not state.db_connection:
-        console.print("[red]No database connection available")
+        print_progress("Creating database connection...")
+        try:
+            state.db_connection = create_duckdb_connection()
+            print_success("Database connection created")
+        except Exception as e:
+            print_error(f"Error creating database connection: {e}")
+            return
+
+    # Check if database has any data
+    if not _db_has_data(con=state.db_connection):
+        print_warning("Database has no tables. Load data first using 'Load into database' option.")
         return
 
     try:
         schema = export_duckdb_schema(con=state.db_connection)
-        console.print("\n[bold]Database Schema:")
-        console.print(schema)
+        print_subheader("Database Schema")
+        console.print(f"[bright_white]{schema}[/bright_white]")
     except Exception as e:
-        console.print(f"[red]Error exporting schema: {e}")
+        print_error(f"Error exporting schema: {e}")
 
 
 def _action_open_csv(*, state: _HandlerState) -> None:
     """Open saved CSV file."""
     if not state.csv_file_path or not state.csv_file_path.exists():
-        console.print("[red]No CSV file available to open")
+        print_error("No CSV file available to open")
         return
 
     try:
         open_file(path=state.csv_file_path)
-        console.print(f"[green]Opened {state.csv_file_path}")
+        print_success(f"Opened {state.csv_file_path}")
     except Exception as e:
-        console.print(f"[red]Error opening CSV file: {e}")
+        print_error(f"Error opening CSV file: {e}")
 
 
 def _action_open_json(*, state: _HandlerState) -> None:
     """Open saved JSON file."""
     if not state.json_file_path or not state.json_file_path.exists():
-        console.print("[red]No JSON file available to open")
+        print_error("No JSON file available to open")
         return
 
     try:
         open_file(path=state.json_file_path)
-        console.print(f"[green]Opened {state.json_file_path}")
+        print_success(f"Opened {state.json_file_path}")
     except Exception as e:
-        console.print(f"[red]Error opening JSON file: {e}")
+        print_error(f"Error opening JSON file: {e}")
 
 
-def _get_menu_options(*, state: _HandlerState) -> List[tuple[str, str, bool]]:
-    """Get available menu options based on current state."""
+def _get_menu_options(*, state: _HandlerState) -> List[tuple[str, str]]:
+    """Get all menu options (always show all options, auto-setup handles prerequisites)."""
     options = []
 
-    # Always available
-    options.append(("Save to CSV", "csv", True))
-    options.append(("Save to JSON", "json", True))
-    options.append(("Create DuckDB connection", "create_db", state.db_connection is None))
+    # Core actions - always available
+    options.append(("Save to CSV", "csv"))
+    options.append(("Save to JSON", "json"))
+    options.append(("Load into database", "load_db"))
+    options.append(("Export database schema", "export_schema"))
 
-    # Conditionally available
-    if state.db_connection:
-        options.append(("Load into database", "load_db", True))
-        options.append(("Export database schema", "export_schema", True))
+    # File opening options - show if files exist
+    if _file_exists_and_readable(file_path=state.csv_file_path) and state.csv_file_path:
+        options.append((f"Open CSV file ({state.csv_file_path.name})", "open_csv"))
 
-    if state.csv_file_path and state.csv_file_path.exists():
-        options.append((f"Open CSV file ({state.csv_file_path.name})", "open_csv", True))
+    if _file_exists_and_readable(file_path=state.json_file_path) and state.json_file_path:
+        options.append((f"Open JSON file ({state.json_file_path.name})", "open_json"))
 
-    if state.json_file_path and state.json_file_path.exists():
-        options.append((f"Open JSON file ({state.json_file_path.name})", "open_json", True))
+    options.append(("Exit", "exit"))
 
-    options.append(("Exit", "exit", True))
-
-    return [(text, action, available) for text, action, available in options if available]
+    return options
 
 
 def interactive_collection_handler(
@@ -436,7 +452,7 @@ def interactive_collection_handler(
         license_number: License number for the data (used in filenames)
     """
     if not data:
-        console.print("[red]Cannot handle empty collection")
+        print_error("Cannot handle empty collection")
         return
 
     # Initialize state
@@ -445,13 +461,13 @@ def interactive_collection_handler(
         license_number=license_number or "unknown"
     )
 
-    console.print(f"\nCollection Handler: {collection_name} ({len(data):,} items)")
+    print_header("Collection Handler")
+    print_labeled_info("Dataset", f"{collection_name} ({len(data):,} items)")
 
     # Action mapping
     actions = {
         "csv": lambda: _action_save_csv(data=data, state=state),
         "json": lambda: _action_save_json(data=data, state=state),
-        "create_db": lambda: _action_create_db(state=state),
         "load_db": lambda: _action_load_db(data=data, state=state),
         "export_schema": lambda: _action_export_schema(state=state),
         "open_csv": lambda: _action_open_csv(state=state),
@@ -470,36 +486,36 @@ def interactive_collection_handler(
             state_info.append("JSON saved")
 
         if state_info:
-            console.print(f"Current state: {' | '.join(state_info)}")
+            print_state_info(state_info)
 
         # Get and display menu options
         options = _get_menu_options(state=state)
 
-        console.print("\nOptions:")
-        for i, (text, _, _) in enumerate(options, 1):
-            console.print(f"  {i}. {text}")
+        console.print("\n[magenta]Options:[/magenta]")
+        for i, (text, _) in enumerate(options, 1):
+            print_menu_item(i, text)
 
         # Get user choice
         try:
-            choice = typer.prompt(f"\nChoice [1-{len(options)}]", type=int)
+            choice = typer.prompt(f"\n[magenta]Choice [1-{len(options)}][/magenta]", type=int)
             if choice < 1 or choice > len(options):
-                console.print("[red]Invalid choice. Please try again.")
+                print_error("Invalid choice. Please try again.")
                 continue
 
             selected_action = options[choice - 1][1]
 
             if selected_action == "exit":
-                console.print("Exiting collection handler")
+                print_info("Exiting collection handler")
                 break
 
             # Execute action
             actions[selected_action]()
 
         except (typer.Abort, KeyboardInterrupt):
-            console.print("\nExiting collection handler")
+            print_info("Exiting collection handler")
             break
         except Exception as e:
-            console.print(f"[red]Error: {e}")
+            print_error(f"Error: {e}")
 
     # Clean up database connection
     if state.db_connection:
@@ -510,6 +526,30 @@ def interactive_collection_handler(
 
 
 from collections import defaultdict
+
+
+def _db_has_data(*, con: duckdb.DuckDBPyConnection) -> bool:
+    """Check if the database connection has any tables with data."""
+    if not con:
+        return False
+
+    try:
+        # Get list of tables in main schema
+        tables = con.execute(
+            """
+            SELECT table_name
+            FROM duckdb_tables()
+            WHERE schema_name = 'main'
+            """
+        ).fetchall()
+        return len(tables) > 0
+    except Exception:
+        return False
+
+
+def _file_exists_and_readable(*, file_path: Path | None) -> bool:
+    """Check if a file path exists and is readable."""
+    return file_path is not None and file_path.exists() and file_path.is_file()
 
 
 def load_db(*, con: duckdb.DuckDBPyConnection, data: List[Dict[str, Any]]) -> None:

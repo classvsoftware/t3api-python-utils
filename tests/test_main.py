@@ -77,9 +77,9 @@ def test_pick_license_valid_choice(mock_get_data, mock_prompt, mock_console):
     assert result == license2
 
 
-@patch("t3api_utils.main.utils.typer.echo")
+@patch("t3api_utils.main.utils.print_error")
 @patch("t3api_utils.main.utils.get_data")
-def test_pick_license_empty_list(mock_get_data, mock_echo):
+def test_pick_license_empty_list(mock_get_data, mock_print_error):
     mock_client = MagicMock()
     mock_licenses: List[Dict[str, Any]] = []
     mock_get_data.return_value = mock_licenses
@@ -87,7 +87,7 @@ def test_pick_license_empty_list(mock_get_data, mock_echo):
     with pytest.raises(Exit):
         pick_license(api_client=mock_client)
 
-    mock_echo.assert_called_once_with("No licenses found.")
+    mock_print_error.assert_called_once_with("No licenses found.")
 
 
 @patch("t3api_utils.main.utils.extract_data")

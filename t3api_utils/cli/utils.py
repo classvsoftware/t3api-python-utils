@@ -8,6 +8,7 @@ from t3api_utils.auth.interfaces import T3Credentials
 from t3api_utils.cli.consts import DEFAULT_ENV_PATH, OTP_WHITELIST, EnvKeys
 from t3api_utils.exceptions import AuthenticationError
 from t3api_utils.logging import get_logger
+from t3api_utils.style import print_error, print_info, print_subheader
 
 __all__ = ["DEFAULT_ENV_PATH", "load_credentials_from_env", "offer_to_save_credentials", "prompt_for_credentials_or_error", "resolve_auth_inputs_or_error"]
 
@@ -91,19 +92,19 @@ def prompt_for_credentials_or_error(**kwargs: object) -> T3Credentials:
     password = str(kwargs.get("password", "")) if kwargs.get("password") else None
 
     if hostname:
-        logger.info(f"[blue]Using stored value for hostname:[/] {hostname}")
+        print_info(f"Using stored value for hostname: {hostname}")
     else:
-        hostname = typer.prompt("Enter Metrc hostname (e.g., mo.metrc.com)")
+        hostname = typer.prompt("[magenta]Enter Metrc hostname (e.g., mo.metrc.com)[/magenta]")
 
     if username:
-        logger.info(f"[blue]Using stored value for username:[/] {username}")
+        print_info(f"Using stored value for username: {username}")
     else:
-        username = typer.prompt("Enter Metrc username")
+        username = typer.prompt("[magenta]Enter Metrc username[/magenta]")
 
     if password:
-        logger.info("[blue]Using stored value for password.[/]")
+        print_info("Using stored value for password.")
     else:
-        password = typer.prompt("Enter Metrc password", hide_input=True)
+        password = typer.prompt("[magenta]Enter Metrc password[/magenta]", hide_input=True)
 
     credentials: T3Credentials = {
         "hostname": hostname or "",
@@ -114,15 +115,15 @@ def prompt_for_credentials_or_error(**kwargs: object) -> T3Credentials:
     }
 
     if hostname in OTP_WHITELIST:
-        otp = typer.prompt("Enter 6-digit Metrc 2-factor authentication code")
+        otp = typer.prompt("[magenta]Enter 6-digit Metrc 2-factor authentication code[/magenta]")
         if not otp or len(otp) != 6 or not otp.isdigit():
-            logger.error("[red]Invalid 2-factor authentication entered.[/red]")
+            print_error("Invalid 2-factor authentication entered.")
             raise AuthenticationError(f"Invalid 2-factor authentication: {otp}")
         credentials["otp"] = otp
 
     for key, value in credentials.items():
         if key not in ("otp", "email") and (not isinstance(value, str) or not value.strip()):
-            logger.error(f"[red]Missing or empty credential:[/] {key}")
+            print_error(f"Missing or empty credential: {key}")
             raise AuthenticationError(f"Missing or empty credential: {key}")
 
     return credentials
@@ -132,6 +133,7 @@ def resolve_auth_inputs_or_error() -> T3Credentials:
     """
     Resolve authentication credentials from env and/or prompt and offer to save.
     """
+    print_subheader("Authentication Required")
     stored_credentials = load_credentials_from_env()
     credentials = prompt_for_credentials_or_error(**stored_credentials)
     offer_to_save_credentials(credentials=credentials)
