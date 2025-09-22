@@ -412,11 +412,17 @@ def _action_open_json(*, state: _HandlerState) -> None:
         print_error(f"Error opening JSON file: {e}")
 
 
+def _action_inspect_collection(*, data: List[Dict[str, Any]], state: _HandlerState) -> None:
+    """Launch collection inspector."""
+    inspect_collection(data=data, collection_name=state.collection_name)
+
+
 def _get_menu_options(*, state: _HandlerState) -> List[tuple[str, str]]:
     """Get all menu options (always show all options, auto-setup handles prerequisites)."""
     options = []
 
     # Core actions - always available
+    options.append(("Inspect collection", "inspect"))
     options.append(("Save to CSV", "csv"))
     options.append(("Save to JSON", "json"))
     options.append(("Load into database", "load_db"))
@@ -466,6 +472,7 @@ def interactive_collection_handler(
 
     # Action mapping
     actions = {
+        "inspect": lambda: _action_inspect_collection(data=data, state=state),
         "csv": lambda: _action_save_csv(data=data, state=state),
         "json": lambda: _action_save_json(data=data, state=state),
         "load_db": lambda: _action_load_db(data=data, state=state),
@@ -582,3 +589,33 @@ def load_db(*, con: duckdb.DuckDBPyConnection, data: List[Dict[str, Any]]) -> No
     # Create one table per nested data_model
     for _, data_dict in extracted_tables.items():
         create_table_from_data(con=con, data_dict=data_dict)
+
+
+def inspect_collection(
+    *,
+    data: List[Dict[str, Any]],
+    collection_name: str = "collection"
+) -> None:
+    """
+    Interactive inspector for exploring collection objects using Textual TUI.
+
+    Features:
+    - Scrollable JSON display with syntax highlighting
+    - Mouse and keyboard navigation support
+    - Interactive buttons with visual feedback
+    - Search functionality with live filtering
+    - Professional terminal user interface
+    - Responsive layout that adapts to terminal size
+
+    Args:
+        data: List of dictionaries to inspect
+        collection_name: Name for the collection (used in display)
+    """
+    if not data:
+        print_error("Cannot inspect empty collection")
+        return
+
+    # Import here to avoid circular import
+    from t3api_utils.inspector import inspect_collection as textual_inspect
+
+    textual_inspect(data=data, collection_name=collection_name)

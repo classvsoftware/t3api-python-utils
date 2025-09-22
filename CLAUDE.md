@@ -272,3 +272,7 @@ password = typer.prompt("[magenta]Password[/magenta]", hide_input=True)
 ```
 
 This style guide ensures a professional, cohesive purple-themed interface across all CLI interactions.
+
+## Textual TUI Style Guide
+
+When building Textual applications, use minimal styling for a barebones interface. Avoid colors and complex CSS - rely on Textual's default appearance.
