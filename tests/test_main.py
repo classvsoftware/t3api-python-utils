@@ -11,7 +11,7 @@ from t3api_utils.main.utils import (get_authenticated_client_or_error,
                                     get_api_key_authenticated_client_or_error,
                                     get_jwt_authenticated_client_or_error,
                                     get_jwt_authenticated_client_or_error_with_validation,
-                                    load_collection, pick_file, pick_license,
+                                    load_collection, match_collection_from_csv, pick_file, pick_license,
                                     save_collection_to_csv,
                                     save_collection_to_json,
                                     _discover_data_files, _format_file_size,
@@ -861,3 +861,241 @@ class TestPickFile:
                 file_extensions=[".csv", ".json", ".txt", ".tsv", ".jsonl"],
                 include_subdirectories=True
             )
+
+
+class TestMatchCollectionFromCSV:
+    """Test the collection matching functionality."""
+
+    def setup_method(self):
+        """Set up test data for each test."""
+        self.sample_collection = [
+            {"id": "123", "name": "ProductA", "status": "Active", "category": "Electronics"},
+            {"id": "456", "name": "ProductB", "status": "Inactive", "category": "Clothing"},
+            {"id": "789", "name": "ProductC", "status": "Active", "category": "Electronics"},
+            {"id": "101", "name": "ProductD", "status": "Active", "category": "Books"}
+        ]
+
+        self.valid_csv_content = [
+            {"id": "123", "status": "Active"},
+            {"id": "789", "status": "Active"}
+        ]
+
+        self.invalid_csv_content = [
+            {"unknown_field": "123", "status": "Active"}
+        ]
+
+    @patch('t3api_utils.main.utils.pick_file')
+    def test_successful_matching(self, mock_pick_file):
+        """Test successful CSV matching with valid data."""
+        mock_pick_file.return_value = {
+            "content": self.valid_csv_content,
+            "format": "csv",
+            "path": Path("/test/file.csv")
+        }
+
+        result = match_collection_from_csv(
+            collection_data=self.sample_collection,
+            collection_name="test_collection"
+        )
+
+        # Should return 2 matching items
+        assert len(result) == 2
+        assert result[0]["id"] == "123"
+        assert result[1]["id"] == "789"
+        mock_pick_file.assert_called_once()
+
+    @patch('t3api_utils.main.utils.pick_file')
+    def test_column_validation_error(self, mock_pick_file):
+        """Test error when CSV columns don't match collection fields."""
+        mock_pick_file.return_value = {
+            "content": self.invalid_csv_content,
+            "format": "csv",
+            "path": Path("/test/file.csv")
+        }
+
+        with pytest.raises(ValueError, match="CSV columns not found in collection"):
+            match_collection_from_csv(
+                collection_data=self.sample_collection,
+                collection_name="test_collection"
+            )
+
+    @patch('t3api_utils.main.utils.pick_file')
+    def test_no_matches_warn_behavior(self, mock_pick_file):
+        """Test behavior when no matches found with warn setting."""
+        no_match_csv = [{"id": "999", "status": "Unknown"}]
+        mock_pick_file.return_value = {
+            "content": no_match_csv,
+            "format": "csv",
+            "path": Path("/test/file.csv")
+        }
+
+        result = match_collection_from_csv(
+            collection_data=self.sample_collection,
+            on_no_match="warn",
+            collection_name="test_collection"
+        )
+
+        # Should return empty list
+        assert result == []
+
+    @patch('t3api_utils.main.utils.pick_file')
+    def test_no_matches_error_behavior(self, mock_pick_file):
+        """Test error behavior when no matches found with error setting."""
+        no_match_csv = [{"id": "999", "status": "Unknown"}]
+        mock_pick_file.return_value = {
+            "content": no_match_csv,
+            "format": "csv",
+            "path": Path("/test/file.csv")
+        }
+
+        with pytest.raises(ValueError, match="No match found for CSV row"):
+            match_collection_from_csv(
+                collection_data=self.sample_collection,
+                on_no_match="error",
+                collection_name="test_collection"
+            )
+
+    @patch('t3api_utils.main.utils.pick_file')
+    def test_no_matches_skip_behavior(self, mock_pick_file):
+        """Test skip behavior when no matches found."""
+        mixed_csv = [
+            {"id": "123", "status": "Active"},  # This will match
+            {"id": "999", "status": "Unknown"}  # This won't match
+        ]
+        mock_pick_file.return_value = {
+            "content": mixed_csv,
+            "format": "csv",
+            "path": Path("/test/file.csv")
+        }
+
+        result = match_collection_from_csv(
+            collection_data=self.sample_collection,
+            on_no_match="skip",
+            collection_name="test_collection"
+        )
+
+        # Should return only the matching item
+        assert len(result) == 1
+        assert result[0]["id"] == "123"
+
+    @patch('t3api_utils.main.utils.pick_file')
+    def test_multiple_field_matching(self, mock_pick_file):
+        """Test matching on multiple CSV fields."""
+        multi_field_csv = [
+            {"id": "123", "name": "ProductA", "status": "Active"},
+            {"id": "456", "name": "ProductB", "status": "Active"}  # Wrong status, won't match
+        ]
+        mock_pick_file.return_value = {
+            "content": multi_field_csv,
+            "format": "csv",
+            "path": Path("/test/file.csv")
+        }
+
+        result = match_collection_from_csv(
+            collection_data=self.sample_collection,
+            collection_name="test_collection"
+        )
+
+        # Only first row should match (ProductB has wrong status)
+        assert len(result) == 1
+        assert result[0]["id"] == "123"
+
+    @patch('t3api_utils.main.utils.pick_file')
+    def test_duplicate_removal(self, mock_pick_file):
+        """Test that duplicate matches are removed."""
+        duplicate_csv = [
+            {"status": "Active"},  # This will match multiple items
+            {"category": "Electronics"}  # This will also match multiple items
+        ]
+        mock_pick_file.return_value = {
+            "content": duplicate_csv,
+            "format": "csv",
+            "path": Path("/test/file.csv")
+        }
+
+        result = match_collection_from_csv(
+            collection_data=self.sample_collection,
+            collection_name="test_collection"
+        )
+
+        # Should have unique items only (no duplicates)
+        ids = [item["id"] for item in result]
+        assert len(ids) == len(set(ids))  # No duplicates
+
+    def test_empty_collection_error(self):
+        """Test error when collection is empty."""
+        with pytest.raises(ValueError, match="Collection data cannot be empty"):
+            match_collection_from_csv(
+                collection_data=[],
+                collection_name="empty_collection"
+            )
+
+    @patch('t3api_utils.main.utils.pick_file')
+    def test_empty_csv_error(self, mock_pick_file):
+        """Test error when CSV is empty."""
+        mock_pick_file.return_value = {
+            "content": [],
+            "format": "csv",
+            "path": Path("/test/file.csv")
+        }
+
+        with pytest.raises(ValueError, match="CSV file contains no data"):
+            match_collection_from_csv(
+                collection_data=self.sample_collection,
+                collection_name="test_collection"
+            )
+
+    @patch('t3api_utils.main.utils.pick_file')
+    def test_invalid_csv_format_error(self, mock_pick_file):
+        """Test error when CSV format is invalid."""
+        mock_pick_file.return_value = {
+            "content": "invalid_format",
+            "format": "csv",
+            "path": Path("/test/file.csv")
+        }
+
+        with pytest.raises(ValueError, match="CSV must contain headers and data rows"):
+            match_collection_from_csv(
+                collection_data=self.sample_collection,
+                collection_name="test_collection"
+            )
+
+    @patch('t3api_utils.main.utils.pick_file')
+    def test_file_selection_cancelled(self, mock_pick_file):
+        """Test behavior when file selection is cancelled."""
+        mock_pick_file.side_effect = Exit(code=1)
+
+        with pytest.raises(Exit):
+            match_collection_from_csv(
+                collection_data=self.sample_collection,
+                collection_name="test_collection"
+            )
+
+    @patch('t3api_utils.main.utils.pick_file')
+    def test_string_conversion_matching(self, mock_pick_file):
+        """Test that values are converted to strings for comparison."""
+        # Collection with mixed types
+        mixed_collection = [
+            {"id": 123, "name": "Product", "active": True},
+            {"id": "456", "name": "Service", "active": False}
+        ]
+
+        # CSV with string values
+        string_csv = [
+            {"id": "123", "active": "True"}
+        ]
+
+        mock_pick_file.return_value = {
+            "content": string_csv,
+            "format": "csv",
+            "path": Path("/test/file.csv")
+        }
+
+        result = match_collection_from_csv(
+            collection_data=mixed_collection,
+            collection_name="test_collection"
+        )
+
+        # Should match due to string conversion
+        assert len(result) == 1
+        assert result[0]["id"] == 123

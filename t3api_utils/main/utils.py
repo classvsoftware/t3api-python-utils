@@ -7,7 +7,7 @@ import sys
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import (Any, Callable, Dict, List, Optional, ParamSpec, TypeVar,
+from typing import (Any, Callable, Dict, List, Literal, Optional, ParamSpec, TypeVar,
                     Union, cast)
 
 import duckdb
@@ -598,17 +598,38 @@ def _action_inspect_collection(*, data: List[Dict[str, Any]], state: _HandlerSta
     inspect_collection(data=data, collection_name=state.collection_name)
 
 
+def _action_filter_by_csv(*, data: List[Dict[str, Any]], state: _HandlerState) -> List[Dict[str, Any]]:
+    """Filter collection by CSV matches and return filtered data."""
+    try:
+        filtered_data = match_collection_from_csv(
+            collection_data=data,
+            collection_name=state.collection_name,
+            on_no_match="warn"  # Default to warn for interactive use
+        )
+
+        if filtered_data:
+            print_success(f"Collection filtered: {len(filtered_data)} items selected")
+            return filtered_data
+        else:
+            print_warning("No matches found - original collection unchanged")
+            return data
+
+    except Exception as e:
+        print_error(f"CSV filtering failed: {e}")
+        return data
+
+
 def _get_menu_options(*, state: _HandlerState) -> List[tuple[str, str]]:
     """Get all menu options (always show all options, auto-setup handles prerequisites)."""
     options = []
 
     # Core actions - always available
     options.append(("Inspect collection", "inspect"))
+    options.append(("Filter by CSV matches", "filter_csv"))
     options.append(("Save to CSV", "csv"))
     options.append(("Save to JSON", "json"))
     options.append(("Load into database", "load_db"))
     options.append(("Export database schema", "export_schema"))
-
 
     options.append(("Exit", "exit"))
 
@@ -643,17 +664,30 @@ def interactive_collection_handler(
     )
 
     print_header("Collection Handler")
-    print_labeled_info("Dataset", f"{collection_name} ({len(data):,} items)")
 
-    # Action mapping
-    actions: Dict[str, Callable[[], None]] = {
-        "inspect": lambda: _action_inspect_collection(data=data, state=state),
-        "csv": lambda: _action_save_csv(data=data, state=state),
-        "json": lambda: _action_save_json(data=data, state=state),
-        "load_db": lambda: _action_load_db(data=data, state=state),
-        "export_schema": lambda: _action_export_schema(state=state),
-        "exit": lambda: None
-    }
+    # Keep track of current working data (may be filtered)
+    current_data = data
+
+    def update_data_display() -> None:
+        """Update the data display info."""
+        if len(current_data) == len(data):
+            print_labeled_info("Dataset", f"{collection_name} ({len(current_data):,} items)")
+        else:
+            print_labeled_info("Dataset", f"{collection_name} ({len(current_data):,} items - filtered from {len(data):,})")
+
+    update_data_display()
+
+    # Action mapping - note that some actions return new data
+    def get_actions() -> Dict[str, Callable[[], Any]]:
+        return {
+            "inspect": lambda: _action_inspect_collection(data=current_data, state=state),
+            "filter_csv": lambda: _action_filter_by_csv(data=current_data, state=state),
+            "csv": lambda: _action_save_csv(data=current_data, state=state),
+            "json": lambda: _action_save_json(data=current_data, state=state),
+            "load_db": lambda: _action_load_db(data=current_data, state=state),
+            "export_schema": lambda: _action_export_schema(state=state),
+            "exit": lambda: None
+        }
 
     while True:
         # Show current state
@@ -694,7 +728,13 @@ def interactive_collection_handler(
                 break
 
             # Execute action
-            actions[selected_action]()
+            actions = get_actions()
+            action_result = actions[selected_action]()
+
+            # Handle actions that return filtered data
+            if selected_action == "filter_csv" and action_result is not None:
+                current_data = action_result
+                update_data_display()
 
         except (typer.Abort, KeyboardInterrupt):
             print_info("Exiting collection handler")
@@ -1105,3 +1145,139 @@ def _handle_custom_path_input(*, load_content: bool) -> Union[Path, Dict[str, An
         except (typer.Abort, KeyboardInterrupt):
             print_error("Operation cancelled.")
             raise typer.Exit(code=1)
+
+
+def match_collection_from_csv(
+    *,
+    collection_data: List[Dict[str, Any]],
+    on_no_match: Literal["error", "warn", "skip"] = "warn",
+    collection_name: str = "collection"
+) -> List[Dict[str, Any]]:
+    """
+    Filter a collection by matching entries from a CSV file.
+
+    Uses the file picker to select a CSV file, then finds exact matches between
+    CSV rows and collection items. CSV column headers must exactly match
+    collection field names.
+
+    Args:
+        collection_data: The existing collection to search within
+        on_no_match: Behavior when CSV row doesn't match any collection item
+        collection_name: Name for display purposes
+
+    Returns:
+        Filtered subset of collection_data containing only matched items
+
+    Raises:
+        ValueError: If CSV columns don't match collection fields
+        typer.Exit: If user cancels file selection
+        FileNotFoundError: If CSV file cannot be loaded
+
+    Example CSV format (columns must match collection fields exactly):
+    ```csv
+    id,name,status
+    12345,ProductA,Active
+    67890,ProductB,Inactive
+    ```
+    """
+    if not collection_data:
+        print_error("Cannot match against empty collection")
+        raise ValueError("Collection data cannot be empty")
+
+    print_subheader(f"CSV Matching for {collection_name.title()}")
+
+    # Use file picker to load CSV
+    print_info("Select CSV file with matching criteria...")
+    try:
+        csv_file_data = pick_file(
+            file_extensions=[".csv", ".tsv"],
+            load_content=True,
+            search_directory="."
+        )
+    except typer.Exit:
+        print_error("File selection cancelled")
+        raise
+
+    if not isinstance(csv_file_data, dict) or "content" not in csv_file_data:
+        print_error("Failed to load CSV content")
+        raise ValueError("CSV file could not be loaded with content")
+
+    csv_content = csv_file_data["content"]
+
+    if not csv_content:
+        print_error("CSV file is empty")
+        raise ValueError("CSV file contains no data")
+
+    # Validate CSV structure
+    if not isinstance(csv_content, list) or not csv_content[0]:
+        print_error("Invalid CSV format - expected list of dictionaries")
+        raise ValueError("CSV must contain headers and data rows")
+
+    # Get CSV columns and collection fields
+    csv_columns = set(csv_content[0].keys())
+    collection_fields = set(collection_data[0].keys())
+
+    print_labeled_info("CSV columns", ", ".join(sorted(csv_columns)))
+    print_labeled_info("Collection fields", ", ".join(sorted(collection_fields)))
+
+    # Early exit: Check if all CSV columns exist in collection
+    missing_fields = csv_columns - collection_fields
+    if missing_fields:
+        error_msg = f"CSV columns not found in collection: {sorted(missing_fields)}"
+        print_error(error_msg)
+        raise ValueError(error_msg)
+
+    print_success("✓ All CSV columns found in collection")
+
+    # Process matches
+    matched_items: List[Dict[str, Any]] = []
+    unmatched_csv_rows: List[Dict[str, Any]] = []
+
+    print_progress(f"Processing {len(csv_content)} CSV rows...")
+
+    for row_idx, csv_row in enumerate(csv_content, start=1):
+        # Find exact matches in collection
+        matches = [
+            item for item in collection_data
+            if all(str(item.get(col, "")) == str(csv_row.get(col, "")) for col in csv_columns)
+        ]
+
+        if matches:
+            # Add all matches (could be multiple items matching the same CSV row)
+            matched_items.extend(matches)
+        else:
+            unmatched_csv_rows.append(csv_row)
+
+            # Handle unmatched based on parameter
+            if on_no_match == "error":
+                error_msg = f"No match found for CSV row {row_idx}: {csv_row}"
+                print_error(error_msg)
+                raise ValueError(error_msg)
+            elif on_no_match == "warn":
+                print_warning(f"No match found for CSV row {row_idx}: {csv_row}")
+
+    # Remove duplicates while preserving order
+    seen_items = set()
+    unique_matched_items = []
+    for item in matched_items:
+        # Create a hashable key from the item (using str representation)
+        item_key = str(sorted(item.items()))
+        if item_key not in seen_items:
+            seen_items.add(item_key)
+            unique_matched_items.append(item)
+
+    # Display results summary
+    print_subheader("Matching Results")
+    print_labeled_info("CSV rows processed", str(len(csv_content)))
+    print_labeled_info("Matches found", str(len(unique_matched_items)))
+    print_labeled_info("Unmatched CSV rows", str(len(unmatched_csv_rows)))
+    print_labeled_info("Original collection size", str(len(collection_data)))
+
+    if unique_matched_items:
+        percentage = (len(unique_matched_items) / len(collection_data)) * 100
+        print_labeled_info("Filtered collection size", f"{len(unique_matched_items)} ({percentage:.1f}%)")
+        print_success(f"✓ Successfully filtered {collection_name}")
+    else:
+        print_warning("No matches found - returning empty collection")
+
+    return unique_matched_items
