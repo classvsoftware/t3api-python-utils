@@ -73,8 +73,8 @@ def parse_collection_endpoints(spec: Dict[str, Any]) -> List[CollectionEndpoint]
             tags = operation.get("tags", [])
             summary = operation.get("summary", "")
 
-            # Look for collection-like endpoints based on common patterns
-            if not _is_collection_endpoint(path, method, tags, summary):
+            # Look for collection endpoints based on pagination support
+            if not _is_collection_endpoint(operation, path):
                 continue
 
             # Extract endpoint metadata
@@ -133,54 +133,49 @@ def _create_display_name(summary: str, path: str) -> str:
     return path
 
 
-def _is_collection_endpoint(path: str, method: str, tags: List[str], summary: str) -> bool:
+def _is_collection_endpoint(operation: Dict[str, Any], path: str) -> bool:
     """
     Determine if an endpoint represents a collection of data.
 
-    Based on the API analysis, collection endpoints are typically:
-    - GET requests that return lists
-    - Main resource endpoints (not single item details)
-    - Tagged with primary resource names
+    Collection endpoints are identified by having a 'page' parameter,
+    which indicates they support pagination and return lists of items.
+
+    We also filter out single-item detail endpoints to focus on
+    main collections that users would want to load entirely.
     """
-    # Only consider GET requests for collections
-    if method.lower() != "get":
+    # Check if the operation has parameters
+    parameters = operation.get("parameters", [])
+
+    # Look for a 'page' parameter
+    has_page_param = False
+    for param in parameters:
+        if isinstance(param, dict) and param.get("name") == "page":
+            has_page_param = True
+            break
+
+    if not has_page_param:
         return False
 
-    # Skip single item endpoints (endpoints that operate on a single resource)
-    single_item_indicators = [
-        "/history", "/photos", "/file", "/manifest", "/transactions",
-        "/deliveries", "/transporter-details", "/labresults", "/document",
-        "/source-harvests", "/required-labtest-batches", "/labresult-batches",
-        "/source-packages"
+    # Check if this requires a specific ID parameter (single-item endpoints)
+    # These endpoints operate on a specific resource rather than collections
+    id_parameters = [
+        "itemId", "packageId", "transferId", "harvestId", "plantId",
+        "plantBatchId", "salesId", "deliveryId", "labTestResultDocumentFileId"
     ]
 
-    if any(indicator in path for indicator in single_item_indicators):
+    for param in parameters:
+        if isinstance(param, dict) and param.get("name") in id_parameters:
+            return False
+
+    # Also exclude report endpoints (they don't return JSON collections)
+    if "/report" in path:
         return False
 
-    # Skip report endpoints
-    if "/report" in path or "report" in summary.lower():
+    # Exclude create helper endpoints
+    if "/create/" in path:
         return False
 
-    # Skip create/modify/auth endpoints
-    skip_tags = [
-        "Create Package", "Create Strains", "Create Transfer", "Modify Items",
-        "Modify Packages", "Modify Sales Receipts", "Modify Strains",
-        "Modify Transfer", "Modify Transfer Template", "Authentication",
-        "Files", "PDF", "Photos", "Permissions", "Labels", "Search"
-    ]
-
-    if any(tag in skip_tags for tag in tags):
-        return False
-
-    # Include main collection tags
-    collection_tags = [
-        "Packages", "Items", "Harvests", "Plants", "Plant Batches",
-        "Sales Receipts", "Transfers", "Transfer Templates", "Strains",
-        "Tags", "Locations", "Licenses", "States", "Supercollections"
-    ]
-
-    # Check if any of the tags are collection tags
-    return any(tag in collection_tags for tag in tags)
+    return True
 
 
 def get_collection_endpoints() -> List[CollectionEndpoint]:

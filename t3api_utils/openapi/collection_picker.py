@@ -4,6 +4,7 @@ import sys
 from typing import Dict, List
 
 import typer
+from rich.table import Table
 
 from t3api_utils.style import console
 from .spec_fetcher import CollectionEndpoint, get_collection_endpoints
@@ -53,20 +54,22 @@ def _group_by_category(endpoints: List[CollectionEndpoint]) -> Dict[str, List[Co
 
 def _pick_category(categories: Dict[str, List[CollectionEndpoint]]) -> str:
     """Let user pick a category."""
-    console.print("Available collection categories:")
-    console.print()
-
     category_list = sorted(categories.keys())
+
+    table = Table(title="Available Collection Categories", border_style="magenta", header_style="bold magenta")
+    table.add_column("#", style="magenta", justify="right")
+    table.add_column("Category", style="bright_white")
+    table.add_column("Endpoints", style="cyan")
 
     for i, category in enumerate(category_list, 1):
         endpoint_count = len(categories[category])
-        console.print(f"  {i}. {category} ({endpoint_count} endpoints)")
+        table.add_row(str(i), category, str(endpoint_count))
 
-    console.print()
+    console.print(table)
 
     while True:
         try:
-            choice = typer.prompt("Select category (number)")
+            choice = typer.prompt("Select category (number)", show_default=False)
             choice_int = int(choice)
 
             if 1 <= choice_int <= len(category_list):
@@ -86,19 +89,20 @@ def _pick_category(categories: Dict[str, List[CollectionEndpoint]]) -> str:
 
 def _pick_from_category(category_name: str, endpoints: List[CollectionEndpoint]) -> CollectionEndpoint:
     """Let user pick an endpoint from a category."""
-    console.print(f"Available {category_name} collections:")
-    console.print()
+    table = Table(title=f"Available {category_name} Collections", border_style="magenta", header_style="bold magenta")
+    table.add_column("#", style="magenta", justify="right")
+    table.add_column("Collection Name", style="bright_white")
+    table.add_column("Endpoint", style="cyan")
 
     for i, endpoint in enumerate(endpoints, 1):
-        console.print(f"  {i}. {endpoint['name']}")
-        if endpoint['description'] and endpoint['description'] != endpoint['name']:
-            console.print(f"     {endpoint['description']}")
+        endpoint_path = f"{endpoint['method']} {endpoint['path']}"
+        table.add_row(str(i), endpoint['name'], endpoint_path)
 
-    console.print()
+    console.print(table)
 
     while True:
         try:
-            choice = typer.prompt("Select collection (number)")
+            choice = typer.prompt("Select collection (number)", show_default=False)
             choice_int = int(choice)
 
             if 1 <= choice_int <= len(endpoints):

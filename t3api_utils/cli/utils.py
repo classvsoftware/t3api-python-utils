@@ -94,17 +94,17 @@ def prompt_for_credentials_or_error(**kwargs: object) -> T3Credentials:
     if hostname:
         print_info(f"Using stored value for hostname: {hostname}")
     else:
-        hostname = typer.prompt("[magenta]Enter Metrc hostname (e.g., mo.metrc.com)[/magenta]")
+        hostname = typer.prompt("Enter Metrc hostname (e.g., mo.metrc.com)")
 
     if username:
         print_info(f"Using stored value for username: {username}")
     else:
-        username = typer.prompt("[magenta]Enter Metrc username[/magenta]")
+        username = typer.prompt("Enter Metrc username")
 
     if password:
         print_info("Using stored value for password.")
     else:
-        password = typer.prompt("[magenta]Enter Metrc password[/magenta]", hide_input=True)
+        password = typer.prompt("Enter Metrc password", hide_input=True)
 
     credentials: T3Credentials = {
         "hostname": hostname or "",
@@ -115,7 +115,7 @@ def prompt_for_credentials_or_error(**kwargs: object) -> T3Credentials:
     }
 
     if hostname in OTP_WHITELIST:
-        otp = typer.prompt("[magenta]Enter 6-digit Metrc 2-factor authentication code[/magenta]")
+        otp = typer.prompt("Enter 6-digit Metrc 2-factor authentication code")
         if not otp or len(otp) != 6 or not otp.isdigit():
             print_error("Invalid 2-factor authentication entered.")
             raise AuthenticationError(f"Invalid 2-factor authentication: {otp}")

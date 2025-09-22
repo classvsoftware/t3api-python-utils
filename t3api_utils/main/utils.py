@@ -153,7 +153,7 @@ def pick_license(*, api_client: T3APIClient) -> Dict[str, Any]:
 
     console.print(table)
 
-    choice = typer.prompt("[magenta]Select a license[/magenta]", type=int)
+    choice = typer.prompt("Select a license", type=int)
 
     if choice < 1 or choice > len(licenses):
         print_error("Invalid selection.")
@@ -256,10 +256,10 @@ class _HandlerState:
 
 
 def _generate_default_path(*, collection_name: str, license_number: str, extension: str) -> str:
-    """Generate a default file path with timestamp."""
+    """Generate a default file path with timestamp in output/ directory."""
     timestamp = datetime.now().isoformat(timespec="seconds").replace(":", "-")
     filename = f"{collection_name}__{license_number}__{timestamp}.{extension}"
-    return filename
+    return f"output/{filename}"
 
 
 def _prompt_for_file_path(*, proposed_path: str, file_type: str) -> Path:
@@ -268,7 +268,7 @@ def _prompt_for_file_path(*, proposed_path: str, file_type: str) -> Path:
     print_labeled_info("Proposed path", proposed_path)
 
     user_input = typer.prompt(
-        "[magenta]Enter path (or press Enter to use proposed)[/magenta]",
+        "Enter path (or press Enter to use proposed)",
         default=proposed_path,
         show_default=False
     )
@@ -504,7 +504,7 @@ def interactive_collection_handler(
 
         # Get user choice
         try:
-            choice = typer.prompt(f"\n[magenta]Choice [1-{len(options)}][/magenta]", type=int)
+            choice = typer.prompt(f"\nChoice [1-{len(options)}]", type=int)
             if choice < 1 or choice > len(options):
                 print_error("Invalid choice. Please try again.")
                 continue

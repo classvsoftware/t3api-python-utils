@@ -1,6 +1,7 @@
 """Unit and integration tests for OpenAPI functionality."""
 
 import json
+from typing import Any, Dict
 from unittest.mock import Mock, patch
 import pytest
 import httpx
@@ -11,6 +12,7 @@ from t3api_utils.openapi.spec_fetcher import (
     get_collection_endpoints,
     _determine_category,
     _create_display_name,
+    _is_collection_endpoint,
 )
 
 
@@ -75,21 +77,31 @@ class TestCollectionEndpointParser:
             "paths": {
                 "/v2/packages/active": {
                     "get": {
-                        "tags": ["Collection", "Packages"],
+                        "tags": ["Packages"],
                         "summary": "Get Active Packages",
-                        "description": "Retrieve all active packages"
+                        "description": "Retrieve all active packages",
+                        "parameters": [
+                            {"name": "licenseNumber", "type": "string"},
+                            {"name": "page", "type": "integer"}
+                        ]
                     }
                 },
                 "/v2/licenses": {
                     "get": {
-                        "tags": ["Collection", "Licenses"],
-                        "summary": "Get Licenses"
+                        "tags": ["Licenses"],
+                        "summary": "Get Licenses",
+                        "parameters": [
+                            {"name": "page", "type": "integer"}
+                        ]
                     }
                 },
                 "/v2/other": {
                     "get": {
-                        "tags": ["NotCollection"],
-                        "summary": "Other Endpoint"
+                        "tags": ["Other"],
+                        "summary": "Other Endpoint",
+                        "parameters": [
+                            {"name": "itemId", "type": "string"}  # No page param
+                        ]
                     }
                 }
             }
@@ -121,8 +133,11 @@ class TestCollectionEndpointParser:
             "paths": {
                 "/v2/other": {
                     "get": {
-                        "tags": ["NotCollection"],
-                        "summary": "Other Endpoint"
+                        "tags": ["Other"],
+                        "summary": "Other Endpoint",
+                        "parameters": [
+                            {"name": "itemId", "type": "string"}  # No page param
+                        ]
                     }
                 }
             }
@@ -139,23 +154,82 @@ class TestCollectionEndpointParser:
             mock_exit.assert_called_once_with(1)
 
 
+class TestIsCollectionEndpoint:
+    """Unit tests for collection endpoint detection."""
+
+    def test_is_collection_endpoint_with_page_param(self):
+        """Test endpoint with page parameter is detected as collection."""
+        operation = {
+            "parameters": [
+                {"name": "licenseNumber", "type": "string"},
+                {"name": "page", "type": "integer"}
+            ]
+        }
+        assert _is_collection_endpoint(operation, "/v2/packages/active") is True
+
+    def test_is_collection_endpoint_without_page_param(self):
+        """Test endpoint without page parameter is not detected as collection."""
+        operation = {
+            "parameters": [
+                {"name": "licenseNumber", "type": "string"}
+            ]
+        }
+        assert _is_collection_endpoint(operation, "/v2/packages/active") is False
+
+    def test_is_collection_endpoint_with_id_param(self):
+        """Test endpoint with ID parameter is excluded even with page param."""
+        operation = {
+            "parameters": [
+                {"name": "licenseNumber", "type": "string"},
+                {"name": "packageId", "type": "string"},
+                {"name": "page", "type": "integer"}
+            ]
+        }
+        assert _is_collection_endpoint(operation, "/v2/packages/history") is False
+
+    def test_is_collection_endpoint_report_excluded(self):
+        """Test report endpoints are excluded."""
+        operation = {
+            "parameters": [
+                {"name": "licenseNumber", "type": "string"},
+                {"name": "page", "type": "integer"}
+            ]
+        }
+        assert _is_collection_endpoint(operation, "/v2/packages/active/report") is False
+
+    def test_is_collection_endpoint_create_excluded(self):
+        """Test create helper endpoints are excluded."""
+        operation = {
+            "parameters": [
+                {"name": "licenseNumber", "type": "string"},
+                {"name": "page", "type": "integer"}
+            ]
+        }
+        assert _is_collection_endpoint(operation, "/v2/packages/create/source-items") is False
+
+    def test_is_collection_endpoint_no_parameters(self):
+        """Test endpoint with no parameters."""
+        operation: Dict[str, Any] = {}
+        assert _is_collection_endpoint(operation, "/v2/packages/active") is False
+
+
 class TestHelperFunctions:
     """Unit tests for helper functions."""
 
     def test_determine_category_from_tags(self):
         """Test category determination from tags."""
-        assert _determine_category("/v2/packages", ["Collection", "Packages"]) == "Packages"
-        assert _determine_category("/v2/licenses", ["Collection", "Licenses"]) == "Licenses"
+        assert _determine_category("/v2/packages", ["Packages"]) == "Packages"
+        assert _determine_category("/v2/licenses", ["Licenses"]) == "Licenses"
 
     def test_determine_category_from_path(self):
         """Test category determination from path when no other tags."""
-        assert _determine_category("/v2/packages/active", ["Collection"]) == "Packages"
-        assert _determine_category("/v2/licenses", ["Collection"]) == "Licenses"
+        assert _determine_category("/v2/packages/active", []) == "Packages"
+        assert _determine_category("/v2/licenses", []) == "Licenses"
 
     def test_determine_category_fallback(self):
         """Test category determination fallback."""
-        assert _determine_category("/", ["Collection"]) == "General"
-        assert _determine_category("/v2", ["Collection"]) == "General"
+        assert _determine_category("/", []) == "General"
+        assert _determine_category("/v2", []) == "General"
 
     def test_create_display_name_from_summary(self):
         """Test display name creation from summary."""
@@ -182,8 +256,12 @@ class TestIntegrationGetCollectionEndpoints:
             "paths": {
                 "/v2/packages/active": {
                     "get": {
-                        "tags": ["Collection", "Packages"],
-                        "summary": "Get Active Packages"
+                        "tags": ["Packages"],
+                        "summary": "Get Active Packages",
+                        "parameters": [
+                            {"name": "licenseNumber", "type": "string"},
+                            {"name": "page", "type": "integer"}
+                        ]
                     }
                 }
             }
