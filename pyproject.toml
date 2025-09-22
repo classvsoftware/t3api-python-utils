@@ -5,7 +5,7 @@ description = "Utility functions and helpers for the T3 API ecosystem"
 authors = [{ name = "Matt Frisbie", email = "matt@classvsoftware.com" }]
 readme = "README.md"
 license = "GPL-3.0-only"
-requires-python = ">=3.8"
+requires-python = ">=3.8.1"
 keywords = ["t3", "metrc", "utils", "helpers", "track and trace"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -68,3 +68,9 @@ disallow_incomplete_defs = true
 disallow_untyped_defs = true
 no_implicit_reexport = true
 warn_return_any = true
+
+[dependency-groups]
+dev = [
+    "mypy>=1.14.1",
+    "pytest>=8.3.5",
+]

@@ -447,7 +447,7 @@ def interactive_collection_handler(
     print_labeled_info("Dataset", f"{collection_name} ({len(data):,} items)")
 
     # Action mapping
-    actions = {
+    actions: Dict[str, Callable[[], None]] = {
         "inspect": lambda: _action_inspect_collection(data=data, state=state),
         "csv": lambda: _action_save_csv(data=data, state=state),
         "json": lambda: _action_save_json(data=data, state=state),
