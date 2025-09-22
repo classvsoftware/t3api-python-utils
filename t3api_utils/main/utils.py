@@ -1,4 +1,5 @@
 """Main utilities for T3 API data operations using httpx-based API client."""
+
 import csv
 import json
 import os
@@ -7,8 +8,18 @@ import sys
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import (Any, Callable, Dict, List, Literal, Optional, ParamSpec, TypeVar,
-                    Union, cast)
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    ParamSpec,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import duckdb
 import typer
@@ -17,28 +28,46 @@ from rich.table import Table
 from t3api_utils.api.client import T3APIClient
 from t3api_utils.api.interfaces import MetrcCollectionResponse, MetrcObject
 from t3api_utils.api.operations import get_data
-from t3api_utils.api.parallel import (load_all_data_sync,
-                                      parallel_load_collection_enhanced)
+from t3api_utils.api.parallel import (
+    load_all_data_sync,
+    parallel_load_collection_enhanced,
+)
 from t3api_utils.auth.interfaces import T3Credentials
 from t3api_utils.auth.utils import (
     create_api_key_authenticated_client_or_error,
     create_credentials_authenticated_client_or_error,
     create_credentials_authenticated_client_or_error_async,
-    create_jwt_authenticated_client)
+    create_jwt_authenticated_client,
+)
 from t3api_utils.cli.utils import config_manager, resolve_auth_inputs_or_error
 from t3api_utils.collection.utils import extract_data, parallel_load_collection
-from t3api_utils.db.utils import (create_duckdb_connection,
-                                  create_table_from_data, export_duckdb_schema,
-                                  flatten_and_extract)
+from t3api_utils.db.utils import (
+    create_duckdb_connection,
+    create_table_from_data,
+    export_duckdb_schema,
+    flatten_and_extract,
+)
 from t3api_utils.exceptions import AuthenticationError
-from t3api_utils.file.utils import (collection_to_dicts, open_file,
-                                    save_dicts_to_csv, save_dicts_to_json)
+from t3api_utils.file.utils import (
+    collection_to_dicts,
+    open_file,
+    save_dicts_to_csv,
+    save_dicts_to_json,
+)
 from t3api_utils.interfaces import HasData, P, SerializableObject, T
 from t3api_utils.logging import get_logger
-from t3api_utils.style import (console, print_error, print_header, print_info,
-                               print_labeled_info, print_progress,
-                               print_state_info, print_subheader,
-                               print_success, print_warning)
+from t3api_utils.style import (
+    console,
+    print_error,
+    print_header,
+    print_info,
+    print_labeled_info,
+    print_progress,
+    print_state_info,
+    print_subheader,
+    print_success,
+    print_warning,
+)
 
 logger = get_logger(__name__)
 
@@ -66,7 +95,11 @@ def _pick_authentication_method() -> str:
     ]
 
     # Create table following CLI picker standards
-    table = Table(title="Available Authentication Methods", border_style="magenta", header_style="bold magenta")
+    table = Table(
+        title="Available Authentication Methods",
+        border_style="magenta",
+        header_style="bold magenta",
+    )
     table.add_column("#", style="magenta", justify="right")
     table.add_column("Method", style="bright_white")
     table.add_column("Description", style="cyan")
@@ -102,8 +135,12 @@ async def _authenticate_with_credentials_async() -> T3APIClient:
         raise
 
     try:
-        api_client = await create_credentials_authenticated_client_or_error_async(**credentials)
-        logger.info("[bold green]Successfully authenticated with T3 API using credentials.[/]")
+        api_client = await create_credentials_authenticated_client_or_error_async(
+            **credentials
+        )
+        logger.info(
+            "[bold green]Successfully authenticated with T3 API using credentials.[/]"
+        )
         return api_client
     except AuthenticationError as e:
         logger.error(f"Authentication failed: {e}")
@@ -116,6 +153,7 @@ async def _authenticate_with_credentials_async() -> T3APIClient:
 def _authenticate_with_credentials() -> T3APIClient:
     """Helper function for credential-based authentication (sync wrapper)."""
     import asyncio
+
     return asyncio.run(_authenticate_with_credentials_async())
 
 
@@ -140,10 +178,14 @@ def _authenticate_with_api_key() -> T3APIClient:
 
     # Validate state code format (basic validation)
     if not state_code or len(state_code) != 2 or not state_code.isalpha():
-        print_error("Invalid state code. Please enter a 2-letter state code like CA, MO, CO, MI.")
+        print_error(
+            "Invalid state code. Please enter a 2-letter state code like CA, MO, CO, MI."
+        )
         raise AuthenticationError(f"Invalid state code: {state_code}")
 
-    return get_api_key_authenticated_client_or_error(api_key=api_key, state_code=state_code)
+    return get_api_key_authenticated_client_or_error(
+        api_key=api_key, state_code=state_code
+    )
 
 
 async def get_authenticated_client_or_error_async() -> T3APIClient:
@@ -173,7 +215,9 @@ async def get_authenticated_client_or_error_async() -> T3APIClient:
         raise AuthenticationError(f"Unknown authentication method: {auth_method}")
 
 
-def get_authenticated_client_or_error(*, auth_method: Optional[str] = None) -> T3APIClient:
+def get_authenticated_client_or_error(
+    *, auth_method: Optional[str] = None
+) -> T3APIClient:
     """
     High-level method to return an authenticated httpx-based T3 API client (sync wrapper).
 
@@ -219,7 +263,9 @@ def get_jwt_authenticated_client_or_error(*, jwt_token: str) -> T3APIClient:
     """
     try:
         api_client = create_jwt_authenticated_client(jwt_token=jwt_token)
-        logger.info("[bold green]Successfully authenticated with T3 API using JWT token.[/]")
+        logger.info(
+            "[bold green]Successfully authenticated with T3 API using JWT token.[/]"
+        )
         return api_client
     except ValueError as e:
         logger.error(f"JWT token validation error: {e}")
@@ -229,7 +275,9 @@ def get_jwt_authenticated_client_or_error(*, jwt_token: str) -> T3APIClient:
         raise
 
 
-def get_jwt_authenticated_client_or_error_with_validation(*, jwt_token: str) -> T3APIClient:
+def get_jwt_authenticated_client_or_error_with_validation(
+    *, jwt_token: str
+) -> T3APIClient:
     """
     High-level method to return a JWT-authenticated httpx-based T3 API client with validation.
 
@@ -254,23 +302,34 @@ def get_jwt_authenticated_client_or_error_with_validation(*, jwt_token: str) -> 
         # Validate the JWT token by calling /whoami endpoint
         try:
             whoami_response = get_data(api_client, "/v2/auth/whoami")
-            logger.info("[bold green]Successfully authenticated and validated JWT token with T3 API.[/]")
-            logger.info(f"Authenticated as: {whoami_response.get('username', 'Unknown user')}")
+            logger.info(
+                "[bold green]Successfully authenticated and validated JWT token with T3 API.[/]"
+            )
+            logger.info(
+                f"Authenticated as: {whoami_response.get('username', 'Unknown user')}"
+            )
             return api_client
 
         except Exception as validation_error:
             # Close the client on validation failure
             import asyncio
+
             asyncio.run(api_client.close())
 
             # Determine the type of validation error
             error_msg = str(validation_error).lower()
             if "401" in error_msg or "unauthorized" in error_msg:
-                raise AuthenticationError("JWT token is invalid or expired") from validation_error
+                raise AuthenticationError(
+                    "JWT token is invalid or expired"
+                ) from validation_error
             elif "403" in error_msg or "forbidden" in error_msg:
-                raise AuthenticationError("JWT token does not have sufficient permissions") from validation_error
+                raise AuthenticationError(
+                    "JWT token does not have sufficient permissions"
+                ) from validation_error
             else:
-                raise AuthenticationError(f"JWT token validation failed: {validation_error}") from validation_error
+                raise AuthenticationError(
+                    f"JWT token validation failed: {validation_error}"
+                ) from validation_error
 
     except ValueError as e:
         logger.error(f"JWT token validation error: {e}")
@@ -279,11 +338,15 @@ def get_jwt_authenticated_client_or_error_with_validation(*, jwt_token: str) -> 
         # Re-raise authentication errors as-is
         raise
     except Exception as e:
-        logger.exception("Unexpected error while creating and validating JWT authenticated client.")
+        logger.exception(
+            "Unexpected error while creating and validating JWT authenticated client."
+        )
         raise AuthenticationError(f"Unexpected authentication error: {str(e)}") from e
 
 
-def get_api_key_authenticated_client_or_error(*, api_key: str, state_code: str) -> T3APIClient:
+def get_api_key_authenticated_client_or_error(
+    *, api_key: str, state_code: str
+) -> T3APIClient:
     """
     High-level method to return an API key-authenticated httpx-based T3 API client.
 
@@ -303,10 +366,11 @@ def get_api_key_authenticated_client_or_error(*, api_key: str, state_code: str) 
     """
     try:
         api_client = create_api_key_authenticated_client_or_error(
-            api_key=api_key,
-            state_code=state_code
+            api_key=api_key, state_code=state_code
         )
-        logger.info("[bold green]Successfully authenticated with T3 API using API key.[/]")
+        logger.info(
+            "[bold green]Successfully authenticated with T3 API using API key.[/]"
+        )
         return api_client
     except ValueError as e:
         logger.error(f"API key validation error: {e}")
@@ -315,7 +379,9 @@ def get_api_key_authenticated_client_or_error(*, api_key: str, state_code: str) 
         # Re-raise authentication errors as-is
         raise
     except Exception as e:
-        logger.exception("Unexpected error while creating API key authenticated client.")
+        logger.exception(
+            "Unexpected error while creating API key authenticated client."
+        )
         raise AuthenticationError(f"Unexpected authentication error: {str(e)}") from e
 
 
@@ -339,7 +405,9 @@ def pick_license(*, api_client: T3APIClient) -> Dict[str, Any]:
         print_error("No licenses found.")
         raise typer.Exit(code=1)
 
-    table = Table(title="Available Licenses", border_style="magenta", header_style="bold magenta")
+    table = Table(
+        title="Available Licenses", border_style="magenta", header_style="bold magenta"
+    )
     table.add_column("#", style="magenta", justify="right")
     table.add_column("License Name", style="bright_white")
     table.add_column("License Number", style="cyan")
@@ -444,6 +512,7 @@ def save_collection_to_csv(
 @dataclass
 class _HandlerState:
     """State for interactive collection handler."""
+
     db_connection: Optional[duckdb.DuckDBPyConnection] = None
     csv_file_path: Optional[Path] = None
     json_file_path: Optional[Path] = None
@@ -451,7 +520,9 @@ class _HandlerState:
     license_number: str = ""
 
 
-def _generate_default_path(*, collection_name: str, license_number: str, extension: str) -> str:
+def _generate_default_path(
+    *, collection_name: str, license_number: str, extension: str
+) -> str:
     """Generate a default file path with timestamp in output/ directory."""
     timestamp = datetime.now().isoformat(timespec="seconds").replace(":", "-")
     filename = f"{collection_name}__{license_number}__{timestamp}.{extension}"
@@ -466,7 +537,7 @@ def _prompt_for_file_path(*, proposed_path: str, file_type: str) -> Path:
     user_input = typer.prompt(
         "Enter path (or press Enter to use proposed)",
         default=proposed_path,
-        show_default=False
+        show_default=False,
     )
 
     path = Path(user_input.strip())
@@ -482,7 +553,7 @@ def _action_save_csv(*, data: List[Dict[str, Any]], state: _HandlerState) -> Non
     default_path = _generate_default_path(
         collection_name=state.collection_name,
         license_number=state.license_number,
-        extension="csv"
+        extension="csv",
     )
 
     csv_path = _prompt_for_file_path(proposed_path=default_path, file_type="CSV")
@@ -517,7 +588,7 @@ def _action_save_json(*, data: List[Dict[str, Any]], state: _HandlerState) -> No
     default_path = _generate_default_path(
         collection_name=state.collection_name,
         license_number=state.license_number,
-        extension="json"
+        extension="json",
     )
 
     json_path = _prompt_for_file_path(proposed_path=default_path, file_type="JSON")
@@ -534,7 +605,7 @@ def _action_save_json(*, data: List[Dict[str, Any]], state: _HandlerState) -> No
                 f,
                 ensure_ascii=False,
                 indent=2,
-                default=lambda obj: default_json_serializer(obj=obj)
+                default=lambda obj: default_json_serializer(obj=obj),
             )
 
         state.json_file_path = json_path
@@ -581,7 +652,9 @@ def _action_export_schema(*, state: _HandlerState) -> None:
 
     # Check if database has any data
     if not _db_has_data(con=state.db_connection):
-        print_warning("Database has no tables. Load data first using 'Load into database' option.")
+        print_warning(
+            "Database has no tables. Load data first using 'Load into database' option."
+        )
         return
 
     try:
@@ -592,19 +665,22 @@ def _action_export_schema(*, state: _HandlerState) -> None:
         print_error(f"Error exporting schema: {e}")
 
 
-
-def _action_inspect_collection(*, data: List[Dict[str, Any]], state: _HandlerState) -> None:
+def _action_inspect_collection(
+    *, data: List[Dict[str, Any]], state: _HandlerState
+) -> None:
     """Launch collection inspector."""
     inspect_collection(data=data, collection_name=state.collection_name)
 
 
-def _action_filter_by_csv(*, data: List[Dict[str, Any]], state: _HandlerState) -> List[Dict[str, Any]]:
+def _action_filter_by_csv(
+    *, data: List[Dict[str, Any]], state: _HandlerState
+) -> List[Dict[str, Any]]:
     """Filter collection by CSV matches and return filtered data."""
     try:
         filtered_data = match_collection_from_csv(
             collection_data=data,
             collection_name=state.collection_name,
-            on_no_match="warn"  # Default to warn for interactive use
+            on_no_match="warn",  # Default to warn for interactive use
         )
 
         if filtered_data:
@@ -637,10 +713,7 @@ def _get_menu_options(*, state: _HandlerState) -> List[tuple[str, str]]:
 
 
 def interactive_collection_handler(
-    *,
-    data: List[Dict[str, Any]],
-    collection_name: str,
-    license_number: str
+    *, data: List[Dict[str, Any]], collection_name: str, license_number: str
 ) -> None:
     """
     Interactive handler for working with loaded collections.
@@ -660,7 +733,7 @@ def interactive_collection_handler(
     # Initialize state
     state = _HandlerState(
         collection_name=collection_name.lower().replace(" ", "_"),
-        license_number=license_number
+        license_number=license_number,
     )
 
     print_header("Collection Handler")
@@ -671,22 +744,29 @@ def interactive_collection_handler(
     def update_data_display() -> None:
         """Update the data display info."""
         if len(current_data) == len(data):
-            print_labeled_info("Dataset", f"{collection_name} ({len(current_data):,} items)")
+            print_labeled_info(
+                "Dataset", f"{collection_name} ({len(current_data):,} items)"
+            )
         else:
-            print_labeled_info("Dataset", f"{collection_name} ({len(current_data):,} items - filtered from {len(data):,})")
+            print_labeled_info(
+                "Dataset",
+                f"{collection_name} ({len(current_data):,} items - filtered from {len(data):,})",
+            )
 
     update_data_display()
 
     # Action mapping - note that some actions return new data
     def get_actions() -> Dict[str, Callable[[], Any]]:
         return {
-            "inspect": lambda: _action_inspect_collection(data=current_data, state=state),
+            "inspect": lambda: _action_inspect_collection(
+                data=current_data, state=state
+            ),
             "filter_csv": lambda: _action_filter_by_csv(data=current_data, state=state),
             "csv": lambda: _action_save_csv(data=current_data, state=state),
             "json": lambda: _action_save_json(data=current_data, state=state),
             "load_db": lambda: _action_load_db(data=current_data, state=state),
             "export_schema": lambda: _action_export_schema(state=state),
-            "exit": lambda: None
+            "exit": lambda: None,
         }
 
     while True:
@@ -705,7 +785,11 @@ def interactive_collection_handler(
         # Get and display menu options
         options = _get_menu_options(state=state)
 
-        table = Table(title="Collection Handler Options", border_style="magenta", header_style="bold magenta")
+        table = Table(
+            title="Collection Handler Options",
+            border_style="magenta",
+            header_style="bold magenta",
+        )
         table.add_column("#", style="magenta", justify="right")
         table.add_column("Action", style="bright_white")
 
@@ -772,7 +856,6 @@ def _db_has_data(*, con: duckdb.DuckDBPyConnection) -> bool:
         return False
 
 
-
 def load_db(*, con: duckdb.DuckDBPyConnection, data: List[Dict[str, Any]]) -> None:
     """
     Loads a list of nested dictionaries into DuckDB, creating separate tables
@@ -806,9 +889,7 @@ def load_db(*, con: duckdb.DuckDBPyConnection, data: List[Dict[str, Any]]) -> No
 
 
 def inspect_collection(
-    *,
-    data: List[Dict[str, Any]],
-    collection_name: str = "collection"
+    *, data: List[Dict[str, Any]], collection_name: str = "collection"
 ) -> None:
     """
     Interactive inspector for exploring collection objects using Textual TUI.
@@ -839,7 +920,7 @@ def _discover_data_files(
     *,
     search_directory: str,
     file_extensions: List[str],
-    include_subdirectories: bool = False
+    include_subdirectories: bool = False,
 ) -> List[Path]:
     """
     Discover data files in the specified directory.
@@ -862,8 +943,8 @@ def _discover_data_files(
     # Create patterns for each extension
     patterns = []
     for ext in file_extensions:
-        if not ext.startswith('.'):
-            ext = f'.{ext}'
+        if not ext.startswith("."):
+            ext = f".{ext}"
         if include_subdirectories:
             patterns.append(f"**/*{ext}")
         else:
@@ -874,7 +955,9 @@ def _discover_data_files(
         found_files.extend(search_path.glob(pattern))
 
     # Filter out hidden files and directories
-    visible_files = [f for f in found_files if not any(part.startswith('.') for part in f.parts)]
+    visible_files = [
+        f for f in found_files if not any(part.startswith(".") for part in f.parts)
+    ]
 
     # Remove duplicates and sort by modification time (newest first)
     unique_files = list(set(visible_files))
@@ -945,20 +1028,20 @@ def _load_file_content(file_path: Path) -> Dict[str, Any]:
     file_format = extension[1:] if extension else "unknown"
 
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            if extension in ['.json']:
+        with open(file_path, "r", encoding="utf-8") as f:
+            if extension in [".json"]:
                 content = json.load(f)
-            elif extension in ['.jsonl', '.ndjson']:
+            elif extension in [".jsonl", ".ndjson"]:
                 # JSON Lines format
                 content = []
                 for line in f:
                     line = line.strip()
                     if line:
                         content.append(json.loads(line))
-            elif extension in ['.csv', '.tsv']:
+            elif extension in [".csv", ".tsv"]:
                 # Reset file pointer
                 f.seek(0)
-                delimiter = '\t' if extension == '.tsv' else ','
+                delimiter = "\t" if extension == ".tsv" else ","
                 reader = csv.DictReader(f, delimiter=delimiter)
                 content = list(reader)
             else:
@@ -970,7 +1053,7 @@ def _load_file_content(file_path: Path) -> Dict[str, Any]:
             "path": file_path,
             "content": content,
             "format": file_format,
-            "size": file_path.stat().st_size
+            "size": file_path.stat().st_size,
         }
 
     except json.JSONDecodeError as e:
@@ -1020,11 +1103,13 @@ def pick_file(
     found_files = _discover_data_files(
         search_directory=search_directory,
         file_extensions=file_extensions,
-        include_subdirectories=include_subdirectories
+        include_subdirectories=include_subdirectories,
     )
 
     # Prepare options list
-    options: List[tuple[str, str, str, str, Path]] = []  # display_name, size, modified, type, path
+    options: List[tuple[str, str, str, str, Path]] = (
+        []
+    )  # display_name, size, modified, type, path
 
     for file_path in found_files:
         try:
@@ -1060,14 +1145,20 @@ def pick_file(
             raise typer.Exit(code=1)
 
     # Create and display table following CLI picker standards
-    table = Table(title="Available Data Files", border_style="magenta", header_style="bold magenta")
+    table = Table(
+        title="Available Data Files",
+        border_style="magenta",
+        header_style="bold magenta",
+    )
     table.add_column("#", style="magenta", justify="right")
     table.add_column("File", style="bright_white")
     table.add_column("Size", style="cyan", justify="right")
     table.add_column("Modified", style="cyan", justify="right")
     table.add_column("Type", style="cyan", justify="center")
 
-    for idx, (display_name, size_str, modified_str, file_type, _) in enumerate(options, start=1):
+    for idx, (display_name, size_str, modified_str, file_type, _) in enumerate(
+        options, start=1
+    ):
         table.add_row(str(idx), display_name, size_str, modified_str, file_type)
 
     console.print(table)
@@ -1091,7 +1182,9 @@ def pick_file(
                     print_progress("Loading file content...")
                     try:
                         file_data = _load_file_content(selected_path)
-                        print_success(f"Loaded {file_data['format'].upper()} file ({_format_file_size(file_data['size'])})")
+                        print_success(
+                            f"Loaded {file_data['format'].upper()} file ({_format_file_size(file_data['size'])})"
+                        )
                         return file_data
                     except Exception as e:
                         print_error(f"Error loading file: {e}")
@@ -1130,7 +1223,9 @@ def _handle_custom_path_input(*, load_content: bool) -> Union[Path, Dict[str, An
                 print_progress("Loading file content...")
                 try:
                     file_data = _load_file_content(file_path)
-                    print_success(f"Loaded {file_data['format'].upper()} file ({_format_file_size(file_data['size'])})")
+                    print_success(
+                        f"Loaded {file_data['format'].upper()} file ({_format_file_size(file_data['size'])})"
+                    )
                     return file_data
                 except Exception as e:
                     print_error(f"Error loading file: {e}")
@@ -1151,7 +1246,7 @@ def match_collection_from_csv(
     *,
     collection_data: List[Dict[str, Any]],
     on_no_match: Literal["error", "warn", "skip"] = "warn",
-    collection_name: str = "collection"
+    collection_name: str = "collection",
 ) -> List[Dict[str, Any]]:
     """
     Filter a collection by matching entries from a CSV file.
@@ -1190,9 +1285,7 @@ def match_collection_from_csv(
     print_info("Select CSV file with matching criteria...")
     try:
         csv_file_data = pick_file(
-            file_extensions=[".csv", ".tsv"],
-            load_content=True,
-            search_directory="."
+            file_extensions=[".csv", ".tsv"], load_content=True, search_directory="."
         )
     except typer.Exit:
         print_error("File selection cancelled")
@@ -1238,8 +1331,12 @@ def match_collection_from_csv(
     for row_idx, csv_row in enumerate(csv_content, start=1):
         # Find exact matches in collection
         matches = [
-            item for item in collection_data
-            if all(str(item.get(col, "")) == str(csv_row.get(col, "")) for col in csv_columns)
+            item
+            for item in collection_data
+            if all(
+                str(item.get(col, "")) == str(csv_row.get(col, ""))
+                for col in csv_columns
+            )
         ]
 
         if matches:
@@ -1275,7 +1372,10 @@ def match_collection_from_csv(
 
     if unique_matched_items:
         percentage = (len(unique_matched_items) / len(collection_data)) * 100
-        print_labeled_info("Filtered collection size", f"{len(unique_matched_items)} ({percentage:.1f}%)")
+        print_labeled_info(
+            "Filtered collection size",
+            f"{len(unique_matched_items)} ({percentage:.1f}%)",
+        )
         print_success(f"✓ Successfully filtered {collection_name}")
     else:
         print_warning("No matches found - returning empty collection")

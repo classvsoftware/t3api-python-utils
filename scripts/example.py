@@ -16,10 +16,11 @@ from t3api_utils.api.parallel import load_all_data_sync
 from t3api_utils.main.utils import (
     get_authenticated_client_or_error,
     interactive_collection_handler,
+    match_collection_from_csv,
     pick_license,
 )
-from t3api_utils.style import print_warning
 from t3api_utils.openapi import pick_collection
+from t3api_utils.style import print_warning
 
 
 def main():
@@ -32,21 +33,29 @@ def main():
     selected_collection = pick_collection()
 
     # Load all data for the selected collection and license
-    all_data: List[Dict[str, Any]] = load_all_data_sync(
+    collection: List[Dict[str, Any]] = load_all_data_sync(
         client=api_client,
         path=selected_collection["path"],
         license_number=license["licenseNumber"],
     )
 
-    # Use the interactive collection handler to let user choose what to do
-    if all_data:
-        interactive_collection_handler(
-            data=all_data,
-            collection_name=selected_collection["name"],
-            license_number=license["licenseNumber"]
-        )
-    else:
-        print_warning(f"No data found for {selected_collection['name']} on this license.")
+    collection_name = selected_collection["name"]
+
+    interactive_collection_handler(
+        data=collection,
+        collection_name=collection_name,
+        license_number=license["licenseNumber"],
+    )
+
+    filtered_collection = match_collection_from_csv(
+        collection_data=collection, on_no_match="error", collection_name=collection_name
+    )
+
+    interactive_collection_handler(
+        data=filtered_collection,
+        collection_name=collection_name,
+        license_number=license["licenseNumber"],
+    )
 
 
 if __name__ == "__main__":
