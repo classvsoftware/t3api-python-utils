@@ -5,6 +5,7 @@ from typing import Any, Dict, List, TypedDict
 
 import httpx
 
+from t3api_utils.cli.utils import config_manager
 from t3api_utils.style import console
 
 
@@ -27,7 +28,8 @@ def fetch_openapi_spec() -> Dict[str, Any]:
     Raises:
         SystemExit: If the API cannot be reached or returns invalid data.
     """
-    spec_url = "https://api.trackandtrace.tools/v2/spec/openapi.json"
+    api_host = config_manager.get_api_host()
+    spec_url = f"{api_host}/v2/spec/openapi.json"
 
     console.print(f"Fetching OpenAPI spec from {spec_url}...")
 

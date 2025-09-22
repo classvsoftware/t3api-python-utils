@@ -10,6 +10,7 @@ from typing import Dict, Optional
 
 from t3api_utils.api.client import T3APIClient
 from t3api_utils.api.interfaces import AuthResponseData
+from t3api_utils.cli.utils import config_manager
 from t3api_utils.exceptions import AuthenticationError
 from t3api_utils.http.utils import T3HTTPError, HTTPConfig, RetryPolicy, LoggingHooks
 
@@ -19,7 +20,7 @@ async def create_credentials_authenticated_client_or_error_async(
     hostname: str,
     username: str,
     password: str,
-    host: str = "https://api.trackandtrace.tools",
+    host: Optional[str] = None,
     otp: Optional[str] = None,
     email: Optional[str] = None,
 ) -> T3APIClient:
@@ -41,8 +42,9 @@ async def create_credentials_authenticated_client_or_error_async(
         AuthenticationError: If authentication fails
     """
     try:
-        # Create HTTP config with the specified host
-        config = HTTPConfig(host=host)
+        # Create HTTP config with host from config or parameter
+        effective_host = host or config_manager.get_api_host()
+        config = HTTPConfig(host=effective_host)
 
         # Create and authenticate the client
         client = T3APIClient(config=config)
@@ -68,7 +70,7 @@ def create_credentials_authenticated_client_or_error(
     hostname: str,
     username: str,
     password: str,
-    host: str = "https://api.trackandtrace.tools",
+    host: Optional[str] = None,
     otp: Optional[str] = None,
     email: Optional[str] = None,
 ) -> T3APIClient:
@@ -106,7 +108,7 @@ async def authenticate_and_get_token_async(
     hostname: str,
     username: str,
     password: str,
-    host: str = "https://api.trackandtrace.tools",
+    host: Optional[str] = None,
     otp: Optional[str] = None,
     email: Optional[str] = None,
 ) -> str:
@@ -153,7 +155,7 @@ def authenticate_and_get_token(
     hostname: str,
     username: str,
     password: str,
-    host: str = "https://api.trackandtrace.tools",
+    host: Optional[str] = None,
     otp: Optional[str] = None,
     email: Optional[str] = None,
 ) -> str:
@@ -192,7 +194,7 @@ async def authenticate_and_get_response_async(
     hostname: str,
     username: str,
     password: str,
-    host: str = "https://api.trackandtrace.tools",
+    host: Optional[str] = None,
     otp: Optional[str] = None,
     email: Optional[str] = None,
 ) -> AuthResponseData:
@@ -217,8 +219,9 @@ async def authenticate_and_get_response_async(
         AuthenticationError: If authentication fails
     """
     try:
-        # Create HTTP config with the specified host
-        config = HTTPConfig(host=host)
+        # Create HTTP config with host from config or parameter
+        effective_host = host or config_manager.get_api_host()
+        config = HTTPConfig(host=effective_host)
 
         # Create client and authenticate
         async with T3APIClient(config=config) as client:
@@ -243,7 +246,7 @@ def authenticate_and_get_response(
     hostname: str,
     username: str,
     password: str,
-    host: str = "https://api.trackandtrace.tools",
+    host: Optional[str] = None,
     otp: Optional[str] = None,
     email: Optional[str] = None,
 ) -> AuthResponseData:
@@ -317,7 +320,7 @@ def create_jwt_authenticated_client(
     # Handle host and config parameters
     if config is None:
         # No config provided, create one with specified host or default
-        effective_host = host or "https://api.trackandtrace.tools"
+        effective_host = host or config_manager.get_api_host()
         config = HTTPConfig(host=effective_host)
     elif host is not None and config.host != host:
         # Config provided but different host explicitly specified

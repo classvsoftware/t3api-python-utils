@@ -46,6 +46,9 @@ import ssl
 import certifi
 import httpx
 
+# Import config manager for default values
+from t3api_utils.cli.utils import config_manager
+
 __all__ = [
     "HTTPConfig",
     "RetryPolicy",
@@ -75,11 +78,16 @@ def _create_ssl_context(verify: Union[bool, str]) -> Union[bool, ssl.SSLContext]
     return verify
 
 
+def _get_default_host() -> str:
+    """Get default API host from configuration."""
+    return config_manager.get_api_host()
+
+
 @dataclass(frozen=True)
 class HTTPConfig:
     """Base HTTP client configuration (no routes)."""
 
-    host: str = "https://api.trackandtrace.tools"
+    host: str = field(default_factory=_get_default_host)
     timeout: float = DEFAULT_TIMEOUT
     verify_ssl: Union[bool, str] = certifi.where()
     base_headers: Mapping[str, str] = field(default_factory=lambda: {"User-Agent": DEFAULT_USER_AGENT})

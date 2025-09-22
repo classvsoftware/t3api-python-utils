@@ -23,7 +23,7 @@ from t3api_utils.auth.utils import (
     create_credentials_authenticated_client_or_error,
     create_credentials_authenticated_client_or_error_async,
     create_jwt_authenticated_client)
-from t3api_utils.cli.utils import resolve_auth_inputs_or_error
+from t3api_utils.cli.utils import resolve_auth_inputs_or_error, config_manager
 from t3api_utils.collection.utils import extract_data, parallel_load_collection
 from t3api_utils.db.utils import (create_duckdb_connection,
                                   create_table_from_data, export_duckdb_schema,
@@ -39,6 +39,9 @@ from t3api_utils.style import (console, print_error, print_header, print_info,
                                print_success, print_warning)
 
 logger = get_logger(__name__)
+
+# Auto-initialize configuration on module import
+config_manager.ensure_config_exists()
 
 
 def _pick_authentication_method() -> str:
