@@ -23,7 +23,7 @@ from t3api_utils.auth.utils import (
     create_credentials_authenticated_client_or_error,
     create_credentials_authenticated_client_or_error_async,
     create_jwt_authenticated_client)
-from t3api_utils.cli.utils import resolve_auth_inputs_or_error, config_manager
+from t3api_utils.cli.utils import config_manager, resolve_auth_inputs_or_error
 from t3api_utils.collection.utils import extract_data, parallel_load_collection
 from t3api_utils.db.utils import (create_duckdb_connection,
                                   create_table_from_data, export_duckdb_schema,
@@ -616,8 +616,8 @@ def _get_menu_options(*, state: _HandlerState) -> List[tuple[str, str]]:
 def interactive_collection_handler(
     *,
     data: List[Dict[str, Any]],
-    collection_name: str = "collection",
-    license_number: str = ""
+    collection_name: str,
+    license_number: str
 ) -> None:
     """
     Interactive handler for working with loaded collections.
@@ -637,7 +637,7 @@ def interactive_collection_handler(
     # Initialize state
     state = _HandlerState(
         collection_name=collection_name.lower().replace(" ", "_"),
-        license_number=license_number or "unknown"
+        license_number=license_number
     )
 
     print_header("Collection Handler")
