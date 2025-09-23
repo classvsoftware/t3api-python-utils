@@ -6,7 +6,6 @@ import pytest
 from typer import Exit
 
 from t3api_utils.exceptions import AuthenticationError
-from t3api_utils.interfaces import SerializableObject
 from t3api_utils.main.utils import (
     _discover_data_files, _format_file_size, _format_file_time,
     _load_file_content, _pick_authentication_method,
@@ -362,25 +361,26 @@ def test_pick_license_empty_list(mock_get_data, mock_print_error):
 def test_load_collection_flattens_data(mock_parallel, mock_extract):
     mock_response = [MagicMock()]
     mock_parallel.return_value = mock_response
-    mock_extract.return_value = ["a", "b"]
+    mock_extract.return_value = [
+        {"id": 1, "hostname": "test.com", "licenseNumber": "LIC-1", "dataModel": "TEST", "retrievedAt": "2023-01-01T00:00:00Z"},
+        {"id": 2, "hostname": "test.com", "licenseNumber": "LIC-2", "dataModel": "TEST", "retrievedAt": "2023-01-01T00:00:00Z"}
+    ]
 
     def fake_method(*args, **kwargs):
         pass
 
     result = load_collection(fake_method)
-    assert result == ["a", "b"]
+    assert len(result) == 2
+    assert result[0]["id"] == 1
+    assert result[1]["id"] == 2
     mock_parallel.assert_called_once()
     mock_extract.assert_called_once_with(responses=mock_response)
 
 
 @patch("t3api_utils.main.utils.open_file")
 @patch("t3api_utils.main.utils.save_dicts_to_json")
-@patch("t3api_utils.main.utils.collection_to_dicts")
-def test_save_collection_to_json_success(mock_convert, mock_save, mock_open):
-    fake_obj = MagicMock(spec=SerializableObject)
-    fake_obj.index = "my_model"
-    fake_obj.license_number = "XYZ"
-    mock_convert.return_value = [{"some": "dict"}]
+def test_save_collection_to_json_success(mock_save, mock_open):
+    fake_obj = {"index": "my_model", "licenseNumber": "XYZ", "other": "data"}
     mock_save.return_value = Path("/tmp/output.json")
 
     result = save_collection_to_json(objects=[fake_obj], output_dir=".", open_after=True)
@@ -391,12 +391,8 @@ def test_save_collection_to_json_success(mock_convert, mock_save, mock_open):
 
 @patch("t3api_utils.main.utils.open_file")
 @patch("t3api_utils.main.utils.save_dicts_to_csv")
-@patch("t3api_utils.main.utils.collection_to_dicts")
-def test_save_collection_to_csv_success(mock_convert, mock_save, mock_open):
-    fake_obj = MagicMock(spec=SerializableObject)
-    fake_obj.index = "test"
-    fake_obj.license_number = "LIC123"
-    mock_convert.return_value = [{"some": "dict"}]
+def test_save_collection_to_csv_success(mock_save, mock_open):
+    fake_obj = {"index": "test", "licenseNumber": "LIC123", "other": "data"}
     mock_save.return_value = Path("/tmp/output.csv")
 
     result = save_collection_to_csv(objects=[fake_obj], output_dir=".", open_after=True, strip_empty_columns=True)

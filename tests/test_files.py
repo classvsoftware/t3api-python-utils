@@ -7,7 +7,6 @@ from typing import Any
 import pytest
 
 from t3api_utils.file.utils import (
-    collection_to_dicts,
     default_json_serializer,
     flatten_dict,
     generate_output_path,
@@ -17,12 +16,6 @@ from t3api_utils.file.utils import (
 )
 
 
-class DummySerializableObject:
-    def __init__(self, data):
-        self._data = data
-
-    def to_dict(self):
-        return self._data
 
 
 def test_flatten_dict():
@@ -38,14 +31,6 @@ def test_prioritized_fieldnames():
     assert fields.index("hostname") < fields.index("z")
 
 
-def test_collection_to_dicts():
-    objs = [DummySerializableObject({"x": 1}), DummySerializableObject({"y": 2})]
-    assert collection_to_dicts(objects=objs) == [{"x": 1}, {"y": 2}]  # type: ignore
-
-
-def test_collection_to_dicts_empty_raises():
-    with pytest.raises(ValueError):
-        collection_to_dicts(objects=[])
 
 
 def test_default_json_serializer_datetime():

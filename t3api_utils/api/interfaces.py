@@ -58,6 +58,3 @@ class MetrcCollectionResponse(TypedDict):
     page: int
     pageSize: int
 
-
-# Type alias for flexible data handling
-MetrcData = Union[MetrcObject, Dict[str, Any]]

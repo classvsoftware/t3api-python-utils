@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from t3api_utils.file.consts import PRIORITY_FIELDS
-from t3api_utils.interfaces import SerializableObject
 from t3api_utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -43,13 +42,6 @@ def prioritized_fieldnames(*, dicts: List[Dict[str, Any]]) -> List[str]:
     return prioritized + remaining
 
 
-def collection_to_dicts(*, objects: List[SerializableObject]) -> List[Dict[str, Any]]:
-    """
-    Converts a collection of SerializableObject instances to a list of dicts using `.to_dict()`.
-    """
-    if not objects:
-        raise ValueError("Cannot serialize an empty list of objects")
-    return [obj.to_dict() for obj in objects]
 
 
 def default_json_serializer(*, obj: object) -> str:

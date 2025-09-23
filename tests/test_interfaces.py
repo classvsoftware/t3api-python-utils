@@ -1,206 +1,8 @@
-"""Tests for protocol and TypedDict interfaces."""
+"""Tests for TypedDict interfaces."""
 
-from typing import Any, Dict, List
-import pytest
 
-from t3api_utils.interfaces import HasData, SerializableObject
 from t3api_utils.auth.interfaces import T3Credentials
 from t3api_utils.api.interfaces import AuthResponseData, MetrcObject, MetrcCollectionResponse
-
-
-class TestHasDataProtocol:
-    """Test HasData protocol."""
-
-    def test_has_data_protocol_basic(self):
-        """Test basic HasData protocol implementation."""
-        class MockResponse:
-            def __init__(self, data: List[Any]):
-                self.data = data
-
-        response = MockResponse([1, 2, 3])
-
-        # Should be recognized as implementing HasData protocol
-        assert isinstance(response, HasData)
-        assert response.data == [1, 2, 3]
-
-    def test_has_data_protocol_with_dicts(self):
-        """Test HasData protocol with dictionary data."""
-        class APIResponse:
-            def __init__(self):
-                self.data = [
-                    {"id": "1", "name": "Item 1"},
-                    {"id": "2", "name": "Item 2"}
-                ]
-
-        response = APIResponse()
-
-        assert isinstance(response, HasData)
-        assert len(response.data) == 2
-        assert response.data[0]["name"] == "Item 1"
-
-    def test_has_data_protocol_empty_list(self):
-        """Test HasData protocol with empty data."""
-        class EmptyResponse:
-            data: List[Any] = []
-
-        response = EmptyResponse()
-
-        assert isinstance(response, HasData)
-        assert response.data == []
-
-    def test_has_data_protocol_runtime_check(self):
-        """Test runtime checking of HasData protocol."""
-        # Object with data attribute
-        class ValidObject:
-            data = ["a", "b", "c"]
-
-        # Object without data attribute
-        class InvalidObject:
-            items = ["a", "b", "c"]
-
-        valid_obj = ValidObject()
-        invalid_obj = InvalidObject()
-
-        assert isinstance(valid_obj, HasData)
-        assert not isinstance(invalid_obj, HasData)
-
-    def test_has_data_protocol_type_var(self):
-        """Test HasData protocol with specific type."""
-        class TypedResponse:
-            def __init__(self, data: List[str]):
-                self.data = data
-
-        response = TypedResponse(["hello", "world"])
-
-        assert isinstance(response, HasData)
-        assert all(isinstance(item, str) for item in response.data)
-
-    def test_has_data_protocol_with_complex_objects(self):
-        """Test HasData protocol with complex object data."""
-        class ComplexObject:
-            def __init__(self, name: str, value: int):
-                self.name = name
-                self.value = value
-
-        class ComplexResponse:
-            def __init__(self):
-                self.data = [
-                    ComplexObject("obj1", 100),
-                    ComplexObject("obj2", 200)
-                ]
-
-        response = ComplexResponse()
-
-        assert isinstance(response, HasData)
-        assert response.data[0].name == "obj1"
-        assert response.data[1].value == 200
-
-
-class TestSerializableObjectProtocol:
-    """Test SerializableObject protocol."""
-
-    def test_serializable_object_basic(self):
-        """Test basic SerializableObject implementation."""
-        class MockSerializable:
-            def __init__(self, index: str, license_number: str):
-                self.index = index
-                self.license_number = license_number
-
-            def to_dict(self) -> Dict[str, Any]:
-                return {
-                    "index": self.index,
-                    "license_number": self.license_number
-                }
-
-        obj = MockSerializable("idx123", "LIC456")
-
-        assert isinstance(obj, SerializableObject)
-        assert obj.index == "idx123"
-        assert obj.license_number == "LIC456"
-
-        result = obj.to_dict()
-        assert result["index"] == "idx123"
-        assert result["license_number"] == "LIC456"
-
-    def test_serializable_object_complex(self):
-        """Test SerializableObject with complex data."""
-        class ComplexSerializable:
-            def __init__(self, index: str, license_number: str, metadata: Dict[str, Any]):
-                self.index = index
-                self.license_number = license_number
-                self.metadata = metadata
-
-            def to_dict(self) -> Dict[str, Any]:
-                return {
-                    "index": self.index,
-                    "license_number": self.license_number,
-                    "metadata": self.metadata,
-                    "timestamp": "2024-01-01T00:00:00Z"
-                }
-
-        metadata = {"type": "test", "version": 1}
-        obj = ComplexSerializable("complex123", "LIC789", metadata)
-
-        assert isinstance(obj, SerializableObject)
-
-        result = obj.to_dict()
-        assert result["metadata"] == metadata
-        assert "timestamp" in result
-
-    def test_serializable_object_runtime_check(self):
-        """Test runtime checking of SerializableObject protocol."""
-        # Valid implementation
-        class ValidSerializable:
-            index = "test"
-            license_number = "LIC123"
-
-            def to_dict(self):
-                return {"index": self.index, "license_number": self.license_number}
-
-        # Missing to_dict method
-        class MissingMethod:
-            index = "test"
-            license_number = "LIC123"
-
-        # Missing index attribute
-        class MissingIndex:
-            license_number = "LIC123"
-
-            def to_dict(self):
-                return {"license_number": self.license_number}
-
-        valid_obj = ValidSerializable()
-        missing_method_obj = MissingMethod()
-        missing_index_obj = MissingIndex()
-
-        assert isinstance(valid_obj, SerializableObject)
-        assert not isinstance(missing_method_obj, SerializableObject)
-        assert not isinstance(missing_index_obj, SerializableObject)
-
-    def test_serializable_object_method_signature(self):
-        """Test SerializableObject to_dict method signature."""
-        class TestSerializable:
-            index = "test123"
-            license_number = "LIC999"
-
-            def to_dict(self) -> Dict[str, Any]:
-                return {
-                    "index": self.index,
-                    "license_number": self.license_number,
-                    "extra_field": "extra_value"
-                }
-
-        obj = TestSerializable()
-
-        assert isinstance(obj, SerializableObject)
-
-        # Method should be callable
-        assert callable(obj.to_dict)
-
-        # Should return a dictionary
-        result = obj.to_dict()
-        assert isinstance(result, dict)
-        assert "extra_field" in result
 
 
 class TestT3Credentials:
@@ -496,10 +298,7 @@ class TestInterfacesModules:
         """Test main interfaces module exports."""
         import t3api_utils.interfaces as interfaces
 
-        assert hasattr(interfaces, 'HasData')
-        assert hasattr(interfaces, 'SerializableObject')
         assert hasattr(interfaces, 'P')
-        assert hasattr(interfaces, 'T')
 
     def test_auth_interfaces_module(self):
         """Test auth interfaces module exports."""
@@ -517,13 +316,10 @@ class TestInterfacesModules:
 
     def test_cross_module_imports(self):
         """Test importing interfaces from different modules."""
-        from t3api_utils.interfaces import HasData, SerializableObject
         from t3api_utils.auth.interfaces import T3Credentials
         from t3api_utils.api.interfaces import AuthResponseData, MetrcCollectionResponse
 
         # Should be able to use all interfaces together
-        assert HasData is not None
-        assert SerializableObject is not None
         assert T3Credentials is not None
         assert AuthResponseData is not None
         assert MetrcCollectionResponse is not None

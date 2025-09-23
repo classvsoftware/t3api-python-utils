@@ -34,12 +34,12 @@ from t3api_utils.db.utils import (
 )
 from t3api_utils.exceptions import AuthenticationError
 from t3api_utils.file.utils import (
-    collection_to_dicts,
     open_file,
     save_dicts_to_csv,
     save_dicts_to_json,
 )
-from t3api_utils.interfaces import HasData, P, SerializableObject, T
+from t3api_utils.api.interfaces import MetrcCollectionResponse, MetrcObject
+from t3api_utils.interfaces import P
 from t3api_utils.logging import get_logger
 from t3api_utils.style import (
     console,
@@ -412,22 +412,22 @@ def pick_license(*, api_client: T3APIClient) -> LicenseData:
 
 
 def load_collection(
-    method: Callable[P, HasData[T]],
+    method: Callable[P, MetrcCollectionResponse],
     max_workers: int | None = None,
     *args: P.args,
     **kwargs: P.kwargs,
-) -> List[T]:
+) -> List[MetrcObject]:
     """
     Loads and flattens a full paginated collection in parallel, preserving type safety.
 
     Args:
-        method: A callable that fetches a single page and returns an object with a `.data: List[T]` attribute.
+        method: A callable that fetches a single page and returns a MetrcCollectionResponse.
         max_workers: Optional max number of threads to use.
         *args: Positional arguments for the method.
         **kwargs: Keyword arguments for the method.
 
     Returns:
-        List[T]: A flattened list of all items across all pages.
+        List[MetrcObject]: A flattened list of all items across all pages.
     """
     all_responses = parallel_load_collection(method, max_workers, *args, **kwargs)
     return extract_data(responses=all_responses)
@@ -435,24 +435,24 @@ def load_collection(
 
 def save_collection_to_json(
     *,
-    objects: List[SerializableObject],
+    objects: List[Dict[str, Any]],
     output_dir: str = "output",
     open_after: bool = False,
     filename_override: Optional[str] = None,
 ) -> Path:
     """
-    Converts and saves a SerializableObject collection to a JSON file.
+    Converts and saves a collection of dictionaries to a JSON file.
     Optionally opens the file after saving.
     Returns the path to the saved file.
     """
     if not objects:
         raise ValueError("Cannot serialize an empty list of objects")
 
-    dicts = collection_to_dicts(objects=objects)
+    dicts = objects
     file_path = save_dicts_to_json(
         dicts=dicts,
-        model_name=filename_override or objects[0].index,
-        license_number=objects[0].license_number,
+        model_name=filename_override or objects[0].get("index", "collection"),
+        license_number=objects[0].get("licenseNumber", ""),
         output_dir=output_dir,
     )
 
@@ -464,25 +464,25 @@ def save_collection_to_json(
 
 def save_collection_to_csv(
     *,
-    objects: List[SerializableObject],
+    objects: List[Dict[str, Any]],
     output_dir: str = "output",
     open_after: bool = False,
     filename_override: Optional[str] = None,
     strip_empty_columns: bool = False,
 ) -> Path:
     """
-    Converts and saves a SerializableObject collection to a CSV file.
+    Converts and saves a collection of dictionaries to a CSV file.
     Optionally opens the file after saving.
     Returns the path to the saved file.
     """
     if not objects:
         raise ValueError("Cannot serialize an empty list of objects")
 
-    dicts = collection_to_dicts(objects=objects)
+    dicts = objects
     file_path = save_dicts_to_csv(
         dicts=dicts,
-        model_name=filename_override or objects[0].index,
-        license_number=objects[0].license_number,
+        model_name=filename_override or objects[0].get("index", "collection"),
+        license_number=objects[0].get("licenseNumber", ""),
         output_dir=output_dir,
         strip_empty_columns=strip_empty_columns,
     )

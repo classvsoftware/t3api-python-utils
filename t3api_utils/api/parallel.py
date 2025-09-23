@@ -15,7 +15,6 @@ from typing import (Any, Awaitable, Callable, Dict, List, Optional, TypeVar,
 from t3api_utils.api.client import T3APIClient
 from t3api_utils.api.interfaces import MetrcCollectionResponse
 from t3api_utils.api.operations import get_collection_async
-from t3api_utils.interfaces import HasData
 from t3api_utils.logging import get_logger
 
 logger = get_logger(__name__)
