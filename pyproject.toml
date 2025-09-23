@@ -5,12 +5,12 @@ description = "Utility functions and helpers for the T3 API ecosystem"
 authors = [{ name = "Matt Frisbie", email = "matt@classvsoftware.com" }]
 readme = "README.md"
 license = "GPL-3.0-only"
-requires-python = ">=3.8.1"
+requires-python = ">=3.12"
 keywords = ["t3", "metrc", "utils", "helpers", "track and trace"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.12",
     "Operating System :: OS Independent",
 ]
 dependencies = [
@@ -30,6 +30,7 @@ dependencies = [
 dev = [
     "mypy>=1.14.1",
     "pytest>=8.3.5",
+    "pytest-asyncio>=1.2.0",
 ]
 
 [project.urls]
@@ -74,4 +75,8 @@ warn_return_any = true
 dev = [
     "mypy>=1.14.1",
     "pytest>=8.3.5",
+    "pytest-asyncio>=1.2.0",
 ]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
