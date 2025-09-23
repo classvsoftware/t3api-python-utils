@@ -869,10 +869,14 @@ class TestMatchCollectionFromCSV:
     def setup_method(self):
         """Set up test data for each test."""
         self.sample_collection = [
-            {"id": "123", "name": "ProductA", "status": "Active", "category": "Electronics"},
-            {"id": "456", "name": "ProductB", "status": "Inactive", "category": "Clothing"},
-            {"id": "789", "name": "ProductC", "status": "Active", "category": "Electronics"},
-            {"id": "101", "name": "ProductD", "status": "Active", "category": "Books"}
+            {"id": 123, "name": "ProductA", "status": "Active", "category": "Electronics",
+             "hostname": "ca.metrc.com", "licenseNumber": "CUL00001", "dataModel": "PACKAGE", "retrievedAt": "2025-09-23T13:19:22.734Z"},
+            {"id": 456, "name": "ProductB", "status": "Inactive", "category": "Clothing",
+             "hostname": "ca.metrc.com", "licenseNumber": "CUL00001", "dataModel": "PACKAGE", "retrievedAt": "2025-09-23T13:19:22.734Z"},
+            {"id": 789, "name": "ProductC", "status": "Active", "category": "Electronics",
+             "hostname": "ca.metrc.com", "licenseNumber": "CUL00001", "dataModel": "PACKAGE", "retrievedAt": "2025-09-23T13:19:22.734Z"},
+            {"id": 101, "name": "ProductD", "status": "Active", "category": "Books",
+             "hostname": "ca.metrc.com", "licenseNumber": "CUL00001", "dataModel": "PACKAGE", "retrievedAt": "2025-09-23T13:19:22.734Z"}
         ]
 
         self.valid_csv_content = [
@@ -894,14 +898,13 @@ class TestMatchCollectionFromCSV:
         }
 
         result = match_collection_from_csv(
-            collection_data=self.sample_collection,
-            collection_name="test_collection"
+            collection_data=self.sample_collection
         )
 
         # Should return 2 matching items
         assert len(result) == 2
-        assert result[0]["id"] == "123"
-        assert result[1]["id"] == "789"
+        assert result[0]["id"] == 123
+        assert result[1]["id"] == 789
         mock_pick_file.assert_called_once()
 
     @patch('t3api_utils.main.utils.pick_file')
@@ -915,8 +918,7 @@ class TestMatchCollectionFromCSV:
 
         with pytest.raises(ValueError, match="CSV columns not found in collection"):
             match_collection_from_csv(
-                collection_data=self.sample_collection,
-                collection_name="test_collection"
+                collection_data=self.sample_collection
             )
 
     @patch('t3api_utils.main.utils.pick_file')
@@ -931,8 +933,7 @@ class TestMatchCollectionFromCSV:
 
         result = match_collection_from_csv(
             collection_data=self.sample_collection,
-            on_no_match="warn",
-            collection_name="test_collection"
+            on_no_match="warn"
         )
 
         # Should return empty list
@@ -951,8 +952,7 @@ class TestMatchCollectionFromCSV:
         with pytest.raises(ValueError, match="No match found for CSV row"):
             match_collection_from_csv(
                 collection_data=self.sample_collection,
-                on_no_match="error",
-                collection_name="test_collection"
+                on_no_match="error"
             )
 
     @patch('t3api_utils.main.utils.pick_file')
@@ -970,13 +970,12 @@ class TestMatchCollectionFromCSV:
 
         result = match_collection_from_csv(
             collection_data=self.sample_collection,
-            on_no_match="skip",
-            collection_name="test_collection"
+            on_no_match="skip"
         )
 
         # Should return only the matching item
         assert len(result) == 1
-        assert result[0]["id"] == "123"
+        assert result[0]["id"] == 123
 
     @patch('t3api_utils.main.utils.pick_file')
     def test_multiple_field_matching(self, mock_pick_file):
@@ -992,13 +991,12 @@ class TestMatchCollectionFromCSV:
         }
 
         result = match_collection_from_csv(
-            collection_data=self.sample_collection,
-            collection_name="test_collection"
+            collection_data=self.sample_collection
         )
 
         # Only first row should match (ProductB has wrong status)
         assert len(result) == 1
-        assert result[0]["id"] == "123"
+        assert result[0]["id"] == 123
 
     @patch('t3api_utils.main.utils.pick_file')
     def test_duplicate_removal(self, mock_pick_file):
@@ -1014,8 +1012,7 @@ class TestMatchCollectionFromCSV:
         }
 
         result = match_collection_from_csv(
-            collection_data=self.sample_collection,
-            collection_name="test_collection"
+            collection_data=self.sample_collection
         )
 
         # Should have unique items only (no duplicates)
@@ -1026,8 +1023,7 @@ class TestMatchCollectionFromCSV:
         """Test error when collection is empty."""
         with pytest.raises(ValueError, match="Collection data cannot be empty"):
             match_collection_from_csv(
-                collection_data=[],
-                collection_name="empty_collection"
+                collection_data=[]
             )
 
     @patch('t3api_utils.main.utils.pick_file')
@@ -1041,8 +1037,7 @@ class TestMatchCollectionFromCSV:
 
         with pytest.raises(ValueError, match="CSV file contains no data"):
             match_collection_from_csv(
-                collection_data=self.sample_collection,
-                collection_name="test_collection"
+                collection_data=self.sample_collection
             )
 
     @patch('t3api_utils.main.utils.pick_file')
@@ -1056,8 +1051,7 @@ class TestMatchCollectionFromCSV:
 
         with pytest.raises(ValueError, match="CSV must contain headers and data rows"):
             match_collection_from_csv(
-                collection_data=self.sample_collection,
-                collection_name="test_collection"
+                collection_data=self.sample_collection
             )
 
     @patch('t3api_utils.main.utils.pick_file')
@@ -1067,8 +1061,7 @@ class TestMatchCollectionFromCSV:
 
         with pytest.raises(Exit):
             match_collection_from_csv(
-                collection_data=self.sample_collection,
-                collection_name="test_collection"
+                collection_data=self.sample_collection
             )
 
     @patch('t3api_utils.main.utils.pick_file')
@@ -1076,8 +1069,10 @@ class TestMatchCollectionFromCSV:
         """Test that values are converted to strings for comparison."""
         # Collection with mixed types
         mixed_collection = [
-            {"id": 123, "name": "Product", "active": True},
-            {"id": "456", "name": "Service", "active": False}
+            {"id": 123, "name": "Product", "active": True,
+             "hostname": "ca.metrc.com", "licenseNumber": "CUL00001", "dataModel": "PACKAGE", "retrievedAt": "2025-09-23T13:19:22.734Z"},
+            {"id": 456, "name": "Service", "active": False,
+             "hostname": "ca.metrc.com", "licenseNumber": "CUL00001", "dataModel": "PACKAGE", "retrievedAt": "2025-09-23T13:19:22.734Z"}
         ]
 
         # CSV with string values
@@ -1092,8 +1087,7 @@ class TestMatchCollectionFromCSV:
         }
 
         result = match_collection_from_csv(
-            collection_data=mixed_collection,
-            collection_name="test_collection"
+            collection_data=mixed_collection
         )
 
         # Should match due to string conversion

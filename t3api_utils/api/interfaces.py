@@ -40,6 +40,9 @@ class MetrcObject(TypedDict):
 
     retrievedAt: str
     """ISO 8601 timestamp when this object was retrieved from the API (e.g., '2025-09-23T13:19:22.734Z')"""
+
+    index: NotRequired[str]
+    """Optional index that differentiates objects of the same dataModel type"""
     
 
 

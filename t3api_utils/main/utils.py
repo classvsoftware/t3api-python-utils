@@ -668,7 +668,7 @@ def _action_inspect_collection(
     *, data: List[Dict[str, Any]], state: _HandlerState
 ) -> None:
     """Launch collection inspector."""
-    inspect_collection(data=data, collection_name=state.collection_name)
+    inspect_collection(data=data)
 
 
 def _action_filter_by_csv(
@@ -678,7 +678,6 @@ def _action_filter_by_csv(
     try:
         filtered_data = match_collection_from_csv(
             collection_data=data,
-            collection_name=state.collection_name,
             on_no_match="warn",  # Default to warn for interactive use
         )
 
@@ -711,23 +710,23 @@ def _get_menu_options(*, state: _HandlerState) -> List[tuple[str, str]]:
     return options
 
 
-def interactive_collection_handler(
-    *, data: List[Dict[str, Any]], collection_name: str, license_number: str
-) -> None:
+def interactive_collection_handler(*, data: List[Dict[str, Any]]) -> None:
     """
     Interactive handler for working with loaded collections.
 
     Provides a menu-driven interface for saving to files, loading into database,
     exporting schemas, and opening files. State is preserved across operations.
+    Automatically extracts collection name and license number from the data.
 
     Args:
-        data: List of dictionaries to work with
-        collection_name: Name for the collection (used in filenames)
-        license_number: License number for the data (used in filenames)
+        data: List of dictionaries to work with (must be MetrcObjects)
     """
     if not data:
         print_error("Cannot handle empty collection")
         return
+
+    # Extract metadata from the collection
+    collection_name, license_number = extract_collection_metadata(cast(List[MetrcObject], data))
 
     # Initialize state
     state = _HandlerState(
@@ -887,9 +886,7 @@ def load_db(*, con: duckdb.DuckDBPyConnection, data: List[Dict[str, Any]]) -> No
         create_table_from_data(con=con, data_dict=data_dict)
 
 
-def inspect_collection(
-    *, data: List[Dict[str, Any]], collection_name: str = "collection"
-) -> None:
+def inspect_collection(*, data: List[Dict[str, Any]]) -> None:
     """
     Interactive inspector for exploring collection objects using Textual TUI.
 
@@ -901,13 +898,16 @@ def inspect_collection(
     - Professional terminal user interface
     - Responsive layout that adapts to terminal size
 
+    Automatically extracts collection name from the data.
     Args:
-        data: List of dictionaries to inspect
-        collection_name: Name for the collection (used in display)
+        data: List of dictionaries to inspect (must be MetrcObjects)
     """
     if not data:
         print_error("Cannot inspect empty collection")
         return
+
+    # Extract metadata from the collection
+    collection_name, _ = extract_collection_metadata(cast(List[MetrcObject], data))
 
     # Import here to avoid circular import
     from t3api_utils.inspector import inspect_collection as textual_inspect
@@ -1245,19 +1245,17 @@ def match_collection_from_csv(
     *,
     collection_data: List[Dict[str, Any]],
     on_no_match: Literal["error", "warn", "skip"] = "warn",
-    collection_name: str = "collection",
 ) -> List[Dict[str, Any]]:
     """
     Filter a collection by matching entries from a CSV file.
 
     Uses the file picker to select a CSV file, then finds exact matches between
     CSV rows and collection items. CSV column headers must exactly match
-    collection field names.
+    collection field names. Automatically extracts collection name from the data.
 
     Args:
-        collection_data: The existing collection to search within
+        collection_data: The existing collection to search within (must be MetrcObjects)
         on_no_match: Behavior when CSV row doesn't match any collection item
-        collection_name: Name for display purposes
 
     Returns:
         Filtered subset of collection_data containing only matched items
@@ -1277,6 +1275,9 @@ def match_collection_from_csv(
     if not collection_data:
         print_error("Cannot match against empty collection")
         raise ValueError("Collection data cannot be empty")
+
+    # Extract metadata from the collection
+    collection_name, _ = extract_collection_metadata(cast(List[MetrcObject], collection_data))
 
     print_subheader(f"CSV Matching for {collection_name.title()}")
 
@@ -1380,3 +1381,70 @@ def match_collection_from_csv(
         print_warning("No matches found - returning empty collection")
 
     return unique_matched_items
+
+
+def extract_collection_metadata(collection: List[MetrcObject]) -> tuple[str, str]:
+    """Extract collection name and license number from a collection of MetrcObjects.
+
+    For collection name: Uses dataModel__index format when index is present,
+    otherwise just dataModel. If multiple different values exist, returns "mixed_datamodels".
+
+    For license number: Uses the licenseNumber field. If multiple different values
+    exist, returns "mixed_licenses".
+
+    Args:
+        collection: List of MetrcObject instances to analyze
+
+    Returns:
+        Tuple of (collection_name, license_number)
+
+    Examples:
+        >>> objects = [
+        ...     {"dataModel": "PACKAGE", "index": "active", "licenseNumber": "CUL00001"},
+        ...     {"dataModel": "PACKAGE", "index": "active", "licenseNumber": "CUL00001"}
+        ... ]
+        >>> extract_collection_metadata(objects)
+        ("PACKAGE__active", "CUL00001")
+
+        >>> mixed_objects = [
+        ...     {"dataModel": "PACKAGE", "licenseNumber": "CUL00001"},
+        ...     {"dataModel": "PLANT", "licenseNumber": "CUL00002"}
+        ... ]
+        >>> extract_collection_metadata(mixed_objects)
+        ("mixed_datamodels", "mixed_licenses")
+    """
+    if not collection:
+        return ("empty_collection", "no_license")
+
+    # Extract collection names (dataModel__index or dataModel)
+    collection_names = set()
+    license_numbers = set()
+
+    for obj in collection:
+        # Build collection name
+        data_model = obj.get("dataModel", "unknown_datamodel")
+        index = obj.get("index")
+
+        if index:
+            collection_name = f"{data_model}__{index}"
+        else:
+            collection_name = data_model
+
+        collection_names.add(collection_name)
+
+        # Extract license number
+        license_number = obj.get("licenseNumber", "unknown_license")
+        license_numbers.add(license_number)
+
+    # Determine final names
+    if len(collection_names) == 1:
+        final_collection_name = next(iter(collection_names))
+    else:
+        final_collection_name = "mixed_datamodels"
+
+    if len(license_numbers) == 1:
+        final_license_number = next(iter(license_numbers))
+    else:
+        final_license_number = "mixed_licenses"
+
+    return (final_collection_name, final_license_number)
