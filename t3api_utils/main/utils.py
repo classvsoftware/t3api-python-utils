@@ -637,8 +637,8 @@ def _action_load_db(*, data: List[Dict[str, Any]], state: _HandlerState) -> None
         print_error(f"Error loading data into database: {e}")
 
 
-def _action_export_schema(*, state: _HandlerState) -> None:
-    """Export and print database schema (auto-creates connection and checks for data)."""
+def _action_export_schema(*, data: List[Dict[str, Any]], state: _HandlerState) -> None:
+    """Export and print database schema (auto-creates connection and loads data if needed)."""
     # Auto-setup: Create database connection if needed
     if not state.db_connection:
         print_progress("Creating database connection...")
@@ -649,12 +649,15 @@ def _action_export_schema(*, state: _HandlerState) -> None:
             print_error(f"Error creating database connection: {e}")
             return
 
-    # Check if database has any data
+    # Auto-load data if database is empty
     if not _db_has_data(con=state.db_connection):
-        print_warning(
-            "Database has no tables. Load data first using 'Load into database' option."
-        )
-        return
+        print_progress("Database is empty. Loading data automatically...")
+        try:
+            load_db(con=state.db_connection, data=data)
+            print_success(f"Loaded {len(data)} records into database")
+        except Exception as e:
+            print_error(f"Error loading data into database: {e}")
+            return
 
     try:
         schema = export_duckdb_schema(con=state.db_connection)
@@ -662,6 +665,41 @@ def _action_export_schema(*, state: _HandlerState) -> None:
         console.print(f"[bright_white]{schema}[/bright_white]")
     except Exception as e:
         print_error(f"Error exporting schema: {e}")
+
+
+def _action_show_help() -> None:
+    """Display help information about the collection handler interface."""
+    print_subheader("Collection Handler Help")
+
+    help_text = [
+        "This interactive interface allows you to work with a collection of data objects.",
+        "Each item in your collection contains structured data that you can explore,",
+        "filter, export, and analyze using the available menu options.",
+        "",
+        "Available Actions:",
+        "• Inspect collection - Browse and explore individual data items",
+        "• Filter by CSV matches - Filter your data based on CSV file criteria",
+        "• Save to CSV - Export your data to a CSV file",
+        "• Save to JSON - Export your data to a JSON file",
+        "• Load into database - Import data into DuckDB for SQL analysis",
+        "• Export database schema - View the structure of loaded database tables",
+        "• Help - Show this help message",
+        "• Exit - Leave the collection handler",
+        "",
+        "Your collection is automatically named based on the data type and license.",
+        "All operations preserve your original data while allowing you to work with",
+        "filtered subsets or export to different formats for further analysis."
+    ]
+
+    for line in help_text:
+        if line.startswith("•"):
+            console.print(f"  [cyan]{line}[/cyan]")
+        elif line == "Available Actions:":
+            console.print(f"[bold magenta]{line}[/bold magenta]")
+        elif line:
+            console.print(f"[bright_white]{line}[/bright_white]")
+        else:
+            console.print()
 
 
 def _action_inspect_collection(
@@ -693,19 +731,19 @@ def _action_filter_by_csv(
         return data
 
 
-def _get_menu_options(*, state: _HandlerState) -> List[tuple[str, str]]:
-    """Get all menu options (always show all options, auto-setup handles prerequisites)."""
+def _get_menu_options(*, state: _HandlerState) -> List[tuple[str, str, str]]:
+    """Get all menu options with descriptions (always show all options, auto-setup handles prerequisites)."""
     options = []
 
     # Core actions - always available
-    options.append(("Inspect collection", "inspect"))
-    options.append(("Filter by CSV matches", "filter_csv"))
-    options.append(("Save to CSV", "csv"))
-    options.append(("Save to JSON", "json"))
-    options.append(("Load into database", "load_db"))
-    options.append(("Export database schema", "export_schema"))
-
-    options.append(("Exit", "exit"))
+    options.append(("Inspect collection", "inspect", "Browse and explore data items interactively"))
+    options.append(("Filter by CSV matches", "filter_csv", "Filter data using criteria from a CSV file"))
+    options.append(("Save to CSV", "csv", "Export data to a CSV file"))
+    options.append(("Save to JSON", "json", "Export data to a JSON file"))
+    options.append(("Load into database", "load_db", "Import data into DuckDB for SQL analysis"))
+    options.append(("Export database schema", "export_schema", "View database table structure (auto-loads data)"))
+    options.append(("Help", "help", "Show help information about this interface"))
+    options.append(("Exit", "exit", "Close the collection handler"))
 
     return options
 
@@ -763,7 +801,8 @@ def interactive_collection_handler(*, data: List[Dict[str, Any]]) -> None:
             "csv": lambda: _action_save_csv(data=current_data, state=state),
             "json": lambda: _action_save_json(data=current_data, state=state),
             "load_db": lambda: _action_load_db(data=current_data, state=state),
-            "export_schema": lambda: _action_export_schema(state=state),
+            "export_schema": lambda: _action_export_schema(data=current_data, state=state),
+            "help": lambda: _action_show_help(),
             "exit": lambda: None,
         }
 
@@ -790,9 +829,9 @@ def interactive_collection_handler(*, data: List[Dict[str, Any]]) -> None:
         )
         table.add_column("#", style="magenta", justify="right")
         table.add_column("Action", style="bright_white")
-
-        for i, (text, _) in enumerate(options, 1):
-            table.add_row(str(i), text)
+        table.add_column("Description", style="cyan")
+        for i, (text, _, description) in enumerate(options, 1):
+            table.add_row(str(i), text, description)
 
         console.print(table)
 
