@@ -15,10 +15,27 @@ class AuthResponseData(TypedDict):
 
 
 class MetrcObject(TypedDict):
-    """Generic Metrc object with common fields."""
+    """Base Metrc object containing fields common to all collection data responses.
 
-    id: NotRequired[str]
-    licenseNumber: NotRequired[str]
+    All Metrc API collection endpoints return objects that extend this base structure
+    with additional fields specific to the resource type (packages, plants, etc.).
+    """
+
+    id: int
+    """Unique numeric identifier for the Metrc object (e.g., 123456)"""
+
+    hostname: str
+    """Metrc instance hostname where the data originated (e.g., 'ca.metrc.com')"""
+
+    licenseNumber: str
+    """License number associated with this object (e.g., 'CUL00001')"""
+
+    dataModel: str
+    """Metrc data model type identifier (e.g., 'ACTIVE_PACKAGE', 'PLANT', 'TRANSFER')"""
+
+    retrievedAt: str
+    """ISO 8601 timestamp when this object was retrieved from the API (e.g., '2025-09-23T13:19:22.734Z')"""
+    
 
 
 class MetrcCollectionResponse(TypedDict):
@@ -28,7 +45,7 @@ class MetrcCollectionResponse(TypedDict):
     like licenses, packages, plants, transfers, etc.
     """
 
-    data: List[Dict[str, Any]]
+    data: List[MetrcObject]
     total: int
     page: int
     pageSize: int
