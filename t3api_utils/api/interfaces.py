@@ -5,7 +5,7 @@ in its raw dict/list format for maximum flexibility.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, NotRequired, TypedDict, TypeVar
+from typing import Any, Dict, List, NotRequired, TypedDict, TypeVar, Union
 
 
 class AuthResponseData(TypedDict):
@@ -57,3 +57,7 @@ class MetrcCollectionResponse(TypedDict):
     total: int
     page: int
     pageSize: int
+
+
+# Type alias for flexible data handling
+MetrcData = Union[MetrcObject, Dict[str, Any]]

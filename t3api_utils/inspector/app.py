@@ -1,7 +1,7 @@
 """Textual-based collection inspector application."""
 
 import json
-from typing import Any, Dict, List
+from typing import Any, Dict, Sequence
 
 from textual import on
 from textual.app import App, ComposeResult
@@ -141,10 +141,10 @@ class CollectionInspectorApp(App[None]):
         Binding("q,escape", "quit", "Quit"),
     ]
 
-    def __init__(self, *, data: List[Dict[str, Any]], collection_name: str = "collection") -> None:
+    def __init__(self, *, data: Sequence[Dict[str, Any]], collection_name: str = "collection") -> None:
         super().__init__()
-        self.original_data = data
-        self.filtered_data = data.copy()
+        self.original_data = list(data)
+        self.filtered_data = list(data)
         self.current_index = 0
         self.collection_name = collection_name
         self.search_query = ""
@@ -273,7 +273,7 @@ class CollectionInspectorApp(App[None]):
         status_bar.set_search(self.search_query, len(self.filtered_data))
 
 
-def inspect_collection(*, data: List[Dict[str, Any]], collection_name: str = "collection") -> None:
+def inspect_collection(*, data: Sequence[Dict[str, Any]], collection_name: str = "collection") -> None:
     """Launch the Textual collection inspector."""
     if not data:
         print_info("No data to inspect")

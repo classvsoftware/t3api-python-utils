@@ -8,34 +8,19 @@ import sys
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    List,
-    Literal,
-    Optional,
-    ParamSpec,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Union, cast
 
 import duckdb
 import typer
 from rich.table import Table
 
 from t3api_utils.api.client import T3APIClient
-from t3api_utils.api.interfaces import LicenseData, MetrcCollectionResponse, MetrcObject
+from t3api_utils.api.interfaces import LicenseData, MetrcObject
 from t3api_utils.api.operations import get_data
-from t3api_utils.api.parallel import (
-    load_all_data_sync,
-    parallel_load_collection_enhanced,
-)
+from t3api_utils.api.parallel import parallel_load_collection_enhanced
 from t3api_utils.auth.interfaces import T3Credentials
 from t3api_utils.auth.utils import (
     create_api_key_authenticated_client_or_error,
-    create_credentials_authenticated_client_or_error,
     create_credentials_authenticated_client_or_error_async,
     create_jwt_authenticated_client,
 )
@@ -385,7 +370,7 @@ def get_api_key_authenticated_client_or_error(
         raise AuthenticationError(f"Unexpected authentication error: {str(e)}") from e
 
 
-def pick_license(*, api_client: T3APIClient) -> Dict[str, Any]:
+def pick_license(*, api_client: T3APIClient) -> LicenseData:
     """
     Interactive license picker using httpx-based T3 API client.
 
@@ -423,7 +408,7 @@ def pick_license(*, api_client: T3APIClient) -> Dict[str, Any]:
         raise typer.Exit(code=1)
 
     selected_license = licenses_response[choice - 1]
-    return cast(Dict[str, Any], selected_license)
+    return cast(LicenseData, selected_license)
 
 
 def load_collection(
@@ -517,6 +502,7 @@ class _HandlerState:
     json_file_path: Optional[Path] = None
     collection_name: str = "collection"
     license_number: str = ""
+    data_loaded_to_db: bool = False
 
 
 def _generate_default_path(
@@ -620,6 +606,14 @@ def _action_save_json(*, data: List[Dict[str, Any]], state: _HandlerState) -> No
 
 def _action_load_db(*, data: List[Dict[str, Any]], state: _HandlerState) -> None:
     """Load collection into database (auto-creates DB connection if needed)."""
+    # Check if data has already been loaded in this session
+    if state.data_loaded_to_db:
+        print_warning("Data has already been loaded into the database in this session.")
+        print_info(
+            "Use 'Export database schema' to view the existing database structure."
+        )
+        return
+
     # Auto-setup: Create database connection if needed
     if not state.db_connection:
         print_progress("Creating database connection...")
@@ -632,6 +626,7 @@ def _action_load_db(*, data: List[Dict[str, Any]], state: _HandlerState) -> None
 
     try:
         load_db(con=state.db_connection, data=data)
+        state.data_loaded_to_db = True  # Mark as loaded
         print_success(f"Loaded {len(data)} records into database")
     except Exception as e:
         print_error(f"Error loading data into database: {e}")
@@ -649,11 +644,19 @@ def _action_export_schema(*, data: List[Dict[str, Any]], state: _HandlerState) -
             print_error(f"Error creating database connection: {e}")
             return
 
-    # Auto-load data if database is empty
+    # Auto-load data if database is empty and data hasn't been loaded yet
     if not _db_has_data(con=state.db_connection):
+        if state.data_loaded_to_db:
+            print_warning(
+                "Database appears empty but data was previously loaded in this session."
+            )
+            print_info("This might indicate the database connection was reset.")
+            return
+
         print_progress("Database is empty. Loading data automatically...")
         try:
             load_db(con=state.db_connection, data=data)
+            state.data_loaded_to_db = True  # Mark as loaded
             print_success(f"Loaded {len(data)} records into database")
         except Exception as e:
             print_error(f"Error loading data into database: {e}")
@@ -688,7 +691,7 @@ def _action_show_help() -> None:
         "",
         "Your collection is automatically named based on the data type and license.",
         "All operations preserve your original data while allowing you to work with",
-        "filtered subsets or export to different formats for further analysis."
+        "filtered subsets or export to different formats for further analysis.",
     ]
 
     for line in help_text:
@@ -715,7 +718,7 @@ def _action_filter_by_csv(
     """Filter collection by CSV matches and return filtered data."""
     try:
         filtered_data = match_collection_from_csv(
-            collection_data=data,
+            data=data,
             on_no_match="warn",  # Default to warn for interactive use
         )
 
@@ -736,12 +739,28 @@ def _get_menu_options(*, state: _HandlerState) -> List[tuple[str, str, str]]:
     options = []
 
     # Core actions - always available
-    options.append(("Inspect collection", "inspect", "Browse and explore data items interactively"))
-    options.append(("Filter by CSV matches", "filter_csv", "Filter data using criteria from a CSV file"))
+    options.append(
+        ("Inspect collection", "inspect", "Browse and explore data items interactively")
+    )
+    options.append(
+        (
+            "Filter by CSV matches",
+            "filter_csv",
+            "Filter data using criteria from a CSV file",
+        )
+    )
     options.append(("Save to CSV", "csv", "Export data to a CSV file"))
     options.append(("Save to JSON", "json", "Export data to a JSON file"))
-    options.append(("Load into database", "load_db", "Import data into DuckDB for SQL analysis"))
-    options.append(("Export database schema", "export_schema", "View database table structure (auto-loads data)"))
+    options.append(
+        ("Load into database", "load_db", "Import data into DuckDB for SQL analysis")
+    )
+    options.append(
+        (
+            "Export database schema",
+            "export_schema",
+            "View database table structure (auto-loads data)",
+        )
+    )
     options.append(("Help", "help", "Show help information about this interface"))
     options.append(("Exit", "exit", "Close the collection handler"))
 
@@ -764,7 +783,7 @@ def interactive_collection_handler(*, data: List[Dict[str, Any]]) -> None:
         return
 
     # Extract metadata from the collection
-    collection_name, license_number = extract_collection_metadata(cast(List[MetrcObject], data))
+    collection_name, license_number = extract_collection_metadata(data=data)
 
     # Initialize state
     state = _HandlerState(
@@ -801,7 +820,9 @@ def interactive_collection_handler(*, data: List[Dict[str, Any]]) -> None:
             "csv": lambda: _action_save_csv(data=current_data, state=state),
             "json": lambda: _action_save_json(data=current_data, state=state),
             "load_db": lambda: _action_load_db(data=current_data, state=state),
-            "export_schema": lambda: _action_export_schema(data=current_data, state=state),
+            "export_schema": lambda: _action_export_schema(
+                data=current_data, state=state
+            ),
             "help": lambda: _action_show_help(),
             "exit": lambda: None,
         }
@@ -811,6 +832,8 @@ def interactive_collection_handler(*, data: List[Dict[str, Any]]) -> None:
         state_info = []
         if state.db_connection:
             state_info.append("DB connected")
+        if state.data_loaded_to_db:
+            state_info.append("Data loaded")
         if state.csv_file_path:
             state_info.append("CSV saved")
         if state.json_file_path:
@@ -925,7 +948,7 @@ def load_db(*, con: duckdb.DuckDBPyConnection, data: List[Dict[str, Any]]) -> No
         create_table_from_data(con=con, data_dict=data_dict)
 
 
-def inspect_collection(*, data: List[Dict[str, Any]]) -> None:
+def inspect_collection(*, data: Sequence[Dict[str, Any]]) -> None:
     """
     Interactive inspector for exploring collection objects using Textual TUI.
 
@@ -946,7 +969,7 @@ def inspect_collection(*, data: List[Dict[str, Any]]) -> None:
         return
 
     # Extract metadata from the collection
-    collection_name, _ = extract_collection_metadata(cast(List[MetrcObject], data))
+    collection_name, _ = extract_collection_metadata(data=data)
 
     # Import here to avoid circular import
     from t3api_utils.inspector import inspect_collection as textual_inspect
@@ -1282,7 +1305,7 @@ def _handle_custom_path_input(*, load_content: bool) -> Union[Path, Dict[str, An
 
 def match_collection_from_csv(
     *,
-    collection_data: List[Dict[str, Any]],
+    data: List[Dict[str, Any]],
     on_no_match: Literal["error", "warn", "skip"] = "warn",
 ) -> List[Dict[str, Any]]:
     """
@@ -1293,11 +1316,11 @@ def match_collection_from_csv(
     collection field names. Automatically extracts collection name from the data.
 
     Args:
-        collection_data: The existing collection to search within (must be MetrcObjects)
+        data: The existing collection to search within (must be MetrcObjects)
         on_no_match: Behavior when CSV row doesn't match any collection item
 
     Returns:
-        Filtered subset of collection_data containing only matched items
+        Filtered subset of data containing only matched items
 
     Raises:
         ValueError: If CSV columns don't match collection fields
@@ -1311,12 +1334,12 @@ def match_collection_from_csv(
     67890,ProductB,Inactive
     ```
     """
-    if not collection_data:
+    if not data:
         print_error("Cannot match against empty collection")
         raise ValueError("Collection data cannot be empty")
 
     # Extract metadata from the collection
-    collection_name, _ = extract_collection_metadata(cast(List[MetrcObject], collection_data))
+    collection_name, _ = extract_collection_metadata(data=data)
 
     print_subheader(f"CSV Matching for {collection_name.title()}")
 
@@ -1347,7 +1370,7 @@ def match_collection_from_csv(
 
     # Get CSV columns and collection fields
     csv_columns = set(csv_content[0].keys())
-    collection_fields = set(collection_data[0].keys())
+    collection_fields = set(data[0].keys())
 
     print_labeled_info("CSV columns", ", ".join(sorted(csv_columns)))
     print_labeled_info("Collection fields", ", ".join(sorted(collection_fields)))
@@ -1371,7 +1394,7 @@ def match_collection_from_csv(
         # Find exact matches in collection
         matches = [
             item
-            for item in collection_data
+            for item in data
             if all(
                 str(item.get(col, "")) == str(csv_row.get(col, ""))
                 for col in csv_columns
@@ -1407,10 +1430,10 @@ def match_collection_from_csv(
     print_labeled_info("CSV rows processed", str(len(csv_content)))
     print_labeled_info("Matches found", str(len(unique_matched_items)))
     print_labeled_info("Unmatched CSV rows", str(len(unmatched_csv_rows)))
-    print_labeled_info("Original collection size", str(len(collection_data)))
+    print_labeled_info("Original collection size", str(len(data)))
 
     if unique_matched_items:
-        percentage = (len(unique_matched_items) / len(collection_data)) * 100
+        percentage = (len(unique_matched_items) / len(data)) * 100
         print_labeled_info(
             "Filtered collection size",
             f"{len(unique_matched_items)} ({percentage:.1f}%)",
@@ -1422,7 +1445,7 @@ def match_collection_from_csv(
     return unique_matched_items
 
 
-def extract_collection_metadata(collection: List[MetrcObject]) -> tuple[str, str]:
+def extract_collection_metadata(*, data: Sequence[Dict[str, Any]]) -> tuple[str, str]:
     """Extract collection name and license number from a collection of MetrcObjects.
 
     For collection name: Uses dataModel__index format when index is present,
@@ -1452,14 +1475,14 @@ def extract_collection_metadata(collection: List[MetrcObject]) -> tuple[str, str
         >>> extract_collection_metadata(mixed_objects)
         ("mixed_datamodels", "mixed_licenses")
     """
-    if not collection:
+    if not data:
         return ("empty_collection", "no_license")
 
     # Extract collection names (dataModel__index or dataModel)
     collection_names = set()
     license_numbers = set()
 
-    for obj in collection:
+    for obj in data:
         # Build collection name
         data_model = obj.get("dataModel", "unknown_datamodel")
         index = obj.get("index")

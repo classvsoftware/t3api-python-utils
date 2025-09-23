@@ -40,7 +40,7 @@ def main():
     interactive_collection_handler(data=collection)
 
     filtered_collection = match_collection_from_csv(
-        collection_data=collection, on_no_match="error"
+        data=collection, on_no_match="error"
     )
 
     interactive_collection_handler(data=filtered_collection)

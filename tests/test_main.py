@@ -7,16 +7,14 @@ from typer import Exit
 
 from t3api_utils.exceptions import AuthenticationError
 from t3api_utils.interfaces import SerializableObject
-from t3api_utils.main.utils import (get_authenticated_client_or_error,
-                                    get_api_key_authenticated_client_or_error,
-                                    get_jwt_authenticated_client_or_error,
-                                    get_jwt_authenticated_client_or_error_with_validation,
-                                    load_collection, match_collection_from_csv, pick_file, pick_license,
-                                    save_collection_to_csv,
-                                    save_collection_to_json,
-                                    _discover_data_files, _format_file_size,
-                                    _format_file_time, _load_file_content,
-                                    _pick_authentication_method)
+from t3api_utils.main.utils import (
+    _discover_data_files, _format_file_size, _format_file_time,
+    _load_file_content, _pick_authentication_method,
+    get_api_key_authenticated_client_or_error,
+    get_authenticated_client_or_error, get_jwt_authenticated_client_or_error,
+    get_jwt_authenticated_client_or_error_with_validation, load_collection,
+    match_collection_from_csv, pick_file, pick_license, save_collection_to_csv,
+    save_collection_to_json)
 
 
 @patch("t3api_utils.main.utils._authenticate_with_credentials")
@@ -655,8 +653,8 @@ class TestFilePickerUtilities:
     @patch('t3api_utils.main.utils.json.load')
     def test_load_file_content_invalid_json(self, mock_json_load, mock_open):
         """Test loading invalid JSON file."""
-        from pathlib import Path
         import json
+        from pathlib import Path
 
         mock_json_load.side_effect = json.JSONDecodeError("Invalid JSON", "doc", 0)
 
@@ -898,7 +896,7 @@ class TestMatchCollectionFromCSV:
         }
 
         result = match_collection_from_csv(
-            collection_data=self.sample_collection
+            data=self.sample_collection
         )
 
         # Should return 2 matching items
@@ -918,7 +916,7 @@ class TestMatchCollectionFromCSV:
 
         with pytest.raises(ValueError, match="CSV columns not found in collection"):
             match_collection_from_csv(
-                collection_data=self.sample_collection
+                data=self.sample_collection
             )
 
     @patch('t3api_utils.main.utils.pick_file')
@@ -932,7 +930,7 @@ class TestMatchCollectionFromCSV:
         }
 
         result = match_collection_from_csv(
-            collection_data=self.sample_collection,
+            data=self.sample_collection,
             on_no_match="warn"
         )
 
@@ -951,7 +949,7 @@ class TestMatchCollectionFromCSV:
 
         with pytest.raises(ValueError, match="No match found for CSV row"):
             match_collection_from_csv(
-                collection_data=self.sample_collection,
+                data=self.sample_collection,
                 on_no_match="error"
             )
 
@@ -969,7 +967,7 @@ class TestMatchCollectionFromCSV:
         }
 
         result = match_collection_from_csv(
-            collection_data=self.sample_collection,
+            data=self.sample_collection,
             on_no_match="skip"
         )
 
@@ -991,7 +989,7 @@ class TestMatchCollectionFromCSV:
         }
 
         result = match_collection_from_csv(
-            collection_data=self.sample_collection
+            data=self.sample_collection
         )
 
         # Only first row should match (ProductB has wrong status)
@@ -1012,7 +1010,7 @@ class TestMatchCollectionFromCSV:
         }
 
         result = match_collection_from_csv(
-            collection_data=self.sample_collection
+            data=self.sample_collection
         )
 
         # Should have unique items only (no duplicates)
@@ -1023,7 +1021,7 @@ class TestMatchCollectionFromCSV:
         """Test error when collection is empty."""
         with pytest.raises(ValueError, match="Collection data cannot be empty"):
             match_collection_from_csv(
-                collection_data=[]
+                data=[]
             )
 
     @patch('t3api_utils.main.utils.pick_file')
@@ -1037,7 +1035,7 @@ class TestMatchCollectionFromCSV:
 
         with pytest.raises(ValueError, match="CSV file contains no data"):
             match_collection_from_csv(
-                collection_data=self.sample_collection
+                data=self.sample_collection
             )
 
     @patch('t3api_utils.main.utils.pick_file')
@@ -1051,7 +1049,7 @@ class TestMatchCollectionFromCSV:
 
         with pytest.raises(ValueError, match="CSV must contain headers and data rows"):
             match_collection_from_csv(
-                collection_data=self.sample_collection
+                data=self.sample_collection
             )
 
     @patch('t3api_utils.main.utils.pick_file')
@@ -1061,7 +1059,7 @@ class TestMatchCollectionFromCSV:
 
         with pytest.raises(Exit):
             match_collection_from_csv(
-                collection_data=self.sample_collection
+                data=self.sample_collection
             )
 
     @patch('t3api_utils.main.utils.pick_file')
@@ -1087,7 +1085,7 @@ class TestMatchCollectionFromCSV:
         }
 
         result = match_collection_from_csv(
-            collection_data=mixed_collection
+            data=mixed_collection
         )
 
         # Should match due to string conversion
