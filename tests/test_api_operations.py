@@ -5,7 +5,7 @@ import pytest
 
 from t3api_utils.api.client import T3APIClient
 from t3api_utils.api.operations import (get_collection, get_collection_async,
-                                        get_data, get_data_async)
+                                        send_api_request, send_api_request_async)
 from t3api_utils.http.utils import T3HTTPError
 
 
@@ -62,7 +62,7 @@ class TestSyncOperations:
         client = T3APIClient()
         client.set_access_token("test_token")
 
-        result = get_data(
+        result = send_api_request(
             client,
             "/v2/licenses",
             params={
@@ -83,12 +83,12 @@ class TestSyncOperations:
         }
         assert call_args[1]["params"] == expected_params
 
-    def test_get_data_not_authenticated(self):
-        """Test get_data without authentication."""
+    def test_send_api_request_not_authenticated(self):
+        """Test send_api_request without authentication."""
         client = T3APIClient()
 
         with pytest.raises(T3HTTPError) as exc_info:
-            get_data(client, "/v2/licenses")
+            send_api_request(client, "/v2/licenses")
 
         assert "not authenticated" in str(exc_info.value)
 
@@ -170,8 +170,8 @@ class TestAsyncOperations:
 
     @pytest.mark.asyncio
     @patch('t3api_utils.api.operations.arequest_json')
-    async def test_get_data_async_success(self, mock_request):
-        """Test successful async get_data retrieval."""
+    async def test_send_api_request_async_success(self, mock_request):
+        """Test successful async send_api_request."""
         mock_response = {
             "data": [
                 {
@@ -189,7 +189,7 @@ class TestAsyncOperations:
         client = T3APIClient()
         client.set_access_token("test_token")
 
-        result = await get_data_async(client, "/v2/licenses")
+        result = await send_api_request_async(client, "/v2/licenses")
 
         # Verify the request
         mock_request.assert_called_once()
@@ -202,12 +202,12 @@ class TestAsyncOperations:
         assert len(result["data"]) == 1
 
     @pytest.mark.asyncio
-    async def test_get_data_async_not_authenticated(self):
-        """Test async get_data without authentication."""
+    async def test_send_api_request_async_not_authenticated(self):
+        """Test async send_api_request without authentication."""
         client = T3APIClient()
 
         with pytest.raises(T3HTTPError) as exc_info:
-            await get_data_async(client, "/v2/licenses")
+            await send_api_request_async(client, "/v2/licenses")
 
         assert "not authenticated" in str(exc_info.value)
 

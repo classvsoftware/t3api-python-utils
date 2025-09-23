@@ -4,7 +4,7 @@ This module provides high-level operations for T3 API endpoints that can be
 called independently with an authenticated client instance.
 
 Available operations:
-- get_data / get_data_async: Most generic operation, supports any HTTP method,
+- send_api_request / send_api_request_async: Most generic operation, supports any HTTP method,
   custom parameters, and doesn't assume response structure
 - get_collection / get_collection_async: Specialized for paginated collection
   endpoints, automatically adds page/pageSize parameters
@@ -19,7 +19,7 @@ from t3api_utils.api.interfaces import MetrcCollectionResponse
 from t3api_utils.http.utils import T3HTTPError, arequest_json
 
 
-def get_data(
+def send_api_request(
     client: T3APIClient,
     path: str,
     *,
@@ -29,7 +29,7 @@ def get_data(
     headers: Optional[Dict[str, str]] = None,
     expected_status: Union[int, tuple[int, ...]] = 200,
 ) -> Any:
-    """Generic data retrieval from any T3 API endpoint (sync wrapper).
+    """Send a request to any T3 API endpoint (sync wrapper).
 
     This is the most flexible operation that doesn't assume any specific
     parameter structure or response format.
@@ -257,7 +257,7 @@ async def get_collection_async(
         raise T3HTTPError(f"Failed to get collection from {path}: {e}", response=e.response) from e
 
 
-async def get_data_async(
+async def send_api_request_async(
     client: T3APIClient,
     path: str,
     *,
@@ -267,7 +267,7 @@ async def get_data_async(
     headers: Optional[Dict[str, str]] = None,
     expected_status: Union[int, tuple[int, ...]] = 200,
 ) -> Any:
-    """Generic data retrieval from any T3 API endpoint using an async client.
+    """Send a request to any T3 API endpoint using an async client.
 
     This is the most flexible operation that doesn't assume any specific
     parameter structure or response format.

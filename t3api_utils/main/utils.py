@@ -16,7 +16,7 @@ from rich.table import Table
 
 from t3api_utils.api.client import T3APIClient
 from t3api_utils.api.interfaces import LicenseData, MetrcObject
-from t3api_utils.api.operations import get_data
+from t3api_utils.api.operations import send_api_request
 from t3api_utils.api.parallel import parallel_load_collection_enhanced
 from t3api_utils.auth.interfaces import T3Credentials
 from t3api_utils.auth.utils import (
@@ -286,7 +286,7 @@ def get_jwt_authenticated_client_or_error_with_validation(
 
         # Validate the JWT token by calling /whoami endpoint
         try:
-            whoami_response = get_data(api_client, "/v2/auth/whoami")
+            whoami_response = send_api_request(api_client, "/v2/auth/whoami")
             logger.info(
                 "[bold green]Successfully authenticated and validated JWT token with T3 API.[/]"
             )
@@ -383,7 +383,7 @@ def pick_license(*, api_client: T3APIClient) -> LicenseData:
     Raises:
         typer.Exit: If no licenses found or invalid selection
     """
-    licenses_response: List[LicenseData] = get_data(api_client, "/v2/licenses")
+    licenses_response: List[LicenseData] = send_api_request(api_client, "/v2/licenses")
 
     if not licenses_response:
         print_error("No licenses found.")
@@ -1316,7 +1316,7 @@ def match_collection_from_csv(
     collection field names. Automatically extracts collection name from the data.
 
     Args:
-        data: The existing collection to search within (must be MetrcObjects)
+        data: The existing collection to search within
         on_no_match: Behavior when CSV row doesn't match any collection item
 
     Returns:
