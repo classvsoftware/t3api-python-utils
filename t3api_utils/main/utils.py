@@ -26,7 +26,7 @@ import typer
 from rich.table import Table
 
 from t3api_utils.api.client import T3APIClient
-from t3api_utils.api.interfaces import MetrcCollectionResponse, MetrcObject
+from t3api_utils.api.interfaces import LicenseData, MetrcCollectionResponse, MetrcObject
 from t3api_utils.api.operations import get_data
 from t3api_utils.api.parallel import (
     load_all_data_sync,
@@ -398,10 +398,9 @@ def pick_license(*, api_client: T3APIClient) -> Dict[str, Any]:
     Raises:
         typer.Exit: If no licenses found or invalid selection
     """
-    licenses_response = get_data(api_client, "/v2/licenses")
-    licenses = licenses_response
+    licenses_response: List[LicenseData] = get_data(api_client, "/v2/licenses")
 
-    if not licenses:
+    if not licenses_response:
         print_error("No licenses found.")
         raise typer.Exit(code=1)
 
@@ -412,18 +411,18 @@ def pick_license(*, api_client: T3APIClient) -> Dict[str, Any]:
     table.add_column("License Name", style="bright_white")
     table.add_column("License Number", style="cyan")
 
-    for idx, license in enumerate(licenses, start=1):
+    for idx, license in enumerate(licenses_response, start=1):
         table.add_row(str(idx), license["licenseName"], license["licenseNumber"])
 
     console.print(table)
 
     choice = typer.prompt("Select a license", type=int)
 
-    if choice < 1 or choice > len(licenses):
+    if choice < 1 or choice > len(licenses_response):
         print_error("Invalid selection.")
         raise typer.Exit(code=1)
 
-    selected_license = licenses[choice - 1]
+    selected_license = licenses_response[choice - 1]
     return cast(Dict[str, Any], selected_license)
 
 

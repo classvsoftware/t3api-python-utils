@@ -14,6 +14,11 @@ class AuthResponseData(TypedDict):
     accessToken: str
 
 
+class LicenseData(TypedDict):
+    licenseNumber: str
+    licenseName: str
+
+
 class MetrcObject(TypedDict):
     """Base Metrc object containing fields common to all collection data responses.
 
