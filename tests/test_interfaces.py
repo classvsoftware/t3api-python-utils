@@ -312,40 +312,64 @@ class TestMetrcObject:
     def test_metrc_object_complete(self):
         """Test MetrcObject with all fields."""
         metrc_obj: MetrcObject = {
-            "id": "12345",
-            "licenseNumber": "LIC-123-456"
+            "id": 12345,
+            "hostname": "ca.metrc.com",
+            "licenseNumber": "LIC-123-456",
+            "dataModel": "ACTIVE_PACKAGE",
+            "retrievedAt": "2025-09-23T13:19:22.734Z"
         }
 
-        assert metrc_obj["id"] == "12345"
+        assert metrc_obj["id"] == 12345
         assert metrc_obj["licenseNumber"] == "LIC-123-456"
 
     def test_metrc_object_minimal(self):
-        """Test MetrcObject with minimal fields (all are NotRequired)."""
-        metrc_obj: MetrcObject = {}
+        """Test MetrcObject with minimal required fields."""
+        metrc_obj: MetrcObject = {
+            "id": 1,
+            "hostname": "ca.metrc.com",
+            "licenseNumber": "LIC-001",
+            "dataModel": "PLANT",
+            "retrievedAt": "2025-09-23T13:19:22.734Z"
+        }
 
-        assert len(metrc_obj) == 0
+        assert len(metrc_obj) == 5
 
     def test_metrc_object_partial(self):
-        """Test MetrcObject with some fields."""
-        obj_with_id: MetrcObject = {"id": "67890"}
-        obj_with_license: MetrcObject = {"licenseNumber": "LIC-789-012"}
+        """Test MetrcObject with different field values."""
+        obj_with_id: MetrcObject = {
+            "id": 67890,
+            "hostname": "co.metrc.com",
+            "licenseNumber": "LIC-789-012",
+            "dataModel": "TRANSFER",
+            "retrievedAt": "2025-09-23T13:19:22.734Z"
+        }
+        obj_with_license: MetrcObject = {
+            "id": 99999,
+            "hostname": "wa.metrc.com",
+            "licenseNumber": "LIC-789-012",
+            "dataModel": "SALE",
+            "retrievedAt": "2025-09-23T13:19:22.734Z"
+        }
 
-        assert obj_with_id["id"] == "67890"
-        assert "licenseNumber" not in obj_with_id
+        assert obj_with_id["id"] == 67890
+        assert obj_with_id["licenseNumber"] == "LIC-789-012"
 
         assert obj_with_license["licenseNumber"] == "LIC-789-012"
-        assert "id" not in obj_with_license
+        assert obj_with_license["id"] == 99999
 
     def test_metrc_object_is_dict(self):
         """Test that MetrcObject behaves like a dictionary."""
         metrc_obj: MetrcObject = {
-            "id": "test123",
-            "licenseNumber": "LIC-TEST"
+            "id": 123,
+            "hostname": "or.metrc.com",
+            "licenseNumber": "LIC-TEST",
+            "dataModel": "PACKAGE",
+            "retrievedAt": "2025-09-23T13:19:22.734Z"
         }
 
         assert isinstance(metrc_obj, dict)
         assert "id" in metrc_obj
-        assert metrc_obj.get("id") == "test123"
+        assert metrc_obj.get("id") == 123
 
 
 class TestMetrcCollectionResponse:
@@ -355,8 +379,20 @@ class TestMetrcCollectionResponse:
         """Test complete MetrcCollectionResponse."""
         response: MetrcCollectionResponse = {
             "data": [
-                {"id": "1", "name": "Item 1"},
-                {"id": "2", "name": "Item 2"}
+                {
+                    "id": 1,
+                    "hostname": "ca.metrc.com",
+                    "licenseNumber": "LIC-001",
+                    "dataModel": "PACKAGE",
+                    "retrievedAt": "2025-09-23T13:19:22.734Z"
+                },
+                {
+                    "id": 2,
+                    "hostname": "ca.metrc.com",
+                    "licenseNumber": "LIC-002",
+                    "dataModel": "PACKAGE",
+                    "retrievedAt": "2025-09-23T13:19:22.734Z"
+                }
             ],
             "total": 100,
             "page": 1,
@@ -384,7 +420,13 @@ class TestMetrcCollectionResponse:
         """Test MetrcCollectionResponse pagination fields."""
         # First page
         first_page: MetrcCollectionResponse = {
-            "data": [{"id": f"{i}"} for i in range(1, 21)],
+            "data": [{
+                "id": i,
+                "hostname": "ca.metrc.com",
+                "licenseNumber": f"LIC-{i:03d}",
+                "dataModel": "PACKAGE",
+                "retrievedAt": "2025-09-23T13:19:22.734Z"
+            } for i in range(1, 21)],
             "total": 100,
             "page": 1,
             "pageSize": 20
@@ -392,7 +434,13 @@ class TestMetrcCollectionResponse:
 
         # Last page
         last_page: MetrcCollectionResponse = {
-            "data": [{"id": f"{i}"} for i in range(81, 101)],
+            "data": [{
+                "id": i,
+                "hostname": "ca.metrc.com",
+                "licenseNumber": f"LIC-{i:03d}",
+                "dataModel": "PACKAGE",
+                "retrievedAt": "2025-09-23T13:19:22.734Z"
+            } for i in range(81, 101)],
             "total": 100,
             "page": 5,
             "pageSize": 20
@@ -409,13 +457,11 @@ class TestMetrcCollectionResponse:
         response: MetrcCollectionResponse = {
             "data": [
                 {
-                    "id": "PKG123",
+                    "id": 123,
+                    "hostname": "ca.metrc.com",
                     "licenseNumber": "LIC-123",
-                    "packageType": "Product",
-                    "metadata": {
-                        "created": "2024-01-01",
-                        "status": "Active"
-                    }
+                    "dataModel": "PACKAGE",
+                    "retrievedAt": "2025-09-23T13:19:22.734Z"
                 }
             ],
             "total": 1,
@@ -424,8 +470,8 @@ class TestMetrcCollectionResponse:
         }
 
         item = response["data"][0]
-        assert item["id"] == "PKG123"
-        assert item["metadata"]["status"] == "Active"
+        assert item["id"] == 123
+        assert item["licenseNumber"] == "LIC-123"
 
     def test_metrc_collection_response_is_dict(self):
         """Test that MetrcCollectionResponse behaves like a dictionary."""

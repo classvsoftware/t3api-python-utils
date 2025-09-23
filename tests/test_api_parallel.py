@@ -94,7 +94,13 @@ class TestParallelLoadPaginatedSync:
         """Test loading when there's only one page."""
         # Mock response with single page
         mock_response: MetrcCollectionResponse = {
-            "data": [{"id": "1", "licenseNumber": "LIC-001", "licenseName": "Company 1"}],
+            "data": [{
+                "id": 1,
+                "hostname": "ca.metrc.com",
+                "licenseNumber": "LIC-001",
+                "dataModel": "LICENSE",
+                "retrievedAt": "2025-09-23T13:19:22.734Z"
+            }],
             "total": 1,
             "page": 1,
             "pageSize": 10
@@ -121,7 +127,13 @@ class TestParallelLoadPaginatedSync:
         def mock_method_side_effect(client, path, page=1, **kwargs):
             if page == 1:
                 return {
-                    "data": [{"id": "1", "licenseNumber": "LIC-001", "licenseName": "Company 1"}],
+                    "data": [{
+                "id": 1,
+                "hostname": "ca.metrc.com",
+                "licenseNumber": "LIC-001",
+                "dataModel": "LICENSE",
+                "retrievedAt": "2025-09-23T13:19:22.734Z"
+            }],
                     "total": 25,
                     "page": 1,
                     "pageSize": 10
@@ -156,7 +168,13 @@ class TestParallelLoadPaginatedSync:
     def test_rate_limiting_applied(self, mock_get_collection_async):
         """Test that rate limiting is properly applied."""
         mock_response: MetrcCollectionResponse = {
-            "data": [{"id": "1", "licenseNumber": "LIC-001", "licenseName": "Company 1"}],
+            "data": [{
+                "id": 1,
+                "hostname": "ca.metrc.com",
+                "licenseNumber": "LIC-001",
+                "dataModel": "LICENSE",
+                "retrievedAt": "2025-09-23T13:19:22.734Z"
+            }],
             "total": 1,
             "page": 1,
             "pageSize": 10
@@ -195,7 +213,13 @@ class TestParallelLoadPaginatedAsync:
     async def test_single_page_response(self, mock_get_collection_async):
         """Test async loading when there's only one page."""
         mock_response: MetrcCollectionResponse = {
-            "data": [{"id": "1", "licenseNumber": "LIC-001", "licenseName": "Company 1"}],
+            "data": [{
+                "id": 1,
+                "hostname": "ca.metrc.com",
+                "licenseNumber": "LIC-001",
+                "dataModel": "LICENSE",
+                "retrievedAt": "2025-09-23T13:19:22.734Z"
+            }],
             "total": 1,
             "page": 1,
             "pageSize": 10
@@ -219,7 +243,13 @@ class TestParallelLoadPaginatedAsync:
         def mock_method_side_effect(client, path, page=1, **kwargs):
             if page == 1:
                 return {
-                    "data": [{"id": "1", "licenseNumber": "LIC-001", "licenseName": "Company 1"}],
+                    "data": [{
+                "id": 1,
+                "hostname": "ca.metrc.com",
+                "licenseNumber": "LIC-001",
+                "dataModel": "LICENSE",
+                "retrievedAt": "2025-09-23T13:19:22.734Z"
+            }],
                     "total": 25,
                     "page": 1,
                     "pageSize": 10
@@ -296,7 +326,13 @@ class TestLoadAllDataSync:
         mock_responses = [
             {
                 "data": [
-                    {"id": "1", "licenseNumber": "LIC-001", "licenseName": "Company 1"},
+                    {
+                "id": 1,
+                "hostname": "ca.metrc.com",
+                "licenseNumber": "LIC-001",
+                "dataModel": "LICENSE",
+                "retrievedAt": "2025-09-23T13:19:22.734Z"
+            },
                     {"id": "2", "licenseNumber": "LIC-002", "licenseName": "Company 2"},
                 ],
                 "total": 4,
@@ -340,7 +376,13 @@ class TestLoadAllDataAsync:
         mock_responses = [
             {
                 "data": [
-                    {"id": "1", "licenseNumber": "LIC-001", "licenseName": "Company 1"},
+                    {
+                "id": 1,
+                "hostname": "ca.metrc.com",
+                "licenseNumber": "LIC-001",
+                "dataModel": "LICENSE",
+                "retrievedAt": "2025-09-23T13:19:22.734Z"
+            },
                     {"id": "2", "licenseNumber": "LIC-002", "licenseName": "Company 2"},
                 ],
                 "total": 4,

@@ -30,16 +30,24 @@ class TestMetrcObject:
 
     def test_basic_structure(self):
         """Test basic MetrcObject structure."""
-        metrc_obj: MetrcObject = {}
-        # MetrcObject has only optional fields
+        metrc_obj: MetrcObject = {
+            "id": 1,
+            "hostname": "ca.metrc.com",
+            "licenseNumber": "LIC-001",
+            "dataModel": "PACKAGE",
+            "retrievedAt": "2025-09-23T13:19:22.734Z"
+        }
 
     def test_with_fields(self):
         """Test MetrcObject with fields."""
         metrc_obj: MetrcObject = {
-            "id": "123",
-            "licenseNumber": "LIC-001"
+            "id": 123,
+            "hostname": "ca.metrc.com",
+            "licenseNumber": "LIC-001",
+            "dataModel": "PACKAGE",
+            "retrievedAt": "2025-09-23T13:19:22.734Z"
         }
-        assert metrc_obj["id"] == "123"
+        assert metrc_obj["id"] == 123
         assert metrc_obj["licenseNumber"] == "LIC-001"
 
 
@@ -50,8 +58,20 @@ class TestMetrcCollectionResponse:
         """Test basic MetrcCollectionResponse structure."""
         response: MetrcCollectionResponse = {
             "data": [
-                {"id": "1", "licenseNumber": "LIC-001", "licenseName": "Company 1"},
-                {"id": "2", "licenseNumber": "LIC-002", "licenseName": "Company 2"}
+                {
+                    "id": 1,
+                    "hostname": "ca.metrc.com",
+                    "licenseNumber": "LIC-001",
+                    "dataModel": "LICENSE",
+                    "retrievedAt": "2025-09-23T13:19:22.734Z"
+                },
+                {
+                    "id": 2,
+                    "hostname": "ca.metrc.com",
+                    "licenseNumber": "LIC-002",
+                    "dataModel": "LICENSE",
+                    "retrievedAt": "2025-09-23T13:19:22.734Z"
+                }
             ],
             "total": 2,
             "page": 1,
@@ -68,19 +88,18 @@ class TestMetrcCollectionResponse:
         license_response: MetrcCollectionResponse = {
             "data": [
                 {
-                    "id": "123",
+                    "id": 123,
+                    "hostname": "ca.metrc.com",
                     "licenseNumber": "LIC-001",
-                    "licenseName": "Test Company",
-                    "dbaName": "Test DBA",
-                    "facilityName": "Test Facility",
-                    "isActive": True,
-                    "licenseType": "Cultivation"
+                    "dataModel": "LICENSE",
+                    "retrievedAt": "2025-09-23T13:19:22.734Z"
                 },
                 {
-                    "id": "456",
+                    "id": 456,
+                    "hostname": "ca.metrc.com",
                     "licenseNumber": "LIC-002",
-                    "licenseName": "Another Company",
-                    "isActive": False
+                    "dataModel": "LICENSE",
+                    "retrievedAt": "2025-09-23T13:19:22.734Z"
                 }
             ],
             "total": 2,
@@ -93,39 +112,34 @@ class TestMetrcCollectionResponse:
 
         # Check first license
         license1 = license_response["data"][0]
-        assert license1["id"] == "123"
+        assert license1["id"] == 123
         assert license1["licenseNumber"] == "LIC-001"
-        assert license1["licenseName"] == "Test Company"
-        assert license1["dbaName"] == "Test DBA"
-        assert license1["facilityName"] == "Test Facility"
-        assert license1["isActive"] is True
-        assert license1["licenseType"] == "Cultivation"
+        assert license1["hostname"] == "ca.metrc.com"
+        assert license1["dataModel"] == "LICENSE"
 
         # Check second license
         license2 = license_response["data"][1]
-        assert license2["id"] == "456"
+        assert license2["id"] == 456
         assert license2["licenseNumber"] == "LIC-002"
-        assert license2["licenseName"] == "Another Company"
-        assert license2["isActive"] is False
+        assert license2["hostname"] == "ca.metrc.com"
 
     def test_package_collection_response(self):
         """Test MetrcCollectionResponse with package data."""
         package_response: MetrcCollectionResponse = {
             "data": [
                 {
-                    "id": "pkg-123",
+                    "id": 123,
+                    "hostname": "ca.metrc.com",
                     "licenseNumber": "LIC-001",
-                    "tag": "TAG-001",
-                    "packageType": "Product",
-                    "productName": "Test Product",
-                    "quantity": 10.5,
-                    "unitOfMeasure": "grams",
-                    "packageState": "Active"
+                    "dataModel": "PACKAGE",
+                    "retrievedAt": "2025-09-23T13:19:22.734Z"
                 },
                 {
-                    "id": "pkg-456",
+                    "id": 456,
+                    "hostname": "ca.metrc.com",
                     "licenseNumber": "LIC-001",
-                    "tag": "TAG-002"
+                    "dataModel": "PACKAGE",
+                    "retrievedAt": "2025-09-23T13:19:22.734Z"
                 }
             ],
             "total": 2,
@@ -140,18 +154,14 @@ class TestMetrcCollectionResponse:
 
         # Check first package
         package1 = package_response["data"][0]
-        assert package1["id"] == "pkg-123"
+        assert package1["id"] == 123
         assert package1["licenseNumber"] == "LIC-001"
-        assert package1["tag"] == "TAG-001"
-        assert package1["packageType"] == "Product"
-        assert package1["productName"] == "Test Product"
-        assert package1["quantity"] == 10.5
-        assert package1["unitOfMeasure"] == "grams"
-        assert package1["packageState"] == "Active"
+        assert package1["hostname"] == "ca.metrc.com"
+        assert package1["dataModel"] == "PACKAGE"
 
         # Check second package
         package2 = package_response["data"][1]
-        assert package2["id"] == "pkg-456"
+        assert package2["id"] == 456
 
     def test_empty_collection_response(self):
         """Test MetrcCollectionResponse with no data."""
