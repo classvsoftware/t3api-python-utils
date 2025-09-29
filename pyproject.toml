@@ -1,6 +1,6 @@
 [project]
 name = "t3api-utils"
-version = "0.3.0"
+version = "1.0.0"
 description = "Utility functions and helpers for the T3 API ecosystem"
 authors = [{ name = "Matt Frisbie", email = "matt@classvsoftware.com" }]
 readme = "README.md"
@@ -8,7 +8,7 @@ license = "GPL-3.0-only"
 requires-python = ">=3.12"
 keywords = ["t3", "metrc", "utils", "helpers", "track and trace"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Operating System :: OS Independent",
