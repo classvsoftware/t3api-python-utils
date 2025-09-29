@@ -103,14 +103,3 @@ Licensed under the GNU General Public License v3.0.
 * [GitHub Repo](https://github.com/classvsoftware/t3api-python-utils)
 
 ---
-
-```
-
----
-
-Let me know if you want:
-
-- A badge row (e.g. PyPI version, license).
-- GitHub Actions CI instructions.
-- `requirements-dev.txt` for lint/test tools (`mypy`, `pytest`, etc).
-```
