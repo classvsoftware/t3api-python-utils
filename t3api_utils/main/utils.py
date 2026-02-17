@@ -32,6 +32,7 @@ from t3api_utils.auth.utils import (
 )
 from t3api_utils.cli.utils import (
     config_manager,
+    load_credentials_from_env,
     offer_to_save_api_key,
     offer_to_save_jwt_token,
     resolve_auth_inputs_or_error,
@@ -157,8 +158,16 @@ def _authenticate_with_jwt() -> T3APIClient:
     """Helper function for JWT token authentication."""
     print_subheader("JWT Token Authentication")
 
-    # Get JWT token from user
-    jwt_token = typer.prompt("Enter JWT token", hide_input=True)
+    # Check for stored JWT token first
+    stored = load_credentials_from_env()
+    stored_jwt = stored.get("jwt_token", "")
+
+    if stored_jwt and typer.confirm(
+        "Use stored JWT token from .t3.env?", default=True
+    ):
+        jwt_token = stored_jwt
+    else:
+        jwt_token = typer.prompt("Enter JWT token", hide_input=True)
 
     # Always validate JWT token using /whoami endpoint
     client = get_jwt_authenticated_client_or_error_with_validation(jwt_token=jwt_token)
@@ -170,9 +179,22 @@ def _authenticate_with_api_key() -> T3APIClient:
     """Helper function for API key authentication."""
     print_subheader("API Key Authentication")
 
-    # Get API key and state code from user
-    api_key = typer.prompt("Enter API key", hide_input=True)
-    state_code = typer.prompt("Enter state code (e.g., CA, MO, CO, MI)").upper().strip()
+    # Check for stored API key and state code first
+    stored = load_credentials_from_env()
+    stored_api_key = stored.get("api_key", "")
+    stored_state_code = stored.get("api_state_code", "")
+
+    if stored_api_key and typer.confirm(
+        "Use stored API key from .t3.env?", default=True
+    ):
+        api_key = stored_api_key
+        state_code = stored_state_code
+    else:
+        api_key = typer.prompt("Enter API key", hide_input=True)
+        state_code = ""
+
+    if not state_code:
+        state_code = typer.prompt("Enter state code (e.g., CA, MO, CO, MI)").upper().strip()
 
     # Validate state code format (basic validation)
     if not state_code or len(state_code) != 2 or not state_code.isalpha():
