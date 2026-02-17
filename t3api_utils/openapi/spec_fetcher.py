@@ -10,7 +10,15 @@ from t3api_utils.style import console
 
 
 class CollectionEndpoint(TypedDict):
-    """Type definition for a collection endpoint."""
+    """Type definition for a collection endpoint.
+
+    Attributes:
+        path: The URL path of the endpoint (e.g. ``/v2/packages/active``).
+        method: The HTTP method in uppercase (e.g. ``GET``).
+        name: A user-friendly display name derived from the summary or path.
+        category: The grouping category derived from tags or path segments.
+        description: A human-readable description of what the endpoint returns.
+    """
     path: str
     method: str
     name: str
@@ -107,7 +115,18 @@ def parse_collection_endpoints(spec: Dict[str, Any]) -> List[CollectionEndpoint]
 
 
 def _determine_category(path: str, tags: List[str]) -> str:
-    """Determine the category for an endpoint based on path and tags."""
+    """Determine the category for an endpoint based on path and tags.
+
+    Uses the first non-"Collection" tag if available, otherwise falls back
+    to the second segment of the URL path.
+
+    Args:
+        path: The endpoint URL path (e.g. ``/v2/packages/active``).
+        tags: OpenAPI tags associated with the operation.
+
+    Returns:
+        A category string such as ``"Packages"`` or ``"General"``.
+    """
     # Remove Collection tag and use remaining tags
     other_tags = [tag for tag in tags if tag != "Collection"]
     if other_tags:
@@ -122,7 +141,18 @@ def _determine_category(path: str, tags: List[str]) -> str:
 
 
 def _create_display_name(summary: str, path: str) -> str:
-    """Create a user-friendly display name for the endpoint."""
+    """Create a user-friendly display name for the endpoint.
+
+    Prefers the OpenAPI summary when available; otherwise builds a
+    title-cased name from the URL path segments.
+
+    Args:
+        summary: The OpenAPI operation summary (may be empty).
+        path: The endpoint URL path used as a fallback.
+
+    Returns:
+        A human-readable name for the endpoint.
+    """
     if summary:
         return summary
 
@@ -136,14 +166,22 @@ def _create_display_name(summary: str, path: str) -> str:
 
 
 def _is_collection_endpoint(operation: Dict[str, Any], path: str) -> bool:
-    """
-    Determine if an endpoint represents a collection of data.
+    """Determine if an endpoint represents a paginated collection.
 
-    Collection endpoints are identified by having a 'page' parameter,
+    Collection endpoints are identified by having a ``page`` parameter,
     which indicates they support pagination and return lists of items.
+    Single-item detail endpoints, report endpoints, and create-helper
+    endpoints are excluded.
 
-    We also filter out single-item detail endpoints to focus on
-    main collections that users would want to load entirely.
+    Args:
+        operation: The OpenAPI operation dictionary for a single
+            path/method combination.
+        path: The endpoint URL path, used to filter out non-collection
+            routes (e.g. reports, create helpers).
+
+    Returns:
+        ``True`` if the endpoint is a paginated collection suitable for
+        bulk loading, ``False`` otherwise.
     """
     # Check if the operation has parameters
     parameters = operation.get("parameters", [])
@@ -181,11 +219,18 @@ def _is_collection_endpoint(operation: Dict[str, Any], path: str) -> bool:
 
 
 def get_collection_endpoints() -> List[CollectionEndpoint]:
-    """
-    Fetch and parse collection endpoints from the live API.
+    """Fetch and parse collection endpoints from the live API.
+
+    Convenience function that fetches the OpenAPI spec and extracts all
+    paginated collection endpoints in a single call.
 
     Returns:
-        List of available collection endpoints.
+        A list of ``CollectionEndpoint`` dicts describing each available
+        collection.
+
+    Raises:
+        SystemExit: If the API spec cannot be fetched or contains no
+            collection endpoints.
     """
     spec = fetch_openapi_spec()
     return parse_collection_endpoints(spec)

@@ -1,3 +1,5 @@
+"""Database utilities for DuckDB table creation, schema export, and nested data extraction."""
+
 from typing import Any, Dict, List, Set, Tuple, Union
 
 import duckdb
@@ -75,7 +77,15 @@ def flatten_and_extract(
 
 
 def _is_list_of_nested_dicts(value: Any) -> bool:
-    """Check if a value is a list of nested dicts with IDs and data_models."""
+    """Check if a value is a non-empty list of dicts that each contain ID and model keys.
+
+    Args:
+        value: The value to check.
+
+    Returns:
+        True if the value is a non-empty list where every element is a dict
+        containing both ``ID_KEY`` and ``MODEL_KEY``.
+    """
     return (
         isinstance(value, list)
         and bool(value)
@@ -92,7 +102,17 @@ def _extract_nested_list(
     parent_id: Any,
     extracted_tables: Dict[str, Dict[Any, Dict[str, Any]]],
 ) -> None:
-    """Extract a list of nested dicts into their own tables and attach foreign key to each."""
+    """Extract a list of nested dicts into their own tables and attach a foreign key to each.
+
+    Args:
+        items: List of nested dictionaries to extract, each containing ``ID_KEY``
+            and ``MODEL_KEY``.
+        parent_model: The model name of the parent record, used to construct the
+            foreign key column name.
+        parent_id: The ID value of the parent record, stored as the foreign key value.
+        extracted_tables: Mutable mapping of table names to deduplicated records,
+            populated in place.
+    """
     for item in items:
         table_name = item[MODEL_KEY]
         item_copy = dict(item)

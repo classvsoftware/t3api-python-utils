@@ -28,18 +28,18 @@ async def create_credentials_authenticated_client_or_error_async(
     Authenticates with the T3 API using credentials and returns an authenticated client (async).
 
     Args:
-        hostname: The hostname for authentication
-        username: Username
-        password: Password
-        host: API host URL (defaults to production)
-        otp: Optional one-time password
-        email: Optional email address
+        hostname: Metrc hostname used for authentication (e.g., "api-ca").
+        username: Metrc account username.
+        password: Metrc account password.
+        host: T3 API host URL. Defaults to production if not provided.
+        otp: One-time password for multi-factor authentication.
+        email: Email address associated with the Metrc account.
 
     Returns:
-        T3APIClient: An authenticated async client instance ready for use
+        T3APIClient: An authenticated async client instance ready for use.
 
     Raises:
-        AuthenticationError: If authentication fails
+        AuthenticationError: If authentication fails.
     """
     try:
         # Create HTTP config with host from config or parameter
@@ -80,12 +80,12 @@ def create_credentials_authenticated_client_or_error(
     This function provides a sync wrapper around the async implementation.
 
     Args:
-        hostname: The hostname for authentication
-        username: Username
-        password: Password
-        host: API host URL (defaults to production)
-        otp: Optional one-time password
-        email: Optional email address
+        hostname: Metrc hostname used for authentication (e.g., "api-ca").
+        username: Metrc account username.
+        password: Metrc account password.
+        host: T3 API host URL. Defaults to production if not provided.
+        otp: One-time password for multi-factor authentication.
+        email: Email address associated with the Metrc account.
 
     Returns:
         T3APIClient: An authenticated client instance ready for use
@@ -119,18 +119,18 @@ async def authenticate_and_get_token_async(
     and not the full client.
 
     Args:
-        hostname: The hostname for authentication
-        username: Username
-        password: Password
-        host: API host URL (defaults to production)
-        otp: Optional one-time password
-        email: Optional email address
+        hostname: Metrc hostname used for authentication (e.g., "api-ca").
+        username: Metrc account username.
+        password: Metrc account password.
+        host: T3 API host URL. Defaults to production if not provided.
+        otp: One-time password for multi-factor authentication.
+        email: Email address associated with the Metrc account.
 
     Returns:
-        str: The access token
+        str: The access token.
 
     Raises:
-        AuthenticationError: If authentication fails
+        AuthenticationError: If authentication fails.
     """
     client = await create_credentials_authenticated_client_or_error_async(
         hostname=hostname,
@@ -166,12 +166,12 @@ def authenticate_and_get_token(
     and not the full client.
 
     Args:
-        hostname: The hostname for authentication
-        username: Username
-        password: Password
-        host: API host URL (defaults to production)
-        otp: Optional one-time password
-        email: Optional email address
+        hostname: Metrc hostname used for authentication (e.g., "api-ca").
+        username: Metrc account username.
+        password: Metrc account password.
+        host: T3 API host URL. Defaults to production if not provided.
+        otp: One-time password for multi-factor authentication.
+        email: Email address associated with the Metrc account.
 
     Returns:
         str: The access token
@@ -205,18 +205,18 @@ async def authenticate_and_get_response_async(
     including refresh tokens and expiration information.
 
     Args:
-        hostname: The hostname for authentication
-        username: Username
-        password: Password
-        host: API host URL (defaults to production)
-        otp: Optional one-time password
-        email: Optional email address
+        hostname: Metrc hostname used for authentication (e.g., "api-ca").
+        username: Metrc account username.
+        password: Metrc account password.
+        host: T3 API host URL. Defaults to production if not provided.
+        otp: One-time password for multi-factor authentication.
+        email: Email address associated with the Metrc account.
 
     Returns:
-        AuthResponseData: The complete authentication response
+        AuthResponseData: The complete authentication response.
 
     Raises:
-        AuthenticationError: If authentication fails
+        AuthenticationError: If authentication fails.
     """
     try:
         # Create HTTP config with host from config or parameter
@@ -257,12 +257,12 @@ def authenticate_and_get_response(
     including refresh tokens and expiration information.
 
     Args:
-        hostname: The hostname for authentication
-        username: Username
-        password: Password
-        host: API host URL (defaults to production)
-        otp: Optional one-time password
-        email: Optional email address
+        hostname: Metrc hostname used for authentication (e.g., "api-ca").
+        username: Metrc account username.
+        password: Metrc account password.
+        host: T3 API host URL. Defaults to production if not provided.
+        otp: One-time password for multi-factor authentication.
+        email: Email address associated with the Metrc account.
 
     Returns:
         AuthResponseData: The complete authentication response
@@ -296,12 +296,12 @@ def create_jwt_authenticated_client(
     going through the username/password authentication flow.
 
     Args:
-        jwt_token: Valid JWT access token for the T3 API
-        host: API host URL (optional, defaults to production if no config provided)
-        config: Optional HTTP configuration (timeout, etc.)
-        retry_policy: Optional retry policy for failed requests
-        logging_hooks: Optional request/response logging hooks
-        headers: Optional additional headers to include with requests
+        jwt_token: Valid JWT access token issued by the T3 API.
+        host: T3 API host URL. Defaults to production if no config provided.
+        config: HTTP configuration for timeout, SSL, and proxy settings.
+        retry_policy: Retry policy controlling backoff and max attempts for failed requests.
+        logging_hooks: Hooks for logging outgoing requests and incoming responses.
+        headers: Additional HTTP headers to include with every request.
 
     Returns:
         T3APIClient: An authenticated async client instance
@@ -364,13 +364,13 @@ def create_api_key_authenticated_client(
     endpoint with the provided API key and state code.
 
     Args:
-        api_key: API key for the T3 API
-        state_code: State code (e.g., "CA", "MO", "CO", "MI")
-        host: API host URL (optional, defaults to production if no config provided)
-        config: Optional HTTP configuration (timeout, etc.)
-        retry_policy: Optional retry policy for failed requests
-        logging_hooks: Optional request/response logging hooks
-        headers: Optional additional headers to include with requests
+        api_key: T3 API key used for authentication via the /v2/auth/apikey endpoint.
+        state_code: Two-letter US state code for the target Metrc instance (e.g., "CA", "MO").
+        host: T3 API host URL. Defaults to production if no config provided.
+        config: HTTP configuration for timeout, SSL, and proxy settings.
+        retry_policy: Retry policy controlling backoff and max attempts for failed requests.
+        logging_hooks: Hooks for logging outgoing requests and incoming responses.
+        headers: Additional HTTP headers to include with every request.
 
     Returns:
         T3APIClient: An authenticated async client instance
@@ -431,9 +431,9 @@ async def create_api_key_authenticated_client_or_error_async(
     Authenticates with the T3 API using API key and returns an authenticated client (async).
 
     Args:
-        api_key: API key for the T3 API
-        state_code: State code (e.g., "CA", "MO", "CO", "MI")
-        host: API host URL (optional, defaults to production)
+        api_key: T3 API key used for authentication via the /v2/auth/apikey endpoint.
+        state_code: Two-letter US state code for the target Metrc instance (e.g., "CA", "MO").
+        host: T3 API host URL. Defaults to production if not provided.
 
     Returns:
         T3APIClient: An authenticated async client instance ready for use
@@ -474,9 +474,9 @@ def create_api_key_authenticated_client_or_error(
     This function provides a sync wrapper around the async implementation.
 
     Args:
-        api_key: API key for the T3 API
-        state_code: State code (e.g., "CA", "MO", "CO", "MI")
-        host: API host URL (optional, defaults to production)
+        api_key: T3 API key used for authentication via the /v2/auth/apikey endpoint.
+        state_code: Two-letter US state code for the target Metrc instance (e.g., "CA", "MO").
+        host: T3 API host URL. Defaults to production if not provided.
 
     Returns:
         T3APIClient: An authenticated client instance ready for use
@@ -504,9 +504,9 @@ async def authenticate_and_get_token_with_api_key_async(
     and not the full client.
 
     Args:
-        api_key: API key for the T3 API
-        state_code: State code (e.g., "CA", "MO", "CO", "MI")
-        host: API host URL (optional, defaults to production)
+        api_key: T3 API key used for authentication via the /v2/auth/apikey endpoint.
+        state_code: Two-letter US state code for the target Metrc instance (e.g., "CA", "MO").
+        host: T3 API host URL. Defaults to production if not provided.
 
     Returns:
         str: The access token
@@ -542,9 +542,9 @@ def authenticate_and_get_token_with_api_key(
     and not the full client.
 
     Args:
-        api_key: API key for the T3 API
-        state_code: State code (e.g., "CA", "MO", "CO", "MI")
-        host: API host URL (optional, defaults to production)
+        api_key: T3 API key used for authentication via the /v2/auth/apikey endpoint.
+        state_code: Two-letter US state code for the target Metrc instance (e.g., "CA", "MO").
+        host: T3 API host URL. Defaults to production if not provided.
 
     Returns:
         str: The access token
@@ -572,9 +572,9 @@ async def authenticate_and_get_response_with_api_key_async(
     including refresh tokens and expiration information.
 
     Args:
-        api_key: API key for the T3 API
-        state_code: State code (e.g., "CA", "MO", "CO", "MI")
-        host: API host URL (optional, defaults to production)
+        api_key: T3 API key used for authentication via the /v2/auth/apikey endpoint.
+        state_code: Two-letter US state code for the target Metrc instance (e.g., "CA", "MO").
+        host: T3 API host URL. Defaults to production if not provided.
 
     Returns:
         AuthResponseData: The complete authentication response
@@ -615,9 +615,9 @@ def authenticate_and_get_response_with_api_key(
     including refresh tokens and expiration information.
 
     Args:
-        api_key: API key for the T3 API
-        state_code: State code (e.g., "CA", "MO", "CO", "MI")
-        host: API host URL (optional, defaults to production)
+        api_key: T3 API key used for authentication via the /v2/auth/apikey endpoint.
+        state_code: Two-letter US state code for the target Metrc instance (e.g., "CA", "MO").
+        host: T3 API host URL. Defaults to production if not provided.
 
     Returns:
         AuthResponseData: The complete authentication response

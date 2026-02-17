@@ -1,3 +1,5 @@
+"""File I/O utilities for CSV/JSON serialization, path generation, and OS file opening."""
+
 import csv
 import json
 import os
@@ -16,11 +18,19 @@ logger = get_logger(__name__)
 def flatten_dict(
     *, d: Dict[str, Any], parent_key: str = "", sep: str = "."
 ) -> Dict[str, Any]:
-    """
-    Recursively flattens a nested dictionary using dot notation.
+    """Recursively flattens a nested dictionary using dot notation.
+
+    Args:
+        d: The dictionary to flatten.
+        parent_key: Prefix for keys at the current nesting level (used during
+            recursion).
+        sep: Separator between parent and child key segments.
+
+    Returns:
+        A single-level dictionary with composite keys joined by ``sep``.
 
     Example:
-        {"a": {"b": 1}} → {"a.b": 1}
+        {"a": {"b": 1}} -> {"a.b": 1}
     """
     result: Dict[str, Any] = {}
     for k, v in d.items():
@@ -33,8 +43,14 @@ def flatten_dict(
 
 
 def prioritized_fieldnames(*, dicts: List[Dict[str, Any]]) -> List[str]:
-    """
-    Orders CSV fieldnames by priority list, then appends any additional keys sorted alphabetically.
+    """Orders CSV fieldnames by priority list, then appends remaining keys alphabetically.
+
+    Args:
+        dicts: List of dictionaries whose keys represent fieldnames.
+
+    Returns:
+        An ordered list of fieldnames with priority fields first, followed by
+        any remaining keys in alphabetical order.
     """
     all_keys = {key for row in dicts for key in row.keys()}
     prioritized = [key for key in PRIORITY_FIELDS if key in all_keys]
@@ -45,9 +61,16 @@ def prioritized_fieldnames(*, dicts: List[Dict[str, Any]]) -> List[str]:
 
 
 def default_json_serializer(*, obj: object) -> str:
-    """
-    Fallback serializer for non-JSON-native types.
-    Currently handles datetime objects by converting them to ISO format.
+    """Fallback serializer for non-JSON-native types.
+
+    Args:
+        obj: The object that ``json.dump`` could not serialize natively.
+
+    Returns:
+        An ISO-format string if ``obj`` is a ``datetime`` instance.
+
+    Raises:
+        TypeError: If the object type is not supported for serialization.
     """
     if isinstance(obj, datetime):
         return obj.isoformat()
@@ -57,9 +80,19 @@ def default_json_serializer(*, obj: object) -> str:
 def generate_output_path(
     *, model_name: str, license_number: str, output_dir: str, extension: str
 ) -> Path:
-    """
-    Constructs the output file path with consistent naming:
-        <model_name>__<license_number>__<timestamp>.<ext>
+    """Constructs the output file path with consistent naming.
+
+    The filename format is ``<model_name>__<license_number>__<timestamp>.<ext>``.
+    Parent directories are created automatically if they do not exist.
+
+    Args:
+        model_name: Logical model name included in the filename.
+        license_number: License identifier included in the filename.
+        output_dir: Directory where the file will be saved.
+        extension: File extension without the leading dot (e.g., ``"csv"``).
+
+    Returns:
+        A ``Path`` to the generated output file.
     """
     timestamp = datetime.now().isoformat(timespec="seconds").replace(":", "-")
     filename = f"{model_name}__{license_number}__{timestamp}.{extension}"
@@ -75,8 +108,19 @@ def save_dicts_to_json(
     license_number: str,
     output_dir: str = "output",
 ) -> Path:
-    """
-    Saves a list of dicts to a JSON file. Returns the saved file path.
+    """Saves a list of dictionaries to a JSON file.
+
+    Args:
+        dicts: Non-empty list of dictionaries to serialize.
+        model_name: Logical model name used in the output filename.
+        license_number: License identifier used in the output filename.
+        output_dir: Directory where the JSON file will be saved.
+
+    Returns:
+        The ``Path`` to the written JSON file.
+
+    Raises:
+        ValueError: If ``dicts`` is empty.
     """
     if not dicts:
         raise ValueError("Input list is empty")
@@ -100,16 +144,21 @@ def save_dicts_to_csv(
     output_dir: str = "output",
     strip_empty_columns: bool = False,
 ) -> Path:
-    """
-    Saves a list of (possibly nested) dictionaries to a CSV file after flattening.
-    Returns the saved file path.
+    """Saves a list of (possibly nested) dictionaries to a CSV file after flattening.
 
     Args:
-        dicts: List of input dictionaries.
-        model_name: Logical model name (used in filename).
-        license_number: License identifier (used in filename).
-        output_dir: Where to save the file.
-        strip_empty_columns: If True, completely empty columns will be removed.
+        dicts: Non-empty list of input dictionaries (may contain nested dicts).
+        model_name: Logical model name used in the output filename.
+        license_number: License identifier used in the output filename.
+        output_dir: Directory where the CSV file will be saved.
+        strip_empty_columns: If True, columns where every value is ``None``,
+            ``""``, or ``[]`` will be removed.
+
+    Returns:
+        The ``Path`` to the written CSV file.
+
+    Raises:
+        ValueError: If ``dicts`` is empty.
     """
     if not dicts:
         raise ValueError("Input list is empty")
@@ -141,8 +190,10 @@ def save_dicts_to_csv(
 
 
 def open_file(*, path: Path) -> None:
-    """
-    Opens a file using the default application for the OS.
+    """Opens a file using the default application for the current OS.
+
+    Args:
+        path: Filesystem path to the file to open.
     """
     try:
         if sys.platform == "darwin":

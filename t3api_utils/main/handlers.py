@@ -1,4 +1,10 @@
-"""Interactive handler methods for collection management."""
+"""Interactive handler methods for collection management.
+
+Provides stateful action functions for the interactive collection handler menu,
+including saving to CSV/JSON, loading into DuckDB, exporting schemas, inspecting
+collections, and filtering by CSV matches. Each action operates on a shared
+``HandlerState`` instance that tracks database connections and saved file paths.
+"""
 
 import csv
 import json
@@ -31,7 +37,16 @@ from t3api_utils.style import (
 
 @dataclass
 class HandlerState:
-    """State for interactive collection handler."""
+    """State for interactive collection handler.
+
+    Attributes:
+        db_connection: Active DuckDB connection, or None if not yet created.
+        csv_file_path: Path to the most recently saved CSV file, or None.
+        json_file_path: Path to the most recently saved JSON file, or None.
+        collection_name: Name derived from the collection's data model and index.
+        license_number: License number associated with the collection data.
+    """
+
     db_connection: Optional[duckdb.DuckDBPyConnection] = None
     csv_file_path: Optional[Path] = None
     json_file_path: Optional[Path] = None
@@ -40,14 +55,33 @@ class HandlerState:
 
 
 def generate_default_path(*, collection_name: str, license_number: str, extension: str) -> str:
-    """Generate a default file path with timestamp in output/ directory."""
+    """Generate a default file path with timestamp in the ``output/`` directory.
+
+    Args:
+        collection_name: Name of the collection (used in the filename).
+        license_number: License number (used in the filename).
+        extension: File extension without the leading dot (e.g. ``"csv"``).
+
+    Returns:
+        A string path in the form ``output/{collection}__{license}__{timestamp}.{ext}``.
+    """
     timestamp = datetime.now().isoformat(timespec="seconds").replace(":", "-")
     filename = f"{collection_name}__{license_number}__{timestamp}.{extension}"
     return f"output/{filename}"
 
 
 def prompt_for_file_path(*, proposed_path: str, file_type: str) -> Path:
-    """Prompt user for file path, allowing them to edit the proposed path."""
+    """Prompt user for a file path, allowing them to accept or edit the proposed path.
+
+    Parent directories are created automatically if they do not exist.
+
+    Args:
+        proposed_path: Default file path shown to the user.
+        file_type: Human-readable label for the file format (e.g. ``"CSV"``).
+
+    Returns:
+        Resolved ``Path`` object for the chosen file location.
+    """
     print_subheader(f"Save to {file_type}")
     print_labeled_info("Proposed path", proposed_path)
 
@@ -66,7 +100,15 @@ def prompt_for_file_path(*, proposed_path: str, file_type: str) -> Path:
 
 
 def action_save_csv(*, data: List[Dict[str, Any]], state: HandlerState) -> None:
-    """Save collection to CSV with interactive path selection."""
+    """Save collection data to a CSV file with interactive path selection.
+
+    Flattens nested dictionaries, writes a CSV with prioritized column ordering,
+    updates ``state.csv_file_path``, and opens the file automatically.
+
+    Args:
+        data: List of dictionaries representing the collection records.
+        state: Shared handler state; ``csv_file_path`` is updated on success.
+    """
     default_path = generate_default_path(
         collection_name=state.collection_name,
         license_number=state.license_number,
@@ -97,7 +139,15 @@ def action_save_csv(*, data: List[Dict[str, Any]], state: HandlerState) -> None:
 
 
 def action_save_json(*, data: List[Dict[str, Any]], state: HandlerState) -> None:
-    """Save collection to JSON with interactive path selection."""
+    """Save collection data to a JSON file with interactive path selection.
+
+    Serializes the data list as pretty-printed JSON, updates
+    ``state.json_file_path``, and opens the file automatically.
+
+    Args:
+        data: List of dictionaries representing the collection records.
+        state: Shared handler state; ``json_file_path`` is updated on success.
+    """
     default_path = generate_default_path(
         collection_name=state.collection_name,
         license_number=state.license_number,
@@ -129,7 +179,15 @@ def action_save_json(*, data: List[Dict[str, Any]], state: HandlerState) -> None
 
 
 def action_load_db(*, data: List[Dict[str, Any]], state: HandlerState) -> None:
-    """Load collection into database (auto-creates DB connection if needed)."""
+    """Load collection data into a DuckDB database.
+
+    Automatically creates a database connection if one does not already exist
+    in ``state``. Flattens and inserts the data into relational tables.
+
+    Args:
+        data: List of dictionaries representing the collection records.
+        state: Shared handler state; ``db_connection`` may be created or reused.
+    """
     # Auto-setup: Create database connection if needed
     if not state.db_connection:
         print_progress("Creating database connection...")
@@ -148,7 +206,14 @@ def action_load_db(*, data: List[Dict[str, Any]], state: HandlerState) -> None:
 
 
 def action_export_schema(*, state: HandlerState) -> None:
-    """Export and print database schema (auto-creates connection and checks for data)."""
+    """Export and print the database schema to the console.
+
+    Automatically creates a database connection if one does not exist and
+    verifies that data has been loaded before attempting to export.
+
+    Args:
+        state: Shared handler state; ``db_connection`` may be created or reused.
+    """
     # Auto-setup: Create database connection if needed
     if not state.db_connection:
         print_progress("Creating database connection...")
@@ -173,14 +238,30 @@ def action_export_schema(*, state: HandlerState) -> None:
 
 
 def action_inspect_collection(*, data: List[Dict[str, Any]], state: HandlerState) -> None:
-    """Launch collection inspector."""
+    """Launch the interactive collection inspector for browsing data items.
+
+    Args:
+        data: List of dictionaries representing the collection records.
+        state: Shared handler state (unused, kept for consistent action signature).
+    """
     # Import here to avoid circular imports
     from t3api_utils.main.utils import inspect_collection
     inspect_collection(data=data)
 
 
 def action_filter_by_csv(*, data: List[Dict[str, Any]], state: HandlerState) -> List[Dict[str, Any]]:
-    """Filter collection by CSV matches and return filtered data."""
+    """Filter collection by matching entries from a CSV file.
+
+    Uses ``match_collection_from_csv`` to find exact matches. Returns the
+    original data unchanged if no matches are found or an error occurs.
+
+    Args:
+        data: List of dictionaries representing the collection records.
+        state: Shared handler state (unused, kept for consistent action signature).
+
+    Returns:
+        Filtered list of matched dictionaries, or the original data on failure.
+    """
     try:
         # Import here to avoid circular imports
         from t3api_utils.main.utils import match_collection_from_csv
@@ -203,7 +284,17 @@ def action_filter_by_csv(*, data: List[Dict[str, Any]], state: HandlerState) -> 
 
 
 def get_menu_options(*, state: HandlerState) -> List[tuple[str, str]]:
-    """Get all menu options (always show all options, auto-setup handles prerequisites)."""
+    """Build the list of menu options for the interactive collection handler.
+
+    All options are always shown; prerequisite setup (e.g. database connection)
+    is handled automatically by each action.
+
+    Args:
+        state: Shared handler state (unused, kept for potential future filtering).
+
+    Returns:
+        List of ``(label, action_key)`` tuples for display in the menu.
+    """
     options = []
 
     # Core actions - always available

@@ -29,6 +29,11 @@ mypy t3api_utils tests    # Type check source and tests
 
 # Type generation (if needed)
 python bin/generate_types.py  # Update TypedDict definitions from OpenAPI spec
+
+# Documentation
+mkdocs serve              # Local preview at http://127.0.0.1:8000
+mkdocs build              # Build static site to site/
+mkdocs gh-deploy          # Deploy to GitHub Pages
 ```
 
 ## Architecture

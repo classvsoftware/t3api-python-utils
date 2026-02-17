@@ -1,4 +1,8 @@
-"""T3 API client built on httpx."""
+"""T3 API client built on httpx.
+
+Provides :class:`T3APIClient`, an async httpx-based client that handles
+authentication, retries, and response parsing for the T3 API.
+"""
 from __future__ import annotations
 
 from typing import Any, Dict, Optional, Union, cast
@@ -67,12 +71,20 @@ class T3APIClient:
 
     @property
     def is_authenticated(self) -> bool:
-        """Check if client is authenticated."""
+        """Check if client is authenticated.
+
+        Returns:
+            ``True`` if an access token has been set and authentication succeeded.
+        """
         return self._authenticated and self._access_token is not None
 
     @property
     def access_token(self) -> Optional[str]:
-        """Get the current access token."""
+        """Get the current access token.
+
+        Returns:
+            The JWT bearer token string, or ``None`` if unauthenticated.
+        """
         return self._access_token
 
     def set_access_token(self, token: str) -> None:
@@ -86,7 +98,10 @@ class T3APIClient:
         self._authenticated = True
 
     def clear_access_token(self) -> None:
-        """Clear the access token."""
+        """Clear the access token and mark the client as unauthenticated.
+
+        Removes the ``Authorization`` header from the underlying httpx client.
+        """
         self._access_token = None
         clear_bearer_token(client=self._client)
         self._authenticated = False

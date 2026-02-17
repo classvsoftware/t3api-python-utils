@@ -9,14 +9,24 @@ from typing import Any, Dict, List, NotRequired, TypedDict, TypeVar, Union
 
 
 class AuthResponseData(TypedDict):
-    """Authentication response data structure."""
+    """Authentication response returned by ``/v2/auth/credentials`` and ``/v2/auth/apikey``.
+
+    May contain additional fields beyond ``accessToken`` depending on the
+    authentication method used.
+    """
 
     accessToken: str
+    """JWT bearer token used to authorize subsequent API requests."""
 
 
 class LicenseData(TypedDict):
+    """A Metrc license associated with an authenticated user."""
+
     licenseNumber: str
+    """Unique license identifier (e.g. ``"CUL00001"``)."""
+
     licenseName: str
+    """Human-readable display name for the license."""
 
 
 class MetrcObject(TypedDict):
@@ -54,7 +64,14 @@ class MetrcCollectionResponse(TypedDict):
     """
 
     data: List[MetrcObject]
+    """List of Metrc objects for the current page."""
+
     total: int
+    """Total number of records across all pages."""
+
     page: int
+    """Current page number (1-based)."""
+
     pageSize: int
+    """Number of items per page."""
 

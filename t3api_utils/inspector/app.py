@@ -20,6 +20,11 @@ class JSONViewer(VerticalScroll):
     json_data: reactive[Dict[str, Any] | None] = reactive(None)
 
     def __init__(self, **kwargs: Any) -> None:
+        """Initialize the JSON viewer widget.
+
+        Args:
+            **kwargs: Additional keyword arguments passed to VerticalScroll.
+        """
         super().__init__(**kwargs)
         self.can_focus = True
         self._content_static = Static(id="json-content")
@@ -29,7 +34,12 @@ class JSONViewer(VerticalScroll):
         self.mount(self._content_static)
 
     def watch_json_data(self, json_data: Dict[str, Any] | None) -> None:
-        """Update displayed JSON when data changes."""
+        """Update displayed JSON when data changes.
+
+        Args:
+            json_data: The JSON data dictionary to display, or None to show
+                a placeholder message.
+        """
         if json_data is None:
             content = "⚠ No data available"
         else:
@@ -56,6 +66,12 @@ class StatusBar(Static):
     """Status information display."""
 
     def __init__(self, collection_name: str, **kwargs: Any) -> None:
+        """Initialize the status bar.
+
+        Args:
+            collection_name: The name of the collection being inspected.
+            **kwargs: Additional keyword arguments passed to Static.
+        """
         self.collection_name = collection_name
         self.current_index = 0
         self.total_count = 0
@@ -77,14 +93,25 @@ class StatusBar(Static):
         self.update(status_text)
 
     def set_position(self, current: int, filtered: int, total: int) -> None:
-        """Update position information."""
+        """Update position information.
+
+        Args:
+            current: Zero-based index of the currently displayed object.
+            filtered: Total number of objects after filtering.
+            total: Total number of objects before filtering.
+        """
         self.current_index = current
         self.filtered_count = filtered
         self.total_count = total
         self.update_status()
 
     def set_search(self, query: str, filtered_count: int) -> None:
-        """Update search information."""
+        """Update search information.
+
+        Args:
+            query: The current search query string.
+            filtered_count: Number of objects matching the search query.
+        """
         self.search_query = query
         self.filtered_count = filtered_count
         self.update_status()
@@ -142,6 +169,13 @@ class CollectionInspectorApp(App[None]):
     ]
 
     def __init__(self, *, data: Sequence[Dict[str, Any]], collection_name: str = "collection") -> None:
+        """Initialize the collection inspector application.
+
+        Args:
+            data: Sequence of JSON-serializable dictionaries to inspect.
+            collection_name: Display name for the collection shown in the
+                title and status bar.
+        """
         super().__init__()
         self.original_data = list(data)
         self.filtered_data = list(data)
@@ -189,7 +223,15 @@ class CollectionInspectorApp(App[None]):
         )
 
     def _object_contains_text(self, *, obj: Dict[str, Any], search_text: str) -> bool:
-        """Recursively search object for text using case-insensitive matching."""
+        """Recursively search object for text using case-insensitive matching.
+
+        Args:
+            obj: The dictionary object to search through.
+            search_text: The text to search for (case-insensitive).
+
+        Returns:
+            True if the search text is found anywhere in the object's values.
+        """
         search_lower = search_text.lower()
 
         def search_recursive(value: Any) -> bool:
@@ -206,7 +248,12 @@ class CollectionInspectorApp(App[None]):
         return search_recursive(obj)
 
     def _apply_search_filter(self, *, query: str) -> None:
-        """Apply search filter to data."""
+        """Apply search filter to data.
+
+        Args:
+            query: The search query string. An empty or whitespace-only
+                string clears the filter.
+        """
         self.search_query = query.strip()
 
         if not self.search_query:
@@ -267,14 +314,25 @@ class CollectionInspectorApp(App[None]):
 
     @on(Input.Changed, "#search-input")
     def on_search_changed(self, event: Input.Changed) -> None:
-        """Handle search input changes."""
+        """Handle search input changes.
+
+        Args:
+            event: The Input.Changed event containing the new search value.
+        """
         self._apply_search_filter(query=event.value)
         status_bar = self.query_one("#status", StatusBar)
         status_bar.set_search(self.search_query, len(self.filtered_data))
 
 
 def inspect_collection(*, data: Sequence[Dict[str, Any]], collection_name: str = "collection") -> None:
-    """Launch the Textual collection inspector."""
+    """Launch the Textual collection inspector.
+
+    Args:
+        data: Sequence of JSON-serializable dictionaries to inspect.
+            If empty, prints an info message and returns immediately.
+        collection_name: Display name for the collection shown in the
+            title and status bar.
+    """
     if not data:
         print_info("No data to inspect")
         return

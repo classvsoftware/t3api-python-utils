@@ -20,8 +20,27 @@ def parallel_load_collection(
     *args: P.args,
     **kwargs: P.kwargs,
 ) -> List[MetrcCollectionResponse]:
-    """
-    Fetches paginated responses in parallel using a thread pool.
+    """Fetch paginated responses in parallel using a thread pool.
+
+    Makes an initial request to determine total records and page size, then
+    fetches all remaining pages concurrently via a thread pool executor.
+
+    Args:
+        method: A callable that returns a ``MetrcCollectionResponse``. Must
+            accept a ``page`` keyword argument for pagination.
+        max_workers: Maximum number of threads for concurrent fetching.
+            Passed directly to ``ThreadPoolExecutor``; ``None`` lets the
+            executor choose a default.
+        *args: Positional arguments forwarded to ``method``.
+        **kwargs: Keyword arguments forwarded to ``method``.
+
+    Returns:
+        A list of ``MetrcCollectionResponse`` objects, one per page, ordered
+        by page number.
+
+    Raises:
+        ValueError: If the first response is missing the ``total`` field or
+            the page size cannot be determined (missing or zero).
     """
     logger.info("Starting parallel data load")
     first_response = method(*args, **kwargs)

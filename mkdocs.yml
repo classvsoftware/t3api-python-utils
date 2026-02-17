@@ -1,0 +1,70 @@
+site_name: t3api-utils
+site_description: Python utilities for the T3 (Track and Trace Tools) API
+site_url: https://classvsoftware.github.io/t3api-python-utils
+repo_url: https://github.com/classvsoftware/t3api-python-utils
+repo_name: classvsoftware/t3api-python-utils
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - content.code.copy
+    - navigation.sections
+    - navigation.expand
+    - search.highlight
+    - search.suggest
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            show_root_full_path: false
+            members_order: source
+            merge_init_into_class: true
+            show_signature_annotations: true
+            separate_signature: true
+
+nav:
+  - Home: index.md
+  - API Reference:
+      - API Client: reference/api-client.md
+      - API Operations: reference/api-operations.md
+      - Parallel Loading: reference/api-parallel.md
+      - Authentication: reference/auth.md
+      - HTTP: reference/http.md
+      - Database: reference/db.md
+      - File I/O: reference/file.md
+      - Collection: reference/collection.md
+      - OpenAPI: reference/openapi.md
+      - CLI: reference/cli.md
+      - Style: reference/style.md
+      - Inspector: reference/inspector.md
+      - Logging: reference/logging.md
+      - Exceptions: reference/exceptions.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - toc:
+      permalink: true

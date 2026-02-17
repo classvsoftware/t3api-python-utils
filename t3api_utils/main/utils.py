@@ -1,4 +1,10 @@
-"""Main utilities for T3 API data operations using httpx-based API client."""
+"""Main utilities for T3 API data operations using httpx-based API client.
+
+Provides high-level functions for authentication, collection loading and saving,
+interactive collection handling (inspect, filter, export), database operations,
+and file picking. Serves as the primary orchestration layer that ties together
+the auth, api, db, and file sub-packages.
+"""
 
 import csv
 import json
@@ -209,12 +215,17 @@ def get_authenticated_client_or_error(
     Displays an interactive picker for authentication method selection and routes to
     the appropriate authentication method based on user choice.
 
+    Args:
+        auth_method: Authentication method to use. One of ``"credentials"``,
+            ``"jwt"``, or ``"api_key"``. If ``None``, an interactive picker is
+            shown to the user.
+
     Returns:
-        T3APIClient: Authenticated httpx-based client
+        T3APIClient: Authenticated httpx-based client.
 
     Raises:
-        AuthenticationError: If authentication fails
-        typer.Exit: If user cancels or provides invalid input
+        AuthenticationError: If authentication fails.
+        typer.Exit: If user cancels or provides invalid input.
     """
     if auth_method is None:
         auth_method = _pick_authentication_method()
@@ -440,10 +451,20 @@ def save_collection_to_json(
     open_after: bool = False,
     filename_override: Optional[str] = None,
 ) -> Path:
-    """
-    Converts and saves a collection of dictionaries to a JSON file.
-    Optionally opens the file after saving.
-    Returns the path to the saved file.
+    """Save a collection of dictionaries to a JSON file.
+
+    Args:
+        objects: Non-empty list of dictionaries to serialize.
+        output_dir: Directory to write the output file into.
+        open_after: If ``True``, open the file with the default application after saving.
+        filename_override: Custom model name for the filename. If ``None``, the
+            ``index`` field from the first object is used.
+
+    Returns:
+        Path to the saved JSON file.
+
+    Raises:
+        ValueError: If ``objects`` is empty.
     """
     if not objects:
         raise ValueError("Cannot serialize an empty list of objects")
@@ -470,10 +491,21 @@ def save_collection_to_csv(
     filename_override: Optional[str] = None,
     strip_empty_columns: bool = False,
 ) -> Path:
-    """
-    Converts and saves a collection of dictionaries to a CSV file.
-    Optionally opens the file after saving.
-    Returns the path to the saved file.
+    """Save a collection of dictionaries to a CSV file.
+
+    Args:
+        objects: Non-empty list of dictionaries to serialize.
+        output_dir: Directory to write the output file into.
+        open_after: If ``True``, open the file with the default application after saving.
+        filename_override: Custom model name for the filename. If ``None``, the
+            ``index`` field from the first object is used.
+        strip_empty_columns: If ``True``, omit columns where every value is empty.
+
+    Returns:
+        Path to the saved CSV file.
+
+    Raises:
+        ValueError: If ``objects`` is empty.
     """
     if not objects:
         raise ValueError("Cannot serialize an empty list of objects")
@@ -508,14 +540,33 @@ class _HandlerState:
 def _generate_default_path(
     *, collection_name: str, license_number: str, extension: str
 ) -> str:
-    """Generate a default file path with timestamp in output/ directory."""
+    """Generate a default file path with timestamp in the ``output/`` directory.
+
+    Args:
+        collection_name: Name of the collection (used in the filename).
+        license_number: License number (used in the filename).
+        extension: File extension without the leading dot (e.g. ``"csv"``).
+
+    Returns:
+        A string path in the form ``output/{collection}__{license}__{timestamp}.{ext}``.
+    """
     timestamp = datetime.now().isoformat(timespec="seconds").replace(":", "-")
     filename = f"{collection_name}__{license_number}__{timestamp}.{extension}"
     return f"output/{filename}"
 
 
 def _prompt_for_file_path(*, proposed_path: str, file_type: str) -> Path:
-    """Prompt user for file path, allowing them to edit the proposed path."""
+    """Prompt user for a file path, allowing them to accept or edit the proposed path.
+
+    Parent directories are created automatically if they do not exist.
+
+    Args:
+        proposed_path: Default file path shown to the user.
+        file_type: Human-readable label for the file format (e.g. ``"CSV"``).
+
+    Returns:
+        Resolved ``Path`` object for the chosen file location.
+    """
     print_subheader(f"Save to {file_type}")
     print_labeled_info("Proposed path", proposed_path)
 
@@ -534,7 +585,15 @@ def _prompt_for_file_path(*, proposed_path: str, file_type: str) -> Path:
 
 
 def _action_save_csv(*, data: List[Dict[str, Any]], state: _HandlerState) -> None:
-    """Save collection to CSV with interactive path selection."""
+    """Save collection data to a CSV file with interactive path selection.
+
+    Flattens nested dictionaries, writes a CSV with prioritized column ordering,
+    updates ``state.csv_file_path``, and opens the file automatically.
+
+    Args:
+        data: List of dictionaries representing the collection records.
+        state: Shared handler state; ``csv_file_path`` is updated on success.
+    """
     default_path = _generate_default_path(
         collection_name=state.collection_name,
         license_number=state.license_number,
@@ -569,7 +628,15 @@ def _action_save_csv(*, data: List[Dict[str, Any]], state: _HandlerState) -> Non
 
 
 def _action_save_json(*, data: List[Dict[str, Any]], state: _HandlerState) -> None:
-    """Save collection to JSON with interactive path selection."""
+    """Save collection data to a JSON file with interactive path selection.
+
+    Serializes the data list as pretty-printed JSON, updates
+    ``state.json_file_path``, and opens the file automatically.
+
+    Args:
+        data: List of dictionaries representing the collection records.
+        state: Shared handler state; ``json_file_path`` is updated on success.
+    """
     default_path = _generate_default_path(
         collection_name=state.collection_name,
         license_number=state.license_number,
@@ -605,7 +672,16 @@ def _action_save_json(*, data: List[Dict[str, Any]], state: _HandlerState) -> No
 
 
 def _action_load_db(*, data: List[Dict[str, Any]], state: _HandlerState) -> None:
-    """Load collection into database (auto-creates DB connection if needed)."""
+    """Load collection data into a DuckDB database.
+
+    Automatically creates a database connection if one does not already exist
+    in ``state``. Prevents duplicate loads within the same session.
+
+    Args:
+        data: List of dictionaries representing the collection records.
+        state: Shared handler state; ``db_connection`` may be created, and
+            ``data_loaded_to_db`` is set to ``True`` on success.
+    """
     # Check if data has already been loaded in this session
     if state.data_loaded_to_db:
         print_warning("Data has already been loaded into the database in this session.")
@@ -633,7 +709,16 @@ def _action_load_db(*, data: List[Dict[str, Any]], state: _HandlerState) -> None
 
 
 def _action_export_schema(*, data: List[Dict[str, Any]], state: _HandlerState) -> None:
-    """Export and print database schema (auto-creates connection and loads data if needed)."""
+    """Export and print the database schema to the console.
+
+    Automatically creates a database connection and loads data if neither has
+    been done yet. Prints the schema using Rich formatting.
+
+    Args:
+        data: List of dictionaries to auto-load if the database is empty.
+        state: Shared handler state; ``db_connection`` and ``data_loaded_to_db``
+            may be updated.
+    """
     # Auto-setup: Create database connection if needed
     if not state.db_connection:
         print_progress("Creating database connection...")
@@ -708,14 +793,31 @@ def _action_show_help() -> None:
 def _action_inspect_collection(
     *, data: List[Dict[str, Any]], state: _HandlerState
 ) -> None:
-    """Launch collection inspector."""
+    """Launch the interactive collection inspector for browsing data items.
+
+    Args:
+        data: List of dictionaries representing the collection records.
+        state: Shared handler state (unused, kept for consistent action signature).
+    """
     inspect_collection(data=data)
 
 
 def _action_filter_by_csv(
     *, data: List[Dict[str, Any]], state: _HandlerState
 ) -> List[Dict[str, Any]]:
-    """Filter collection by CSV matches and return filtered data."""
+    """Filter collection by matching entries from a CSV file.
+
+    Uses ``match_collection_from_csv`` with ``on_no_match="warn"`` for
+    interactive use. Returns the original data unchanged if no matches are
+    found or an error occurs.
+
+    Args:
+        data: List of dictionaries representing the collection records.
+        state: Shared handler state (unused, kept for consistent action signature).
+
+    Returns:
+        Filtered list of matched dictionaries, or the original data on failure.
+    """
     try:
         filtered_data = match_collection_from_csv(
             data=data,
@@ -735,7 +837,17 @@ def _action_filter_by_csv(
 
 
 def _get_menu_options(*, state: _HandlerState) -> List[tuple[str, str, str]]:
-    """Get all menu options with descriptions (always show all options, auto-setup handles prerequisites)."""
+    """Build the list of menu options for the interactive collection handler.
+
+    All options are always shown; prerequisite setup (e.g. database connection)
+    is handled automatically by each action.
+
+    Args:
+        state: Shared handler state (reserved for potential future filtering).
+
+    Returns:
+        List of ``(label, action_key, description)`` tuples for menu display.
+    """
     options = []
 
     # Core actions - always available
@@ -898,7 +1010,14 @@ from collections import defaultdict
 
 
 def _db_has_data(*, con: duckdb.DuckDBPyConnection) -> bool:
-    """Check if the database connection has any tables with data."""
+    """Check if the database connection has any tables in the main schema.
+
+    Args:
+        con: Active DuckDB connection to inspect.
+
+    Returns:
+        ``True`` if at least one table exists, ``False`` otherwise or on error.
+    """
     if not con:
         return False
 
@@ -1032,7 +1151,14 @@ def _discover_data_files(
 
 
 def _format_file_size(size_bytes: int) -> str:
-    """Format file size in human-readable format."""
+    """Format a file size in bytes as a human-readable string.
+
+    Args:
+        size_bytes: File size in bytes.
+
+    Returns:
+        Formatted string such as ``"0 B"``, ``"4 KB"``, or ``"1.2 MB"``.
+    """
     if size_bytes == 0:
         return "0 B"
 
@@ -1051,7 +1177,16 @@ def _format_file_size(size_bytes: int) -> str:
 
 
 def _format_file_time(timestamp: float) -> str:
-    """Format file modification time in readable format."""
+    """Format a file modification timestamp as a short readable string.
+
+    Returns time-only for today, month-day for this year, or year otherwise.
+
+    Args:
+        timestamp: Unix timestamp (seconds since epoch).
+
+    Returns:
+        Formatted date/time string, or ``"Unknown"`` on error.
+    """
     try:
         dt = datetime.fromtimestamp(timestamp)
         now = datetime.now()
@@ -1262,7 +1397,23 @@ def pick_file(
 
 
 def _handle_custom_path_input(*, load_content: bool) -> Union[Path, Dict[str, Any]]:
-    """Handle custom file path input."""
+    """Prompt the user for a custom file path and optionally load its content.
+
+    Validates that the path exists and points to a regular file. Loops until
+    a valid path is provided or the user cancels.
+
+    Args:
+        load_content: If ``True``, parse and return the file content as a dict.
+            If ``False``, return the resolved ``Path`` object.
+
+    Returns:
+        If ``load_content`` is ``False``: resolved ``Path`` to the selected file.
+        If ``load_content`` is ``True``: dict with keys ``path``, ``content``,
+        ``format``, and ``size``.
+
+    Raises:
+        typer.Exit: If the user cancels or an unrecoverable error occurs.
+    """
     print_subheader("Custom File Path")
 
     while True:
@@ -1455,7 +1606,7 @@ def extract_collection_metadata(*, data: Sequence[Dict[str, Any]]) -> tuple[str,
     exist, returns "mixed_licenses".
 
     Args:
-        collection: List of MetrcObject instances to analyze
+        data: List of MetrcObject dictionaries to analyze.
 
     Returns:
         Tuple of (collection_name, license_number)

@@ -36,7 +36,16 @@ def pick_collection() -> CollectionEndpoint:
 
 
 def _group_by_category(endpoints: List[CollectionEndpoint]) -> Dict[str, List[CollectionEndpoint]]:
-    """Group endpoints by their category."""
+    """Group endpoints by their category.
+
+    Endpoints within each category are sorted alphabetically by name.
+
+    Args:
+        endpoints: A flat list of collection endpoints to group.
+
+    Returns:
+        A dict mapping category names to their sorted lists of endpoints.
+    """
     categories: Dict[str, List[CollectionEndpoint]] = {}
 
     for endpoint in endpoints:
@@ -53,7 +62,17 @@ def _group_by_category(endpoints: List[CollectionEndpoint]) -> Dict[str, List[Co
 
 
 def _pick_category(categories: Dict[str, List[CollectionEndpoint]]) -> str:
-    """Let user pick a category."""
+    """Display an interactive Rich table and let the user pick a category.
+
+    Args:
+        categories: A dict mapping category names to their endpoints.
+
+    Returns:
+        The name of the selected category.
+
+    Raises:
+        SystemExit: If the user cancels the selection or interrupts.
+    """
     category_list = sorted(categories.keys())
 
     table = Table(title="Available Collection Categories", border_style="magenta", header_style="bold magenta")
@@ -88,7 +107,18 @@ def _pick_category(categories: Dict[str, List[CollectionEndpoint]]) -> str:
 
 
 def _pick_from_category(category_name: str, endpoints: List[CollectionEndpoint]) -> CollectionEndpoint:
-    """Let user pick an endpoint from a category."""
+    """Display an interactive Rich table and let the user pick an endpoint.
+
+    Args:
+        category_name: The name of the category, used in the table title.
+        endpoints: The list of endpoints to present for selection.
+
+    Returns:
+        The ``CollectionEndpoint`` chosen by the user.
+
+    Raises:
+        SystemExit: If the user cancels the selection or interrupts.
+    """
     table = Table(title=f"Available {category_name} Collections", border_style="magenta", header_style="bold magenta")
     table.add_column("#", style="magenta", justify="right")
     table.add_column("Collection Name", style="bright_white")

@@ -24,20 +24,38 @@ PaginatedT = TypeVar("PaginatedT", bound=MetrcCollectionResponse)
 
 
 class RateLimiter:
-    """Simple rate limiter to avoid overwhelming the API."""
+    """Simple rate limiter using a token-bucket-style algorithm.
+
+    Enforces a minimum time interval between consecutive requests to avoid
+    overwhelming the API. The limiter tracks the timestamp of the last
+    request and sleeps for the remaining interval before allowing the next
+    one. Both synchronous (``time.sleep``) and asynchronous
+    (``asyncio.sleep``) acquisition methods are provided.
+
+    Attributes:
+        requests_per_second: Configured maximum throughput.
+        min_interval: Minimum seconds between consecutive requests,
+            derived as ``1.0 / requests_per_second``.
+        last_request_time: Epoch timestamp of the most recent request.
+    """
 
     def __init__(self, requests_per_second: float = 10.0) -> None:
         """Initialize rate limiter.
 
         Args:
-            requests_per_second: Maximum requests per second allowed
+            requests_per_second: Maximum requests per second allowed.
+                A value of ``0`` or less disables rate limiting.
         """
         self.requests_per_second = requests_per_second
         self.min_interval = 1.0 / requests_per_second if requests_per_second > 0 else 0
         self.last_request_time = 0.0
 
     def acquire(self) -> None:
-        """Block until it's safe to make another request."""
+        """Block synchronously until it's safe to make another request.
+
+        Uses ``time.sleep`` to pause the calling thread when the elapsed
+        time since the last request is less than ``min_interval``.
+        """
         if self.min_interval <= 0:
             return
 
@@ -51,7 +69,12 @@ class RateLimiter:
         self.last_request_time = time.time()
 
     async def acquire_async(self) -> None:
-        """Async version of acquire."""
+        """Asynchronously wait until it's safe to make another request.
+
+        Uses ``asyncio.sleep`` instead of ``time.sleep`` so that the
+        event loop remains unblocked while waiting for the rate-limit
+        interval to elapse.
+        """
         if self.min_interval <= 0:
             return
 
@@ -182,7 +205,19 @@ async def parallel_load_paginated_async(
         return [first_response]
 
     async def fetch_page(page_number: int) -> tuple[int, PaginatedT]:
-        """Fetch a specific page."""
+        """Fetch a single page from the paginated endpoint.
+
+        Respects the outer rate limiter (if configured) before issuing
+        the request.
+
+        Args:
+            page_number: 1-based page number to fetch.
+
+        Returns:
+            A tuple of ``(zero_based_index, response)`` where the index
+            is ``page_number - 1``, suitable for direct insertion into
+            the pre-allocated responses list.
+        """
         if rate_limiter:
             await rate_limiter.acquire_async()
 
@@ -262,6 +297,11 @@ def load_all_data_sync(
 
     Returns:
         Flattened list of all data items across all pages
+
+    Raises:
+        ValueError: If the first response is missing required pagination
+            fields (``total`` or ``pageSize``).
+        AttributeError: If the client is not authenticated.
     """
     # Create a temporary async client that uses the same config and auth
     # but runs in its own event loop to avoid conflicts
@@ -325,6 +365,11 @@ async def load_all_data_async(
 
     Returns:
         Flattened list of all data items across all pages
+
+    Raises:
+        ValueError: If the first response is missing required pagination
+            fields (``total`` or ``pageSize``).
+        AttributeError: If the client is not authenticated.
     """
     responses: List[MetrcCollectionResponse] = await parallel_load_paginated_async(
         client=client,
@@ -357,13 +402,18 @@ def parallel_load_collection_enhanced(
     while adding rate limiting capabilities.
 
     Args:
-        method: Callable that returns a paginated response
+        method: Callable that returns a paginated response. Must accept a
+            ``page`` keyword argument.
         max_workers: Maximum number of threads to use
         rate_limit: Requests per second limit (None to disable)
         **method_kwargs: Arguments to pass to the method
 
     Returns:
         List of paginated response objects
+
+    Raises:
+        ValueError: If the first response is missing a ``total`` field or
+            the page size cannot be determined from the response.
     """
     logger.info("Starting enhanced parallel data load")
 
@@ -400,6 +450,19 @@ def parallel_load_collection_enhanced(
     responses[0] = first_response
 
     def fetch_page(page_number: int) -> tuple[int, PaginatedT]:
+        """Fetch a single page using the provided callable.
+
+        Respects the outer rate limiter (if configured) before issuing
+        the request.
+
+        Args:
+            page_number: 0-based page index. The actual API call uses
+                ``page_number + 1`` as the 1-based page parameter.
+
+        Returns:
+            A tuple of ``(page_number, response)`` for insertion into
+            the pre-allocated responses list.
+        """
         if rate_limiter:
             rate_limiter.acquire()
 

@@ -1,3 +1,10 @@
+"""CLI utility functions for configuration management and authentication.
+
+Provides the ``ConfigManager`` class for reading and auto-generating the
+``.t3.env`` configuration file, as well as helper functions for loading,
+prompting, and persisting Metrc credentials.
+"""
+
 import os
 from pathlib import Path
 from typing import Dict, Set, Any, Optional
@@ -32,21 +39,44 @@ class ConfigManager:
     """
 
     def __init__(self, config_path: str = DEFAULT_ENV_PATH):
+        """Initialize the configuration manager.
+
+        Args:
+            config_path: Filesystem path to the ``.t3.env`` configuration
+                file. Defaults to ``DEFAULT_ENV_PATH``.
+        """
         self.config_path = config_path
         self._config_cache: Optional[Dict[str, Any]] = None
 
     def ensure_config_exists(self) -> None:
-        """Ensure .t3.env exists and is complete, auto-generating if needed."""
+        """Ensure ``.t3.env`` exists and is complete, auto-generating if needed.
+
+        Creates the configuration file when it is missing or regenerates it
+        when required keys are absent. Prints an info message when the file
+        is generated or updated.
+        """
         if not self._config_exists() or self._needs_update():
             self._generate_config_file()
             print_info(f"Generated/updated {self.config_path} configuration file")
 
     def _config_exists(self) -> bool:
-        """Check if config file exists."""
+        """Check if the configuration file exists on disk.
+
+        Returns:
+            True if the file at ``self.config_path`` exists, False otherwise.
+        """
         return Path(self.config_path).exists()
 
     def _needs_update(self) -> bool:
-        """Check if config file needs updating (missing keys or sections)."""
+        """Check if the configuration file needs updating.
+
+        Loads the current file and verifies that all required keys are
+        present and non-empty.
+
+        Returns:
+            True if the file is missing or any required key is absent,
+            False otherwise.
+        """
         if not self._config_exists():
             return True
 
@@ -69,7 +99,11 @@ class ConfigManager:
         return False
 
     def _generate_config_file(self) -> None:
-        """Generate comprehensive .t3.env file with all settings and comments."""
+        """Generate a comprehensive ``.t3.env`` file with all settings.
+
+        Reads any existing values from the current configuration file so
+        they are preserved, then writes the full template back to disk.
+        """
         # Read existing values to preserve them
         existing_values = {}
         if self._config_exists():
@@ -85,7 +119,15 @@ class ConfigManager:
             f.write(config_content)
 
     def _generate_config_template(self, existing_values: Dict[str, str]) -> str:
-        """Generate the complete .t3.env template with comments."""
+        """Generate the complete ``.t3.env`` template string with comments.
+
+        Args:
+            existing_values: Mapping of environment variable names to their
+                current values. These take precedence over built-in defaults.
+
+        Returns:
+            The fully-rendered configuration file content as a string.
+        """
         template = """# =============================================================================
 # T3 API UTILS CONFIGURATION FILE
 # =============================================================================
@@ -265,7 +307,21 @@ DEFAULT_FILE_FORMAT={default_file_format}
         )
 
     def get_config_value(self, key: EnvKeys, default: Any = None) -> Any:
-        """Get a configuration value with type conversion and defaults."""
+        """Get a configuration value with automatic type conversion.
+
+        Loads the configuration file, reads the requested key, and converts
+        the raw string to the appropriate Python type (bool, float, int, or
+        set) based on the key.
+
+        Args:
+            key: The ``EnvKeys`` member identifying the configuration value.
+            default: Fallback value returned when the key is missing or
+                type conversion fails.
+
+        Returns:
+            The converted configuration value, or ``default`` if the key is
+            absent or conversion fails.
+        """
         load_dotenv(dotenv_path=self.config_path)
         value = os.getenv(key.value)
 
@@ -295,27 +351,47 @@ DEFAULT_FILE_FORMAT={default_file_format}
         return value
 
     def get_otp_whitelist(self) -> Set[str]:
-        """Get OTP whitelist with fallback to default."""
+        """Get the set of hostnames that require OTP authentication.
+
+        Returns:
+            Set of Metrc hostnames requiring OTP, falling back to
+            ``DEFAULT_OTP_WHITELIST`` when unconfigured.
+        """
         whitelist = self.get_config_value(EnvKeys.OTP_WHITELIST)
         return whitelist if whitelist else DEFAULT_OTP_WHITELIST
 
     def get_email_whitelist(self) -> Set[str]:
-        """Get email whitelist with fallback to default."""
+        """Get the set of hostnames that require an email during authentication.
+
+        Returns:
+            Set of Metrc hostnames requiring email, falling back to
+            ``DEFAULT_CREDENTIAL_EMAIL_WHITELIST`` when unconfigured.
+        """
         whitelist = self.get_config_value(EnvKeys.EMAIL_WHITELIST)
         return whitelist if whitelist else DEFAULT_CREDENTIAL_EMAIL_WHITELIST
 
     def get_api_host(self) -> str:
-        """Get T3 API host with fallback to default."""
+        """Get the T3 API base URL.
+
+        Returns:
+            The configured API host string, falling back to
+            ``DEFAULT_T3_API_HOST`` when unconfigured.
+        """
         host = self.get_config_value(EnvKeys.T3_API_HOST)
         return host if host else DEFAULT_T3_API_HOST
 
     def get_otp_seed(self) -> Optional[str]:
-        """Get OTP seed for TOTP generation."""
+        """Get the Base32-encoded OTP seed for TOTP generation.
+
+        Returns:
+            The trimmed seed string, or ``None`` if the seed is not
+            configured or is empty.
+        """
         seed = self.get_config_value(EnvKeys.OTP_SEED)
         return seed.strip() if seed else None
 
 
-# Global configuration manager instance
+#: Global ``ConfigManager`` instance using the default ``.t3.env`` path.
 config_manager = ConfigManager()
 
 
@@ -345,11 +421,16 @@ def generate_otp_from_seed() -> Optional[str]:
 
 
 def load_credentials_from_env() -> Dict[str, str]:
-    """
-    Load credential values from the environment file (.env).
+    """Load credential values from the ``.t3.env`` environment file.
 
-    Returns all available authentication values including Metrc credentials,
-    JWT tokens, and API key credentials.
+    Reads all available authentication values including Metrc credentials,
+    JWT tokens, and API key credentials. Only non-empty values are included
+    in the returned dictionary.
+
+    Returns:
+        Dictionary mapping credential names (e.g. ``"hostname"``,
+        ``"username"``, ``"jwt_token"``) to their string values.
+        Keys with empty or missing values are omitted.
     """
     load_dotenv(dotenv_path=DEFAULT_ENV_PATH)
 
@@ -385,8 +466,15 @@ def load_credentials_from_env() -> Dict[str, str]:
 
 
 def offer_to_save_credentials(*, credentials: T3Credentials) -> None:
-    """
-    Offer to save credentials to the .env file if it's missing or out-of-date.
+    """Offer to save credentials to the ``.t3.env`` file.
+
+    If the environment file does not exist, the user is prompted to create
+    it. If it exists but any credential values differ from those provided,
+    the user is prompted to update the file.
+
+    Args:
+        credentials: The ``T3Credentials`` dictionary containing the
+            current authentication values to compare and potentially save.
     """
     load_dotenv(dotenv_path=DEFAULT_ENV_PATH)
     env_exists = os.path.exists(DEFAULT_ENV_PATH)
@@ -448,8 +536,22 @@ def offer_to_save_credentials(*, credentials: T3Credentials) -> None:
 
 
 def prompt_for_credentials_or_error(**kwargs: object) -> T3Credentials:
-    """
-    Prompt for any missing credentials, using provided values if available.
+    """Prompt for any missing credentials, using provided values if available.
+
+    Pre-populated values (typically loaded from the environment) are used
+    without prompting. Missing values are requested interactively. OTP and
+    email prompts are shown only when the hostname requires them.
+
+    Args:
+        **kwargs: Optional pre-populated credential values. Recognized keys
+            are ``hostname``, ``username``, ``password``, and ``email``.
+
+    Returns:
+        A fully-populated ``T3Credentials`` dictionary.
+
+    Raises:
+        AuthenticationError: If a required credential is missing or empty,
+            the OTP code is invalid, or the email address is malformed.
     """
     hostname = str(kwargs.get("hostname", "")) if kwargs.get("hostname") else None
     username = str(kwargs.get("username", "")) if kwargs.get("username") else None
@@ -512,8 +614,19 @@ def prompt_for_credentials_or_error(**kwargs: object) -> T3Credentials:
 
 
 def resolve_auth_inputs_or_error() -> T3Credentials:
-    """
-    Resolve authentication credentials from env and/or prompt and offer to save.
+    """Resolve authentication credentials from env and/or interactive prompt.
+
+    Loads any stored credentials from the environment file, prompts the
+    user for missing values, and offers to persist the final set back to
+    the ``.t3.env`` file.
+
+    Returns:
+        A fully-populated ``T3Credentials`` dictionary ready for use with
+        the authentication client.
+
+    Raises:
+        AuthenticationError: If required credentials cannot be resolved
+            (propagated from ``prompt_for_credentials_or_error``).
     """
     print_subheader("Authentication Required")
     stored_credentials = load_credentials_from_env()
