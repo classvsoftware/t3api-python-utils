@@ -2,18 +2,15 @@
 
 import sys
 import threading
-import time
 
 from rich.align import Align
 from rich.console import Console
-from rich.live import Live
 from rich.panel import Panel
 from rich.rule import Rule
 from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
 from rich.theme import Theme
-from rich.tree import Tree
 
 _theme = Theme(
     {
@@ -37,16 +34,20 @@ def _print_info(message: str) -> None:
 
 DOCS_URL = "https://classvsoftware.github.io/t3api-python-utils/"
 WIKI_URL = "https://www.trackandtrace.tools/wiki"
+YOUTUBE_URL = "https://www.youtube.com/watch?v=GjHhyuLTh20"
 
-_TOTAL_STEPS = 5
+EXAMPLES_URL = "https://github.com/classvsoftware/t3-api-examples"
+WEBSITE_URL = "https://www.trackandtrace.tools"
+
+_TOTAL_STEPS = 12
 
 _T3_BANNER = r"""
-████████╗██████╗      █████╗ ██████╗ ██╗
-╚══██╔══╝╚════██╗    ██╔══██╗██╔══██╗██║
-   ██║    █████╔╝    ███████║██████╔╝██║
-   ██║   ╚═══██╗    ██╔══██║██╔═══╝ ██║
-   ██║   ██████╔╝   ██║  ██║██║     ██║
-   ╚═╝   ╚═════╝    ╚═╝  ╚═╝╚═╝     ╚═╝
+████████╗██████╗  █████╗ ██████╗ ██╗    ██╗   ██╗████████╗██╗██╗     ███████╗
+╚══██╔══╝╚════██╗██╔══██╗██╔══██╗██║    ██║   ██║╚══██╔══╝██║██║     ██╔════╝
+   ██║    █████╔╝███████║██████╔╝██║    ██║   ██║   ██║   ██║██║     ███████╗
+   ██║    ╚═══██╗██╔══██║██╔═══╝ ██║    ██║   ██║   ██║   ██║██║     ╚════██║
+   ██║   ██████╔╝██║  ██║██║     ██║    ╚██████╔╝   ██║   ██║███████╗███████║
+   ╚═╝   ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝     ╚═════╝    ╚═╝   ╚═╝╚══════╝╚══════╝
 """.strip()
 
 # Gradient: deep purple → light violet
@@ -89,42 +90,19 @@ def _gradient_banner(text: str) -> Text:
     return result
 
 
-def _animate_banner() -> None:
-    """Reveal the ASCII art banner line-by-line with gradient."""
-    lines = _T3_BANNER.split("\n")
-    revealed: list[str] = []
-
-    with Live(Text(""), console=console, refresh_per_second=30) as live:
-        for line in lines:
-            revealed.append(line)
-            banner = _gradient_banner("\n".join(revealed))
-            live.update(Align.center(banner))
-            time.sleep(0.1)
-        time.sleep(0.3)
+def _show_banner() -> None:
+    """Display the ASCII art banner with gradient."""
+    console.print(Align.center(_gradient_banner(_T3_BANNER)))
 
 
-def _type_text(text: str, style: str = "bright_white", speed: float = 0.02) -> None:
-    """Display text with a character-by-character typing animation."""
-    result = Text(style=style)
-    with Live(result, console=console, refresh_per_second=60) as live:
-        for char in text:
-            result.append(char)
-            live.update(result)
-            time.sleep(speed)
+def _type_text(text: str, style: str = "bright_white") -> None:
+    """Display styled text."""
+    console.print(Text(text, style=style))
 
 
-def _animate_code(code: str) -> None:
-    """Reveal a syntax-highlighted code block line-by-line."""
-    lines = code.strip().split("\n")
-    with Live(
-        Syntax("", "python", theme="monokai", padding=1),
-        console=console,
-        refresh_per_second=30,
-    ) as live:
-        for i in range(len(lines)):
-            partial = "\n".join(lines[: i + 1])
-            live.update(Syntax(partial, "python", theme="monokai", padding=1))
-            time.sleep(0.05)
+def _show_code(code: str) -> None:
+    """Display a syntax-highlighted code block."""
+    console.print(Syntax(code.strip(), "python", theme="monokai", padding=1))
 
 
 def _show_progress(step: int, title: str) -> None:
@@ -178,22 +156,34 @@ def _wait_for_next(last: bool = False) -> None:
 def _step_welcome() -> None:
     console.clear()
     console.print()
-    _animate_banner()
+    _show_banner()
     console.print()
 
-    _type_text("A Python toolkit for working with the T3 API (Metrc).")
+    console.print(Align.center(Text("Python utilities for the T3 API", style="bright_white")))
 
     console.print()
     console.print(
-        "[bright_white]This walkthrough will teach you how to authenticate, "
-        "make API calls, and troubleshoot.[/bright_white]"
+        Align.center(
+            Text.from_markup(
+                f"[dim]Built by[/dim] [bold bright_white]Matt Frisbie[/bold bright_white] "
+                f"[dim]at[/dim] [bold magenta]Track and Trace Tools[/bold magenta]"
+            )
+        )
+    )
+    console.print(
+        Align.center(
+            Text.from_markup(
+                f"[link={WEBSITE_URL}][cyan]{WEBSITE_URL}[/cyan][/link]"
+            )
+        )
     )
     console.print()
 
     console.print(
         Panel(
             f"[magenta]Documentation:[/magenta]  [link={DOCS_URL}][cyan]{DOCS_URL}[/cyan][/link]\n"
-            f"[magenta]T3 Wiki:[/magenta]         [link={WIKI_URL}][cyan]{WIKI_URL}[/cyan][/link]",
+            f"[magenta]T3 Wiki:[/magenta]         [link={WIKI_URL}][cyan]{WIKI_URL}[/cyan][/link]\n"
+            f"[magenta]YouTube Demo:[/magenta]    [link={YOUTUBE_URL}][cyan]{YOUTUBE_URL}[/cyan][/link]",
             title="[bold magenta]Resources[/bold magenta]",
             border_style="magenta",
             padding=(1, 2),
@@ -203,10 +193,45 @@ def _step_welcome() -> None:
     _wait_for_next()
 
 
+def _step_running_with_uv() -> None:
+    console.clear()
+    _show_progress(1, "Running with UV")
+    console.print(
+        Rule("[bold magenta]Running with UV[/bold magenta]", style="magenta")
+    )
+    console.print()
+
+    console.print(
+        "[bright_white]Add this header so [cyan]uv[/cyan] "
+        "handles dependencies for you:[/bright_white]"
+    )
+    console.print()
+
+    _show_code("""\
+#!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "t3api_utils",
+# ]
+# ///
+
+from t3api_utils.main.utils import get_authenticated_client_or_error
+
+client = get_authenticated_client_or_error()""")
+
+    console.print()
+    _print_info("Run with: [cyan]uv run your_script.py[/cyan]")
+
+    _wait_for_next()
+
+
 def _step_authentication() -> None:
     console.clear()
-    _show_progress(1, "Authentication")
-    console.print(Rule("[bold magenta]Authentication[/bold magenta]", style="magenta"))
+    _show_progress(2, "Authentication")
+    console.print(
+        Rule("[bold magenta]Authentication[/bold magenta]", style="magenta")
+    )
     console.print()
 
     table = Table(
@@ -234,210 +259,280 @@ def _step_authentication() -> None:
         "Request from T3 support",
     )
     console.print(table)
+
+    console.print()
+    _print_info("The interactive picker walks you through any method:")
     console.print()
 
-    console.print(
-        Rule(
-            "[bold bright_magenta]Easiest: Interactive Auth Picker[/bold bright_magenta]",
-            style="bright_magenta",
-            align="left",
-        )
-    )
-    console.print()
-    _print_info("Shows a menu and walks you through whichever method you choose:")
-    console.print()
-
-    _animate_code("""\
+    _show_code("""\
 from t3api_utils.main.utils import get_authenticated_client_or_error
 
-# Shows an interactive picker with all 3 auth options
 client = get_authenticated_client_or_error()""")
 
-    console.print()
+    _wait_for_next()
+
+
+def _step_jwt() -> None:
+    console.clear()
+    _show_progress(3, "JWT Authentication")
     console.print(
-        Rule(
-            "[bold bright_magenta]Direct: JWT Token[/bold bright_magenta]",
-            style="bright_magenta",
-            align="left",
-        )
+        Rule("[bold magenta]JWT Authentication[/bold magenta]", style="magenta")
     )
     console.print()
 
-    _animate_code("""\
+    console.print(
+        "[bright_white]The T3 browser extension provides a JWT for your "
+        "current Metrc session:[/bright_white]"
+    )
+    console.print()
+
+    _show_code("""\
 from t3api_utils.main.utils import get_jwt_authenticated_client_or_error_with_validation
 
-# Authenticate with a JWT token (validates it automatically)
 client = get_jwt_authenticated_client_or_error_with_validation(
     jwt_token="your_jwt_token_here"
 )""")
 
     console.print()
-    console.print(
-        Rule(
-            "[bold bright_magenta]Direct: Credentials[/bold bright_magenta]",
-            style="bright_magenta",
-            align="left",
-        )
-    )
-    console.print()
-
-    _animate_code("""\
-from t3api_utils.auth.utils import create_credentials_authenticated_client_or_error
-
-# Authenticate with Metrc credentials
-client = create_credentials_authenticated_client_or_error(
-    hostname="co.metrc.com",
-    username="your_username",
-    password="your_password",
-)""")
+    _print_info("Tokens expire — grab a fresh one from the extension when needed.")
 
     _wait_for_next()
 
 
 def _step_env_file() -> None:
     console.clear()
-    _show_progress(2, "Configuration")
+    _show_progress(4, "The .t3.env File")
     console.print(
         Rule("[bold magenta]The .t3.env File[/bold magenta]", style="magenta")
     )
     console.print()
 
     console.print(
-        "[bright_white]When you first import from [magenta]t3api_utils[/magenta], "
-        "a [cyan].t3.env[/cyan] file is auto-generated in your working directory.[/bright_white]"
+        "[bright_white]Auto-generated on first import. "
+        "Stores credentials, performance, logging, and output settings:[/bright_white]"
     )
     console.print()
+
     console.print(
-        "[bright_white]This file stores your credentials and configuration "
-        "so you don't have to re-enter them every time.[/bright_white]"
-    )
-    console.print()
+        Syntax(
+            """\
+# T3 API UTILS CONFIGURATION FILE
+# Auto-generated by t3api-utils - edit values as needed.
 
-    table = Table(
-        title="[bold magenta]Key Variables[/bold magenta]",
-        border_style="magenta",
-        header_style="bold magenta",
-        padding=(0, 1),
-        show_lines=True,
+# AUTHENTICATION
+METRC_HOSTNAME=co.metrc.com
+METRC_USERNAME=
+METRC_PASSWORD=
+JWT_TOKEN=
+API_KEY=
+
+# PERFORMANCE
+MAX_WORKERS=
+RATE_LIMIT_RPS=
+
+# HTTP LOGGING
+T3_LOG_HTTP=
+T3_LOG_FILE=
+
+# OUTPUT
+OUTPUT_DIR=
+DEFAULT_FILE_FORMAT=
+# ... and more""",
+            "ini",
+            theme="monokai",
+            padding=1,
+        )
     )
-    table.add_column("Variable", style="magenta", min_width=16)
-    table.add_column("Description", style="bright_white")
-    table.add_row("METRC_HOSTNAME", "Metrc state domain (e.g. co.metrc.com)")
-    table.add_row("METRC_USERNAME", "Your Metrc account username")
-    table.add_row("METRC_PASSWORD", "Your Metrc account password")
-    table.add_row("JWT_TOKEN", "JWT from the T3 browser extension")
-    table.add_row("API_KEY", "Long-lived API key from T3")
-    table.add_row("T3_LOG_HTTP", "Enable HTTP debug logging (true/false)")
-    table.add_row("T3_LOG_FILE", "Log file path (default: t3_http.log)")
-    console.print(table)
 
     console.print()
-    _print_info(
-        "The [cyan].t3.env[/cyan] file is gitignored by default — "
-        "your credentials stay local."
-    )
-    _print_info(
-        "After authenticating, you'll be prompted to save your credentials "
-        "to this file for next time."
-    )
+    _print_info("Gitignored by default — your credentials stay local.")
 
     _wait_for_next()
 
 
-def _step_api_calls() -> None:
+def _step_loading_data() -> None:
     console.clear()
-    _show_progress(3, "Making API Calls")
+    _show_progress(5, "Loading Data")
     console.print(
-        Rule("[bold magenta]Making API Calls[/bold magenta]", style="magenta")
+        Rule("[bold magenta]Loading Data[/bold magenta]", style="magenta")
     )
     console.print()
 
-    tree = Tree("[bold magenta]Script Workflow[/bold magenta]")
-    auth_node = tree.add("[magenta]1.[/magenta] [bright_white]Authenticate[/bright_white]")
-    auth_node.add("[dim]get_authenticated_client_or_error()[/dim]")
-    lic_node = tree.add("[magenta]2.[/magenta] [bright_white]Pick License[/bright_white]")
-    lic_node.add("[dim]pick_license(api_client=client)[/dim]")
-    col_node = tree.add("[magenta]3.[/magenta] [bright_white]Pick Collection[/bright_white]")
-    col_node.add("[dim]pick_collection()[/dim]")
-    data_node = tree.add("[magenta]4.[/magenta] [bright_white]Load Data[/bright_white]")
-    data_node.add("[dim]load_all_data_sync(client, path, license_number)[/dim]")
-    out_node = tree.add("[magenta]5.[/magenta] [bright_white]Process & Export[/bright_white]")
-    out_node.add("[dim]save_dicts_to_csv() / save_dicts_to_json()[/dim]")
-    console.print(tree)
-
-    console.print()
     console.print(
-        Rule(
-            "[bold bright_magenta]Full Workflow Example[/bold bright_magenta]",
-            style="bright_magenta",
-            align="left",
-        )
+        "[bright_white]Load all records from a collection with "
+        "automatic parallel pagination:[/bright_white]"
     )
     console.print()
 
-    _animate_code("""\
+    _show_code("""\
 from t3api_utils.api.parallel import load_all_data_sync
-from t3api_utils.main.utils import (
-    get_authenticated_client_or_error,
-    pick_license,
-)
+from t3api_utils.main.utils import get_authenticated_client_or_error, pick_license
 from t3api_utils.openapi import pick_collection
 
-# 1. Authenticate
 client = get_authenticated_client_or_error()
-
-# 2. Pick a Metrc license from your account
 license = pick_license(api_client=client)
-
-# 3. Pick a data collection (packages, plants, etc.)
 collection = pick_collection()
 
-# 4. Load all data for that collection and license
 data = load_all_data_sync(
     client=client,
     path=collection["path"],
     license_number=license["licenseNumber"],
 )
-
 print(f"Loaded {len(data)} records!")""")
 
     console.print()
-    _print_info(
-        "[magenta]pick_license()[/magenta] and [magenta]pick_collection()[/magenta] "
-        "show interactive Rich tables for selection."
+    _print_info("Handles rate limiting and retries automatically.")
+
+    _wait_for_next()
+
+
+def _step_inspecting_data() -> None:
+    console.clear()
+    _show_progress(6, "Inspecting Data")
+    console.print(
+        Rule("[bold magenta]Inspecting Data[/bold magenta]", style="magenta")
     )
+    console.print()
+
+    console.print(
+        "[bright_white]Browse data in a full-screen terminal UI:[/bright_white]"
+    )
+    console.print()
+
+    _show_code("""\
+from t3api_utils.main.utils import inspect_collection
+
+inspect_collection(data=data)""")
+
+    console.print()
     _print_info(
-        "[magenta]load_all_data_sync()[/magenta] handles pagination and "
-        "parallel fetching automatically."
+        "Arrow keys to navigate, [cyan]/[/cyan] to search, "
+        "[cyan]q[/cyan] to quit."
+    )
+    console.print()
+    console.print(
+        "[bright_white]Or use the all-in-one interactive menu:[/bright_white]"
+    )
+    console.print()
+
+    _show_code("""\
+from t3api_utils.main.utils import interactive_collection_handler
+
+interactive_collection_handler(data=data)""")
+
+    _wait_for_next()
+
+
+def _step_export_file() -> None:
+    console.clear()
+    _show_progress(7, "Exporting to File")
+    console.print(
+        Rule("[bold magenta]Exporting to File[/bold magenta]", style="magenta")
+    )
+    console.print()
+
+    console.print(
+        "[bright_white]Save data to CSV or JSON:[/bright_white]"
+    )
+    console.print()
+
+    _show_code("""\
+from t3api_utils.file.utils import save_dicts_to_csv, save_dicts_to_json
+
+csv_path = save_dicts_to_csv(
+    dicts=data,
+    model_name="packages",
+    license_number="CUL00001",
+)
+
+json_path = save_dicts_to_json(
+    dicts=data,
+    model_name="packages",
+    license_number="CUL00001",
+)""")
+
+    console.print()
+    _print_info("Nested dicts are auto-flattened in CSV. Saved to [cyan]output/[/cyan] by default.")
+
+    _wait_for_next()
+
+
+def _step_export_db() -> None:
+    console.clear()
+    _show_progress(8, "Exporting to Database")
+    console.print(
+        Rule(
+            "[bold magenta]Exporting to Database[/bold magenta]", style="magenta"
+        )
+    )
+    console.print()
+
+    console.print(
+        "[bright_white]Load data into DuckDB for SQL queries:[/bright_white]"
+    )
+    console.print()
+
+    _show_code("""\
+from t3api_utils.db.utils import create_duckdb_connection
+from t3api_utils.main.utils import load_db
+
+con = create_duckdb_connection()
+load_db(con=con, data=data)
+
+results = con.execute("SELECT * FROM main LIMIT 5").fetchall()""")
+
+    console.print()
+    _print_info("In-memory by default. Pass a file path to persist to disk.")
+
+    _wait_for_next()
+
+
+def _step_writing_to_metrc() -> None:
+    console.clear()
+    _show_progress(9, "Writing to Metrc")
+    console.print(
+        Rule("[bold magenta]Writing to Metrc[/bold magenta]", style="magenta")
+    )
+    console.print()
+
+    console.print(
+        "[bright_white]POST, PUT, or PATCH data back to Metrc:[/bright_white]"
+    )
+    console.print()
+
+    _show_code("""\
+from t3api_utils.api.operations import send_api_request
+
+# Discontinue an item
+send_api_request(
+    client=api_client,
+    path="/v2/items/discontinue",
+    method="POST",
+    params={
+        "licenseNumber": license["licenseNumber"],
+        "submit": True,
+    },
+    json_body={"id": item["id"]},
+)""")
+
+    console.print()
+    _print_info(
+        f"More examples: [link={EXAMPLES_URL}][cyan]{EXAMPLES_URL}[/cyan][/link]"
     )
 
     _wait_for_next()
 
 
-def _step_troubleshooting() -> None:
+def _step_http_logging() -> None:
     console.clear()
-    _show_progress(4, "Troubleshooting")
+    _show_progress(10, "HTTP Logging")
     console.print(
-        Rule("[bold magenta]Troubleshooting[/bold magenta]", style="magenta")
+        Rule("[bold magenta]HTTP Logging[/bold magenta]", style="magenta")
     )
     console.print()
 
     console.print(
-        "[bright_white]If something isn't working, enable HTTP debug logging "
-        "to see exactly what's happening.[/bright_white]"
-    )
-    console.print()
-
-    console.print(
-        Rule(
-            "[bold bright_magenta]Enable HTTP Logging[/bold bright_magenta]",
-            style="bright_magenta",
-            align="left",
-        )
-    )
-    console.print()
-    console.print(
-        "[bright_white]In your [cyan].t3.env[/cyan] file, set:[/bright_white]"
+        "[bright_white]Log all network requests. Enable in [cyan].t3.env[/cyan]:[/bright_white]"
     )
     console.print()
 
@@ -450,26 +545,16 @@ def _step_troubleshooting() -> None:
     )
 
     console.print()
-    console.print(
-        "[bright_white]This writes all HTTP requests and responses to "
-        "[cyan]t3_http.log[/cyan] in your working directory.[/bright_white]"
-    )
-    console.print()
+    _print_info("Written to [cyan]t3_http.log[/cyan]. Overwritten each run.")
 
-    _print_info(
-        "The log shows request methods, URLs, headers, and response status codes."
-    )
-    _print_info(
-        "The log file is overwritten each run, so it always shows the latest session."
-    )
+    _wait_for_next()
 
-    console.print()
+
+def _step_troubleshooting() -> None:
+    console.clear()
+    _show_progress(11, "Troubleshooting")
     console.print(
-        Rule(
-            "[bold bright_magenta]Common Issues[/bold bright_magenta]",
-            style="bright_magenta",
-            align="left",
-        )
+        Rule("[bold magenta]Troubleshooting[/bold magenta]", style="magenta")
     )
     console.print()
 
@@ -502,25 +587,25 @@ def _step_troubleshooting() -> None:
 
 def _step_next() -> None:
     console.clear()
-    _show_progress(5, "Next Steps")
-    console.print(Rule("[bold magenta]Next Steps[/bold magenta]", style="magenta"))
-    console.print()
-
+    _show_progress(12, "Next Steps")
     console.print(
-        "[bright_white]You're ready to start writing scripts![/bright_white]"
+        Rule("[bold magenta]Next Steps[/bold magenta]", style="magenta")
     )
     console.print()
 
     console.print(
         Panel(
-            "[magenta]Full example script:[/magenta]\n"
-            "  [cyan]uv run scripts/example.py[/cyan]\n"
+            "[magenta]Example scripts:[/magenta]\n"
+            f"  [link={EXAMPLES_URL}][cyan]{EXAMPLES_URL}[/cyan][/link]\n"
             "\n"
             "[magenta]Documentation:[/magenta]\n"
             f"  [link={DOCS_URL}][cyan]{DOCS_URL}[/cyan][/link]\n"
             "\n"
             "[magenta]T3 Wiki:[/magenta]\n"
-            f"  [link={WIKI_URL}][cyan]{WIKI_URL}[/cyan][/link]",
+            f"  [link={WIKI_URL}][cyan]{WIKI_URL}[/cyan][/link]\n"
+            "\n"
+            "[magenta]YouTube Demo:[/magenta]\n"
+            f"  [link={YOUTUBE_URL}][cyan]{YOUTUBE_URL}[/cyan][/link]",
             title="[bold magenta]What's Next[/bold magenta]",
             border_style="magenta",
             padding=(1, 2),
@@ -528,7 +613,7 @@ def _step_next() -> None:
     )
 
     console.print()
-    _type_text("Happy scripting!", style="bold magenta", speed=0.04)
+    _type_text("Happy scripting!", style="bold magenta")
 
     _wait_for_next(last=True)
 
@@ -548,9 +633,16 @@ def run_intro() -> None:
     """
     try:
         _step_welcome()
+        _step_running_with_uv()
         _step_authentication()
+        _step_jwt()
         _step_env_file()
-        _step_api_calls()
+        _step_loading_data()
+        _step_inspecting_data()
+        _step_export_file()
+        _step_export_db()
+        _step_writing_to_metrc()
+        _step_http_logging()
         _step_troubleshooting()
         _step_next()
     except KeyboardInterrupt:
