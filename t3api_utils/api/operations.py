@@ -26,6 +26,7 @@ def send_api_request(
     method: str = "GET",
     params: Optional[Dict[str, Any]] = None,
     json_body: Optional[Any] = None,
+    files: Optional[Any] = None,
     headers: Optional[Dict[str, str]] = None,
     expected_status: Union[int, tuple[int, ...]] = 200,
 ) -> Any:
@@ -39,7 +40,12 @@ def send_api_request(
         path: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active", "/v2/facilities/123")
         method: HTTP method (default: "GET")
         params: Query parameters (optional)
-        json_body: JSON request body for POST/PUT requests (optional)
+        json_body: JSON request body for POST/PUT requests (optional).
+            Mutually exclusive with *files*.
+        files: Multipart file upload data (optional). Mutually exclusive
+            with *json_body*. Accepts the same formats as ``httpx``'s
+            ``files`` parameter (e.g.
+            ``{"file": ("name.png", data, "image/png")}``).
         headers: Additional headers (optional)
         expected_status: Expected HTTP status code(s) (default: 200)
 
@@ -47,8 +53,12 @@ def send_api_request(
         Raw response data (could be dict, list, or any JSON-serializable type)
 
     Raises:
+        ValueError: If both *json_body* and *files* are provided.
         T3HTTPError: If request fails or client not authenticated
     """
+    if json_body is not None and files is not None:
+        raise ValueError("json_body and files are mutually exclusive; provide one or neither.")
+
     # For sync wrapper, we need to handle the case where the client might have been
     # created in a different event loop context. The safest approach is to create
     # a new client instance for this operation.
@@ -87,6 +97,7 @@ def send_api_request(
             url=path,
             params=params,
             json_body=json_body,
+            files=files,
             headers=headers_dict,
             policy=client._retry_policy,
             expected_status=expected_status,
@@ -264,6 +275,7 @@ async def send_api_request_async(
     method: str = "GET",
     params: Optional[Dict[str, Any]] = None,
     json_body: Optional[Any] = None,
+    files: Optional[Any] = None,
     headers: Optional[Dict[str, str]] = None,
     expected_status: Union[int, tuple[int, ...]] = 200,
 ) -> Any:
@@ -277,7 +289,11 @@ async def send_api_request_async(
         path: API endpoint path (e.g., "/v2/licenses", "/v2/packages/active", "/v2/facilities/123")
         method: HTTP method (default: "GET")
         params: Query parameters (optional)
-        json_body: JSON request body for POST/PUT requests (optional)
+        json_body: JSON request body for POST/PUT requests (optional).
+            Mutually exclusive with *files*.
+        files: Multipart file upload data (optional). Mutually exclusive
+            with *json_body*. Accepts the same formats as ``httpx``'s
+            ``files`` parameter.
         headers: Additional headers (optional)
         expected_status: Expected HTTP status code(s) (default: 200)
 
@@ -285,8 +301,12 @@ async def send_api_request_async(
         Raw response data (could be dict, list, or any JSON-serializable type)
 
     Raises:
+        ValueError: If both *json_body* and *files* are provided.
         T3HTTPError: If request fails or client not authenticated
     """
+    if json_body is not None and files is not None:
+        raise ValueError("json_body and files are mutually exclusive; provide one or neither.")
+
     if not client.is_authenticated:
         raise T3HTTPError("Client is not authenticated. Call authenticate_with_credentials() first.")
 
@@ -297,6 +317,7 @@ async def send_api_request_async(
             url=path,
             params=params,
             json_body=json_body,
+            files=files,
             headers=headers,
             policy=client._retry_policy,
             expected_status=expected_status,

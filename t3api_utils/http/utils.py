@@ -45,6 +45,7 @@ from typing import (Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tupl
 import ssl
 import certifi
 import httpx
+from httpx._types import RequestFiles
 
 # Import config manager for default values
 from t3api_utils.cli.utils import config_manager
@@ -429,6 +430,7 @@ def request_json(
     url: str,
     params: Optional[Mapping[str, Any]] = None,
     json_body: Optional[Any] = None,
+    files: Optional[RequestFiles] = None,
     headers: Optional[Mapping[str, str]] = None,
     policy: Optional[RetryPolicy] = None,
     expected_status: Union[int, Iterable[int]] = (200, 201, 202, 204),
@@ -446,7 +448,12 @@ def request_json(
         method: HTTP method (e.g. ``"GET"``, ``"POST"``).
         url: Request URL or path (resolved against the client's base URL).
         params: Optional query-string parameters.
-        json_body: Optional JSON-serializable request body.
+        json_body: Optional JSON-serializable request body. Mutually
+            exclusive with *files*.
+        files: Optional multipart file upload data. Mutually exclusive
+            with *json_body*. Accepts the same formats as ``httpx``'s
+            ``files`` parameter (e.g.
+            ``{"field": ("name.png", data, "image/png")}``).
         headers: Optional per-request headers merged on top of the
             client's default headers.
         policy: Retry policy. Defaults to ``RetryPolicy()`` when ``None``.
@@ -461,10 +468,14 @@ def request_json(
         Parsed JSON response body, or ``None`` for 204 / empty responses.
 
     Raises:
+        ValueError: If both *json_body* and *files* are provided.
         T3HTTPError: If the response status is not in *expected_status*
             after all retries are exhausted, or if the response body
             cannot be decoded as JSON.
     """
+    if json_body is not None and files is not None:
+        raise ValueError("json_body and files are mutually exclusive; provide one or neither.")
+
     pol = policy or RetryPolicy()
     exp: Tuple[int, ...] = (
         (expected_status,) if isinstance(expected_status, int) else tuple(expected_status)
@@ -484,6 +495,7 @@ def request_json(
                 url,
                 params=params,
                 json=json_body,
+                files=files,
                 headers=merged_headers or None,
                 timeout=timeout,
             )
@@ -515,6 +527,7 @@ async def arequest_json(
     url: str,
     params: Optional[Mapping[str, Any]] = None,
     json_body: Optional[Any] = None,
+    files: Optional[RequestFiles] = None,
     headers: Optional[Mapping[str, str]] = None,
     policy: Optional[RetryPolicy] = None,
     expected_status: Union[int, Iterable[int]] = (200, 201, 202, 204),
@@ -533,7 +546,11 @@ async def arequest_json(
         method: HTTP method (e.g. ``"GET"``, ``"POST"``).
         url: Request URL or path (resolved against the client's base URL).
         params: Optional query-string parameters.
-        json_body: Optional JSON-serializable request body.
+        json_body: Optional JSON-serializable request body. Mutually
+            exclusive with *files*.
+        files: Optional multipart file upload data. Mutually exclusive
+            with *json_body*. Accepts the same formats as ``httpx``'s
+            ``files`` parameter.
         headers: Optional per-request headers merged on top of the
             client's default headers.
         policy: Retry policy. Defaults to ``RetryPolicy()`` when ``None``.
@@ -548,10 +565,14 @@ async def arequest_json(
         Parsed JSON response body, or ``None`` for 204 / empty responses.
 
     Raises:
+        ValueError: If both *json_body* and *files* are provided.
         T3HTTPError: If the response status is not in *expected_status*
             after all retries are exhausted, or if the response body
             cannot be decoded as JSON.
     """
+    if json_body is not None and files is not None:
+        raise ValueError("json_body and files are mutually exclusive; provide one or neither.")
+
     pol = policy or RetryPolicy()
     exp: Tuple[int, ...] = (
         (expected_status,) if isinstance(expected_status, int) else tuple(expected_status)
@@ -571,6 +592,7 @@ async def arequest_json(
                 url,
                 params=params,
                 json=json_body,
+                files=files,
                 headers=merged_headers or None,
                 timeout=timeout,
             )

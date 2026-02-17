@@ -490,7 +490,7 @@ class TestRequestHelpers:
 
         assert result == {"key": "value"}
         mock_client.request.assert_called_once_with(
-            "GET", "/test", params=None, json=None, headers=None, timeout=None
+            "GET", "/test", params=None, json=None, files=None, headers=None, timeout=None
         )
 
     @patch('httpx.Client')
@@ -658,3 +658,82 @@ class TestRequestHelpers:
         assert result == {"retry": "success"}
         assert mock_client.request.call_count == 2
         mock_sleep.assert_called_once()
+
+    def test_request_json_with_files(self):
+        """Test request_json with multipart file upload."""
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.content = b'{"uploaded": true}'
+        mock_response.json.return_value = {"uploaded": True}
+        mock_client.request.return_value = mock_response
+
+        test_files = {"file": ("test.png", b"\x89PNG", "image/png")}
+        result = request_json(
+            client=mock_client,
+            method="POST",
+            url="/upload",
+            params={"licenseNumber": "LIC-001"},
+            files=test_files,
+        )
+
+        assert result == {"uploaded": True}
+        call_args = mock_client.request.call_args
+        assert call_args[0] == ("POST", "/upload")
+        assert call_args[1]["files"] == test_files
+        assert call_args[1]["json"] is None
+        assert call_args[1]["params"] == {"licenseNumber": "LIC-001"}
+
+    def test_request_json_files_and_json_body_mutually_exclusive(self):
+        """Test that providing both json_body and files raises ValueError."""
+        mock_client = MagicMock()
+
+        with pytest.raises(ValueError, match="mutually exclusive"):
+            request_json(
+                client=mock_client,
+                method="POST",
+                url="/test",
+                json_body={"data": "test"},
+                files={"file": ("test.png", b"\x89PNG", "image/png")},
+            )
+
+        mock_client.request.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_arequest_json_with_files(self):
+        """Test arequest_json with multipart file upload."""
+        mock_client = AsyncMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.content = b'{"uploaded": true}'
+        mock_response.json.return_value = {"uploaded": True}
+        mock_client.request.return_value = mock_response
+
+        test_files = {"file": ("test.png", b"\x89PNG", "image/png")}
+        result = await arequest_json(
+            aclient=mock_client,
+            method="POST",
+            url="/upload",
+            files=test_files,
+        )
+
+        assert result == {"uploaded": True}
+        call_args = mock_client.request.call_args
+        assert call_args[1]["files"] == test_files
+        assert call_args[1]["json"] is None
+
+    @pytest.mark.asyncio
+    async def test_arequest_json_files_and_json_body_mutually_exclusive(self):
+        """Test that providing both json_body and files raises ValueError (async)."""
+        mock_client = AsyncMock()
+
+        with pytest.raises(ValueError, match="mutually exclusive"):
+            await arequest_json(
+                aclient=mock_client,
+                method="POST",
+                url="/test",
+                json_body={"data": "test"},
+                files={"file": ("test.png", b"\x89PNG", "image/png")},
+            )
+
+        mock_client.request.assert_not_called()

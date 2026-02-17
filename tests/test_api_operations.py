@@ -83,6 +83,44 @@ class TestSyncOperations:
         }
         assert call_args[1]["params"] == expected_params
 
+    @patch('t3api_utils.http.utils.request_json')
+    def test_send_api_request_with_files(self, mock_request):
+        """Test send_api_request with multipart file upload."""
+        mock_request.return_value = {"uploaded": True}
+
+        client = T3APIClient()
+        client.set_access_token("test_token")
+
+        test_files = {"file": ("test.png", b"\x89PNG", "image/png")}
+        result = send_api_request(
+            client,
+            "/v2/items/images/file",
+            method="POST",
+            params={"licenseNumber": "LIC-001", "fileType": "ItemProductImage", "submit": True},
+            files=test_files,
+        )
+
+        assert result == {"uploaded": True}
+        call_args = mock_request.call_args
+        assert call_args[1]["files"] == test_files
+        assert call_args[1]["json_body"] is None
+        assert call_args[1]["method"] == "POST"
+        assert call_args[1]["params"]["licenseNumber"] == "LIC-001"
+
+    def test_send_api_request_files_and_json_body_mutually_exclusive(self):
+        """Test that providing both json_body and files raises ValueError."""
+        client = T3APIClient()
+        client.set_access_token("test_token")
+
+        with pytest.raises(ValueError, match="mutually exclusive"):
+            send_api_request(
+                client,
+                "/v2/test",
+                method="POST",
+                json_body={"data": "test"},
+                files={"file": ("test.png", b"\x89PNG", "image/png")},
+            )
+
     def test_send_api_request_not_authenticated(self):
         """Test send_api_request without authentication."""
         client = T3APIClient()
@@ -200,6 +238,44 @@ class TestAsyncOperations:
         # Verify the response
         assert isinstance(result, dict)
         assert len(result["data"]) == 1
+
+    @pytest.mark.asyncio
+    @patch('t3api_utils.api.operations.arequest_json')
+    async def test_send_api_request_async_with_files(self, mock_request):
+        """Test async send_api_request with multipart file upload."""
+        mock_request.return_value = {"uploaded": True}
+
+        client = T3APIClient()
+        client.set_access_token("test_token")
+
+        test_files = {"file": ("test.png", b"\x89PNG", "image/png")}
+        result = await send_api_request_async(
+            client,
+            "/v2/items/images/file",
+            method="POST",
+            params={"licenseNumber": "LIC-001"},
+            files=test_files,
+        )
+
+        assert result == {"uploaded": True}
+        call_args = mock_request.call_args
+        assert call_args[1]["files"] == test_files
+        assert call_args[1]["json_body"] is None
+
+    @pytest.mark.asyncio
+    async def test_send_api_request_async_files_and_json_body_mutually_exclusive(self):
+        """Test that providing both json_body and files raises ValueError (async)."""
+        client = T3APIClient()
+        client.set_access_token("test_token")
+
+        with pytest.raises(ValueError, match="mutually exclusive"):
+            await send_api_request_async(
+                client,
+                "/v2/test",
+                method="POST",
+                json_body={"data": "test"},
+                files={"file": ("test.png", b"\x89PNG", "image/png")},
+            )
 
     @pytest.mark.asyncio
     async def test_send_api_request_async_not_authenticated(self):
