@@ -47,7 +47,7 @@ async def create_credentials_authenticated_client_or_error_async(
         config = HTTPConfig(host=effective_host)
 
         # Create and authenticate the client
-        client = T3APIClient(config=config)
+        client = T3APIClient(config=config, logging_hooks=LoggingHooks.from_env())
 
         await client.authenticate_with_credentials(
             hostname=hostname,
@@ -224,7 +224,7 @@ async def authenticate_and_get_response_async(
         config = HTTPConfig(host=effective_host)
 
         # Create client and authenticate
-        async with T3APIClient(config=config) as client:
+        async with T3APIClient(config=config, logging_hooks=LoggingHooks.from_env()) as client:
             auth_response = await client.authenticate_with_credentials(
                 hostname=hostname,
                 username=username,
@@ -337,7 +337,7 @@ def create_jwt_authenticated_client(
     client = T3APIClient(
         config=config,
         retry_policy=retry_policy,
-        logging_hooks=logging_hooks,
+        logging_hooks=logging_hooks if logging_hooks is not None else LoggingHooks.from_env(),
         headers=headers,
     )
 
@@ -412,7 +412,7 @@ def create_api_key_authenticated_client(
     client = T3APIClient(
         config=config,
         retry_policy=retry_policy,
-        logging_hooks=logging_hooks,
+        logging_hooks=logging_hooks if logging_hooks is not None else LoggingHooks.from_env(),
         headers=headers,
     )
 
@@ -447,7 +447,7 @@ async def create_api_key_authenticated_client_or_error_async(
         config = HTTPConfig(host=effective_host)
 
         # Create and authenticate the client
-        client = T3APIClient(config=config)
+        client = T3APIClient(config=config, logging_hooks=LoggingHooks.from_env())
 
         await client.authenticate_with_api_key(
             api_key=api_key,
@@ -588,7 +588,7 @@ async def authenticate_and_get_response_with_api_key_async(
         config = HTTPConfig(host=effective_host)
 
         # Create client and authenticate
-        async with T3APIClient(config=config) as client:
+        async with T3APIClient(config=config, logging_hooks=LoggingHooks.from_env()) as client:
             auth_response = await client.authenticate_with_api_key(
                 api_key=api_key,
                 state_code=state_code,

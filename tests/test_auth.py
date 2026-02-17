@@ -5,7 +5,7 @@ import pytest
 
 from t3api_utils.api.client import T3APIClient
 from t3api_utils.auth.utils import create_jwt_authenticated_client
-from t3api_utils.http.utils import HTTPConfig, RetryPolicy
+from t3api_utils.http.utils import HTTPConfig, LoggingHooks, RetryPolicy
 
 
 class TestCreateJwtAuthenticatedClient:
@@ -27,7 +27,8 @@ class TestCreateJwtAuthenticatedClient:
             mock_client_class.assert_called_once()
             call_kwargs = mock_client_class.call_args[1]
             assert call_kwargs['retry_policy'] is None
-            assert call_kwargs['logging_hooks'] is None
+            assert isinstance(call_kwargs['logging_hooks'], LoggingHooks)
+            assert call_kwargs['logging_hooks'].enabled is False
             assert call_kwargs['headers'] is None
 
             # Verify HTTPConfig was created with default host
@@ -136,7 +137,8 @@ class TestCreateJwtAuthenticatedClient:
             call_kwargs = mock_client_class.call_args[1]
             assert call_kwargs['config'] == custom_config
             assert call_kwargs['retry_policy'] == custom_retry
-            assert call_kwargs['logging_hooks'] is None
+            assert isinstance(call_kwargs['logging_hooks'], LoggingHooks)
+            assert call_kwargs['logging_hooks'].enabled is False
             assert call_kwargs['headers'] == custom_headers
 
             mock_client.set_access_token.assert_called_once_with(test_token)

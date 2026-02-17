@@ -147,6 +147,47 @@ class RetryPolicy:
     retry_statuses: Sequence[int] = (408, 409, 425, 429, 500, 502, 503, 504)
 
 
+_SENSITIVE_HEADERS = frozenset({
+    "authorization", "cookie", "set-cookie", "x-api-key", "proxy-authorization",
+})
+
+_MAX_BODY_LOG_LENGTH = 2000
+
+_http_debug_log = logging.getLogger("t3api_utils.http.debug")
+
+
+def _mask_header_value(name: str, value: str) -> str:
+    """Mask sensitive header values, preserving a prefix and suffix for debugging."""
+    if name.lower() not in _SENSITIVE_HEADERS:
+        return value
+    if len(value) < 12:
+        return "****"
+    return value[:8] + "****" + value[-4:]
+
+
+def _format_headers(headers: Mapping[str, str]) -> str:
+    """Format headers as indented key: value lines with sensitive values masked."""
+    lines = []
+    for name, value in headers.items():
+        lines.append(f"  {name}: {_mask_header_value(name, value)}")
+    return "\n".join(lines)
+
+
+def _format_body(content: Optional[bytes]) -> str:
+    """Format a request body for logging, pretty-printing JSON when possible."""
+    if not content:
+        return "  (empty)"
+    try:
+        parsed = json.loads(content)
+        text = json.dumps(parsed, indent=2)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        text = content.decode("utf-8", errors="replace")
+    if len(text) > _MAX_BODY_LOG_LENGTH:
+        text = text[:_MAX_BODY_LOG_LENGTH] + "\n  ... (truncated)"
+    # Indent each line for readability
+    return "\n".join(f"  {line}" for line in text.splitlines())
+
+
 @dataclass(frozen=True)
 class LoggingHooks:
     """Optional request/response logging via httpx event hooks.
@@ -155,9 +196,65 @@ class LoggingHooks:
         enabled: When ``True``, debug-level log messages are emitted for
             every outgoing request and incoming response. Defaults to
             ``False``.
+        log_headers: When ``True`` and logging is enabled, request headers
+            are included in log output. Sensitive headers are masked.
+        log_body: When ``True`` and logging is enabled, request bodies
+            are included in log output (JSON is pretty-printed).
+        file_path: Optional file path for HTTP debug logs. The file is
+            opened in write mode (truncated) on first use.
     """
 
     enabled: bool = False
+    log_headers: bool = True
+    log_body: bool = True
+    file_path: Optional[str] = None
+
+    @classmethod
+    def from_env(cls) -> LoggingHooks:
+        """Create a ``LoggingHooks`` instance configured from environment variables.
+
+        Reads ``T3_LOG_HTTP``, ``T3_LOG_HEADERS``, ``T3_LOG_BODY``, and
+        ``T3_LOG_FILE`` from the environment.
+
+        Returns:
+            A configured ``LoggingHooks`` instance. If ``T3_LOG_HTTP`` is
+            not set or is falsy, returns a disabled instance.
+        """
+        import os
+        enabled = os.getenv("T3_LOG_HTTP", "").lower() in ("true", "1", "yes", "on")
+        if not enabled:
+            return cls(enabled=False)
+
+        log_headers = os.getenv("T3_LOG_HEADERS", "true").lower() not in ("false", "0", "no", "off")
+        log_body = os.getenv("T3_LOG_BODY", "true").lower() not in ("false", "0", "no", "off")
+        file_path = os.getenv("T3_LOG_FILE", "").strip() or None
+
+        return cls(
+            enabled=True,
+            log_headers=log_headers,
+            log_body=log_body,
+            file_path=file_path,
+        )
+
+    def _get_logger(self) -> logging.Logger:
+        """Get the configured debug logger, setting up file handler if needed."""
+        logger = _http_debug_log
+
+        # Only add file handler once
+        if self.file_path and not any(
+            isinstance(h, logging.FileHandler) and getattr(h, '_t3_debug_path', None) == self.file_path
+            for h in logger.handlers
+        ):
+            handler = logging.FileHandler(self.file_path, mode="w", encoding="utf-8")
+            handler._t3_debug_path = self.file_path  # type: ignore[attr-defined]
+            handler.setFormatter(logging.Formatter(
+                "%(asctime)s %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+            ))
+            handler.setLevel(logging.DEBUG)
+            logger.addHandler(handler)
+
+        logger.setLevel(logging.DEBUG)
+        return logger
 
     def as_hooks(self, *, async_client: bool = False) -> Optional[Dict[str, Any]]:
         """Build an httpx ``event_hooks`` mapping for request/response logging.
@@ -175,19 +272,33 @@ class LoggingHooks:
         if not self.enabled:
             return None
 
+        debug_logger = self._get_logger()
+        do_headers = self.log_headers
+        do_body = self.log_body
+
+        def _build_request_message(request: httpx.Request) -> str:
+            parts = [f">>> HTTP {request.method} {request.url}"]
+            if do_headers:
+                parts.append(f"  Headers:\n{_format_headers(request.headers)}")
+            if do_body and request.content:
+                parts.append(f"  Body:\n{_format_body(request.content)}")
+            return "\n".join(parts)
+
+        def _build_response_message(response: httpx.Response) -> str:
+            req = response.request
+            return f"<<< HTTP {req.method} {req.url} -> {response.status_code}"
+
         async def _alog_request(request: httpx.Request) -> None:
-            log.debug("HTTP %s %s", request.method, request.url)
+            debug_logger.debug(_build_request_message(request))
 
         async def _alog_response(response: httpx.Response) -> None:
-            req = response.request
-            log.debug("HTTP %s %s -> %s", req.method, req.url, response.status_code)
+            debug_logger.debug(_build_response_message(response))
 
         def _log_request(request: httpx.Request) -> None:
-            log.debug("HTTP %s %s", request.method, request.url)
+            debug_logger.debug(_build_request_message(request))
 
         def _log_response(response: httpx.Response) -> None:
-            req = response.request
-            log.debug("HTTP %s %s -> %s", req.method, req.url, response.status_code)
+            debug_logger.debug(_build_response_message(response))
 
         if async_client:
             return {

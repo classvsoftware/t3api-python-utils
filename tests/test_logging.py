@@ -6,15 +6,62 @@ from unittest.mock import MagicMock, patch
 import pytest
 from rich.logging import RichHandler
 
-from t3api_utils.logging import setup_logging, get_logger
+from t3api_utils.logging import setup_logging, get_logger, _resolve_log_level
+
+
+class TestResolveLogLevel:
+    """Test LOG_LEVEL environment variable resolution."""
+
+    @patch.dict('os.environ', {"LOG_LEVEL": "DEBUG"}, clear=False)
+    def test_resolve_debug(self):
+        """Test resolving DEBUG level from env."""
+        assert _resolve_log_level() == logging.DEBUG
+
+    @patch.dict('os.environ', {"LOG_LEVEL": "WARNING"}, clear=False)
+    def test_resolve_warning(self):
+        """Test resolving WARNING level from env."""
+        assert _resolve_log_level() == logging.WARNING
+
+    @patch.dict('os.environ', {"LOG_LEVEL": "warn"}, clear=False)
+    def test_resolve_warn_alias(self):
+        """Test resolving WARN alias (case-insensitive)."""
+        assert _resolve_log_level() == logging.WARNING
+
+    @patch.dict('os.environ', {"LOG_LEVEL": "error"}, clear=False)
+    def test_resolve_case_insensitive(self):
+        """Test resolving level is case-insensitive."""
+        assert _resolve_log_level() == logging.ERROR
+
+    @patch.dict('os.environ', {"LOG_LEVEL": "CRITICAL"}, clear=False)
+    def test_resolve_critical(self):
+        """Test resolving CRITICAL level from env."""
+        assert _resolve_log_level() == logging.CRITICAL
+
+    @patch.dict('os.environ', {}, clear=False)
+    def test_resolve_default_when_unset(self):
+        """Test default INFO when LOG_LEVEL not set."""
+        import os
+        os.environ.pop("LOG_LEVEL", None)
+        assert _resolve_log_level() == logging.INFO
+
+    @patch.dict('os.environ', {"LOG_LEVEL": "INVALID"}, clear=False)
+    def test_resolve_default_when_invalid(self):
+        """Test default INFO when LOG_LEVEL is unrecognized."""
+        assert _resolve_log_level() == logging.INFO
+
+    @patch.dict('os.environ', {"LOG_LEVEL": "  INFO  "}, clear=False)
+    def test_resolve_strips_whitespace(self):
+        """Test that whitespace is stripped from LOG_LEVEL."""
+        assert _resolve_log_level() == logging.INFO
 
 
 class TestLoggingSetup:
     """Test logging setup functionality."""
 
+    @patch('t3api_utils.logging._resolve_log_level', return_value=logging.INFO)
     @patch('t3api_utils.logging.logging.basicConfig')
-    def test_setup_logging_default_level(self, mock_basic_config):
-        """Test setup_logging with default INFO level."""
+    def test_setup_logging_default_level(self, mock_basic_config, mock_resolve):
+        """Test setup_logging with default level from env."""
         setup_logging()
 
         mock_basic_config.assert_called_once()

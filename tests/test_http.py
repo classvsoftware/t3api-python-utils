@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 import ssl
 from typing import Dict, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -129,6 +130,155 @@ class TestLoggingHooks:
         assert "response" in hook_dict
         assert len(hook_dict["request"]) == 1
         assert len(hook_dict["response"]) == 1
+
+    def test_default_field_values(self):
+        """Test LoggingHooks default field values."""
+        hooks = LoggingHooks(enabled=True)
+        assert hooks.log_headers is True
+        assert hooks.log_body is True
+        assert hooks.file_path is None
+
+    def test_custom_field_values(self):
+        """Test LoggingHooks with custom field values."""
+        hooks = LoggingHooks(
+            enabled=True,
+            log_headers=False,
+            log_body=False,
+            file_path="/tmp/test.log",
+        )
+        assert hooks.log_headers is False
+        assert hooks.log_body is False
+        assert hooks.file_path == "/tmp/test.log"
+
+    @patch.dict('os.environ', {"T3_LOG_HTTP": "true"}, clear=False)
+    def test_from_env_enabled(self):
+        """Test LoggingHooks.from_env() with T3_LOG_HTTP=true."""
+        hooks = LoggingHooks.from_env()
+        assert hooks.enabled is True
+        assert hooks.log_headers is True
+        assert hooks.log_body is True
+        assert hooks.file_path is None
+
+    @patch.dict('os.environ', {}, clear=False)
+    def test_from_env_disabled_by_default(self):
+        """Test LoggingHooks.from_env() returns disabled when env var not set."""
+        # Remove T3_LOG_HTTP if it exists
+        import os
+        os.environ.pop("T3_LOG_HTTP", None)
+        hooks = LoggingHooks.from_env()
+        assert hooks.enabled is False
+
+    @patch.dict('os.environ', {
+        "T3_LOG_HTTP": "true",
+        "T3_LOG_HEADERS": "false",
+        "T3_LOG_BODY": "false",
+        "T3_LOG_FILE": "/tmp/debug.log",
+    }, clear=False)
+    def test_from_env_granular_controls(self):
+        """Test LoggingHooks.from_env() with granular env vars."""
+        hooks = LoggingHooks.from_env()
+        assert hooks.enabled is True
+        assert hooks.log_headers is False
+        assert hooks.log_body is False
+        assert hooks.file_path == "/tmp/debug.log"
+
+    @patch.dict('os.environ', {"T3_LOG_HTTP": "1"}, clear=False)
+    def test_from_env_truthy_values(self):
+        """Test LoggingHooks.from_env() accepts various truthy values."""
+        hooks = LoggingHooks.from_env()
+        assert hooks.enabled is True
+
+    def test_file_handler_setup(self, tmp_path):
+        """Test that file handler is created when file_path is set."""
+        log_file = tmp_path / "test_http.log"
+        hooks = LoggingHooks(enabled=True, file_path=str(log_file))
+        logger = hooks._get_logger()
+
+        # Should have a file handler
+        file_handlers = [
+            h for h in logger.handlers
+            if isinstance(h, logging.FileHandler)
+        ]
+        assert len(file_handlers) >= 1
+
+        # Clean up handlers to avoid test pollution
+        for h in file_handlers:
+            logger.removeHandler(h)
+            h.close()
+
+
+class TestHeaderMasking:
+    """Test header value masking for sensitive headers."""
+
+    def test_mask_authorization_header(self):
+        """Test that Authorization header values are masked."""
+        from t3api_utils.http.utils import _mask_header_value
+        result = _mask_header_value("Authorization", "Bearer eyJhbGciOiJIUzI1NiJ9.test.sig")
+        assert result.startswith("Bearer e")
+        assert result.endswith(".sig")
+        assert "****" in result
+
+    def test_mask_short_value(self):
+        """Test that short sensitive values are fully masked."""
+        from t3api_utils.http.utils import _mask_header_value
+        result = _mask_header_value("Authorization", "short")
+        assert result == "****"
+
+    def test_non_sensitive_header_unchanged(self):
+        """Test that non-sensitive headers are not masked."""
+        from t3api_utils.http.utils import _mask_header_value
+        result = _mask_header_value("Content-Type", "application/json")
+        assert result == "application/json"
+
+    def test_mask_cookie_header(self):
+        """Test that Cookie header values are masked."""
+        from t3api_utils.http.utils import _mask_header_value
+        result = _mask_header_value("Cookie", "session=abcdef123456789xyz")
+        assert "****" in result
+
+    def test_mask_api_key_header(self):
+        """Test that X-Api-Key header values are masked."""
+        from t3api_utils.http.utils import _mask_header_value
+        result = _mask_header_value("X-Api-Key", "sk-1234567890abcdef")
+        assert "****" in result
+
+    def test_mask_case_insensitive(self):
+        """Test that header name matching is case-insensitive."""
+        from t3api_utils.http.utils import _mask_header_value
+        result = _mask_header_value("AUTHORIZATION", "Bearer eyJhbGciOiJIUzI1NiJ9.test.sig")
+        assert "****" in result
+
+
+class TestBodyFormatting:
+    """Test request body formatting for logging."""
+
+    def test_format_empty_body(self):
+        """Test formatting of empty body."""
+        from t3api_utils.http.utils import _format_body
+        result = _format_body(None)
+        assert "(empty)" in result
+
+    def test_format_json_body(self):
+        """Test formatting of JSON body."""
+        from t3api_utils.http.utils import _format_body
+        body = b'{"key":"value","nested":{"a":1}}'
+        result = _format_body(body)
+        assert "key" in result
+        assert "value" in result
+
+    def test_format_non_json_body(self):
+        """Test formatting of non-JSON body."""
+        from t3api_utils.http.utils import _format_body
+        body = b"plain text body content"
+        result = _format_body(body)
+        assert "plain text body content" in result
+
+    def test_format_large_body_truncated(self):
+        """Test that large bodies are truncated."""
+        from t3api_utils.http.utils import _format_body
+        body = b'{"data":"' + b"x" * 3000 + b'"}'
+        result = _format_body(body)
+        assert "truncated" in result
 
 
 class TestT3HTTPError:

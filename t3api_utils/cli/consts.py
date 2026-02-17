@@ -117,6 +117,20 @@ class EnvKeys(str, Enum):
     CACHE_RESPONSES = "CACHE_RESPONSES"
     """Cache API responses locally (``"true"`` / ``"false"``)."""
 
+    # -- HTTP debug logging --
+
+    T3_LOG_HTTP = "T3_LOG_HTTP"
+    """Enable verbose HTTP request/response logging (``"true"`` / ``"false"``)."""
+
+    T3_LOG_HEADERS = "T3_LOG_HEADERS"
+    """Log request headers when HTTP logging is enabled (``"true"`` / ``"false"``, default ``"true"``)."""
+
+    T3_LOG_BODY = "T3_LOG_BODY"
+    """Log request body/payload when HTTP logging is enabled (``"true"`` / ``"false"``, default ``"true"``)."""
+
+    T3_LOG_FILE = "T3_LOG_FILE"
+    """File path for HTTP debug logs. File is truncated on each run. Empty to disable file logging."""
+
     # -- Output settings --
 
     OUTPUT_DIR = "OUTPUT_DIR"

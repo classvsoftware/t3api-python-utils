@@ -233,6 +233,16 @@ LOG_FORMAT={log_format}
 # Enable verbose debug output (true/false)
 DEBUG_MODE={debug_mode}
 
+# HTTP debug logging
+# Enable verbose HTTP request/response logging (true/false)
+T3_LOG_HTTP={t3_log_http}
+# Log request headers (true/false, default: true when HTTP logging enabled)
+T3_LOG_HEADERS={t3_log_headers}
+# Log request body/payload (true/false, default: true when HTTP logging enabled)
+T3_LOG_BODY={t3_log_body}
+# File path for HTTP debug logs (truncated on each run, empty to disable)
+T3_LOG_FILE={t3_log_file}
+
 # Development features
 # Cache API responses for development (true/false)
 CACHE_RESPONSES={cache_responses}
@@ -296,6 +306,10 @@ DEFAULT_FILE_FORMAT={default_file_format}
             log_level=existing_values.get(EnvKeys.LOG_LEVEL.value, "INFO"),
             log_format=existing_values.get(EnvKeys.LOG_FORMAT.value, "detailed"),
             debug_mode=existing_values.get(EnvKeys.DEBUG_MODE.value, "false"),
+            t3_log_http=existing_values.get(EnvKeys.T3_LOG_HTTP.value, "false"),
+            t3_log_headers=existing_values.get(EnvKeys.T3_LOG_HEADERS.value, "true"),
+            t3_log_body=existing_values.get(EnvKeys.T3_LOG_BODY.value, "true"),
+            t3_log_file=existing_values.get(EnvKeys.T3_LOG_FILE.value, ""),
             cache_responses=existing_values.get(EnvKeys.CACHE_RESPONSES.value, "false"),
 
             # Output
@@ -330,7 +344,8 @@ DEFAULT_FILE_FORMAT={default_file_format}
 
         # Type conversion based on key
         if key in [EnvKeys.DEBUG_MODE, EnvKeys.VERIFY_SSL, EnvKeys.AUTO_OPEN_FILES,
-                   EnvKeys.STRIP_EMPTY_COLUMNS, EnvKeys.CACHE_RESPONSES]:
+                   EnvKeys.STRIP_EMPTY_COLUMNS, EnvKeys.CACHE_RESPONSES,
+                   EnvKeys.T3_LOG_HTTP, EnvKeys.T3_LOG_HEADERS, EnvKeys.T3_LOG_BODY]:
             return value.lower() in ['true', '1', 'yes', 'on']
         elif key in [EnvKeys.HTTP_TIMEOUT, EnvKeys.HTTP_CONNECT_TIMEOUT, EnvKeys.HTTP_READ_TIMEOUT,
                      EnvKeys.RETRY_BACKOFF_FACTOR, EnvKeys.RETRY_MIN_WAIT]:
