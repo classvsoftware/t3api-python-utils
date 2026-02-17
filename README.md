@@ -98,6 +98,7 @@ Licensed under the GNU General Public License v3.0.
 
 ## 🔗 Links
 
+* [Documentation](https://classvsoftware.github.io/t3api-python-utils/)
 * [T3 Website](https://trackandtrace.tools)
 * [T3 API Docs](https://api.trackandtrace.tools/v2/docs)
 * [GitHub Repo](https://github.com/classvsoftware/t3api-python-utils)

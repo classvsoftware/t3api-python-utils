@@ -38,6 +38,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/classvsoftware/t3api-python-utils"
+Documentation = "https://classvsoftware.github.io/t3api-python-utils/"
 
 [build-system]
 requires = ["setuptools", "wheel"]
