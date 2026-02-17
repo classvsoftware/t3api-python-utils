@@ -25,7 +25,7 @@ from t3api_utils.exceptions import AuthenticationError
 from t3api_utils.logging import get_logger
 from t3api_utils.style import print_error, print_info, print_subheader
 
-__all__ = ["DEFAULT_ENV_PATH", "ConfigManager", "config_manager", "generate_otp_from_seed", "load_credentials_from_env", "offer_to_save_credentials", "prompt_for_credentials_or_error", "resolve_auth_inputs_or_error"]
+__all__ = ["DEFAULT_ENV_PATH", "ConfigManager", "config_manager", "generate_otp_from_seed", "load_credentials_from_env", "offer_to_save_api_key", "offer_to_save_credentials", "offer_to_save_jwt_token", "prompt_for_credentials_or_error", "resolve_auth_inputs_or_error"]
 
 logger = get_logger(__name__)
 
@@ -309,7 +309,7 @@ DEFAULT_FILE_FORMAT={default_file_format}
             t3_log_http=existing_values.get(EnvKeys.T3_LOG_HTTP.value, "false"),
             t3_log_headers=existing_values.get(EnvKeys.T3_LOG_HEADERS.value, "true"),
             t3_log_body=existing_values.get(EnvKeys.T3_LOG_BODY.value, "true"),
-            t3_log_file=existing_values.get(EnvKeys.T3_LOG_FILE.value, ""),
+            t3_log_file=existing_values.get(EnvKeys.T3_LOG_FILE.value, "t3_http.log"),
             cache_responses=existing_values.get(EnvKeys.CACHE_RESPONSES.value, "false"),
 
             # Output
@@ -548,6 +548,72 @@ def offer_to_save_credentials(*, credentials: T3Credentials) -> None:
                 set_key(
                     DEFAULT_ENV_PATH, EnvKeys.METRC_EMAIL.value, email_value
                 )
+
+
+def offer_to_save_jwt_token(*, jwt_token: str) -> None:
+    """Offer to save a JWT token to the ``.t3.env`` file.
+
+    If the environment file does not exist, the user is prompted to create
+    it. If it exists but the stored token differs, the user is prompted to
+    update the file.
+
+    Args:
+        jwt_token: The JWT token string to compare and potentially save.
+    """
+    load_dotenv(dotenv_path=DEFAULT_ENV_PATH)
+    env_exists = os.path.exists(DEFAULT_ENV_PATH)
+
+    current_jwt = os.getenv(EnvKeys.JWT_TOKEN.value, "").strip()
+
+    if not env_exists:
+        if typer.confirm(
+            f"No credentials file found. Save JWT token to {DEFAULT_ENV_PATH}?",
+            default=True,
+        ):
+            logger.info("[green]Saving JWT token to new environment file.[/green]")
+            set_key(DEFAULT_ENV_PATH, EnvKeys.JWT_TOKEN.value, jwt_token)
+    elif jwt_token != current_jwt:
+        if typer.confirm(
+            f"JWT token differs from the one in {DEFAULT_ENV_PATH}. Update it?",
+            default=True,
+        ):
+            logger.info("[cyan]Updating JWT token in environment file.[/cyan]")
+            set_key(DEFAULT_ENV_PATH, EnvKeys.JWT_TOKEN.value, jwt_token)
+
+
+def offer_to_save_api_key(*, api_key: str, state_code: str) -> None:
+    """Offer to save an API key and state code to the ``.t3.env`` file.
+
+    If the environment file does not exist, the user is prompted to create
+    it. If it exists but either the API key or state code differs, the user
+    is prompted to update the file.
+
+    Args:
+        api_key: The API key string to compare and potentially save.
+        state_code: The two-letter state code to compare and potentially save.
+    """
+    load_dotenv(dotenv_path=DEFAULT_ENV_PATH)
+    env_exists = os.path.exists(DEFAULT_ENV_PATH)
+
+    current_api_key = os.getenv(EnvKeys.API_KEY.value, "").strip()
+    current_state_code = os.getenv(EnvKeys.API_STATE_CODE.value, "").strip()
+
+    if not env_exists:
+        if typer.confirm(
+            f"No credentials file found. Save API key to {DEFAULT_ENV_PATH}?",
+            default=True,
+        ):
+            logger.info("[green]Saving API key to new environment file.[/green]")
+            set_key(DEFAULT_ENV_PATH, EnvKeys.API_KEY.value, api_key)
+            set_key(DEFAULT_ENV_PATH, EnvKeys.API_STATE_CODE.value, state_code)
+    elif api_key != current_api_key or state_code != current_state_code:
+        if typer.confirm(
+            f"API key or state code differs from {DEFAULT_ENV_PATH}. Update them?",
+            default=True,
+        ):
+            logger.info("[cyan]Updating API key in environment file.[/cyan]")
+            set_key(DEFAULT_ENV_PATH, EnvKeys.API_KEY.value, api_key)
+            set_key(DEFAULT_ENV_PATH, EnvKeys.API_STATE_CODE.value, state_code)
 
 
 def prompt_for_credentials_or_error(**kwargs: object) -> T3Credentials:

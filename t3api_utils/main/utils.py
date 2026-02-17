@@ -30,7 +30,12 @@ from t3api_utils.auth.utils import (
     create_credentials_authenticated_client_or_error_async,
     create_jwt_authenticated_client,
 )
-from t3api_utils.cli.utils import config_manager, resolve_auth_inputs_or_error
+from t3api_utils.cli.utils import (
+    config_manager,
+    offer_to_save_api_key,
+    offer_to_save_jwt_token,
+    resolve_auth_inputs_or_error,
+)
 from t3api_utils.collection.utils import extract_data, parallel_load_collection
 from t3api_utils.db.utils import (
     create_duckdb_connection,
@@ -156,7 +161,9 @@ def _authenticate_with_jwt() -> T3APIClient:
     jwt_token = typer.prompt("Enter JWT token", hide_input=True)
 
     # Always validate JWT token using /whoami endpoint
-    return get_jwt_authenticated_client_or_error_with_validation(jwt_token=jwt_token)
+    client = get_jwt_authenticated_client_or_error_with_validation(jwt_token=jwt_token)
+    offer_to_save_jwt_token(jwt_token=jwt_token)
+    return client
 
 
 def _authenticate_with_api_key() -> T3APIClient:
@@ -174,9 +181,11 @@ def _authenticate_with_api_key() -> T3APIClient:
         )
         raise AuthenticationError(f"Invalid state code: {state_code}")
 
-    return get_api_key_authenticated_client_or_error(
+    client = get_api_key_authenticated_client_or_error(
         api_key=api_key, state_code=state_code
     )
+    offer_to_save_api_key(api_key=api_key, state_code=state_code)
+    return client
 
 
 async def get_authenticated_client_or_error_async() -> T3APIClient:

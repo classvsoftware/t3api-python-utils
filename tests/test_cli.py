@@ -299,3 +299,132 @@ def test_prompt_for_credentials_invalid_seed_raises(mock_offer, mock_prompt):
 
     with pytest.raises(AuthenticationError, match="Failed to generate OTP from seed"):
         cli.prompt_for_credentials_or_error()
+
+
+# JWT Token Persistence Tests
+
+
+@patch.dict(os.environ, {EnvKeys.JWT_TOKEN.value: "existing-jwt-token"})
+def test_load_credentials_from_env_with_jwt():
+    """Test that JWT token is loaded from environment."""
+    credentials = cli.load_credentials_from_env()
+    assert credentials["jwt_token"] == "existing-jwt-token"
+
+
+@patch.dict(os.environ, {
+    EnvKeys.API_KEY.value: "my-api-key",
+    EnvKeys.API_STATE_CODE.value: "CA",
+})
+def test_load_credentials_from_env_with_api_key():
+    """Test that API key and state code are loaded from environment."""
+    credentials = cli.load_credentials_from_env()
+    assert credentials["api_key"] == "my-api-key"
+    assert credentials["api_state_code"] == "CA"
+
+
+@patch("typer.confirm", return_value=True)
+@patch("t3api_utils.cli.utils.set_key")
+def test_offer_to_save_jwt_token_new_file(mock_set_key, mock_confirm):
+    """Test saving JWT token when no .t3.env file exists."""
+    with patch("os.path.exists", return_value=False):
+        cli.offer_to_save_jwt_token(jwt_token="my-jwt-token")
+    mock_confirm.assert_called_once()
+    mock_set_key.assert_called_once_with(
+        cli.DEFAULT_ENV_PATH, EnvKeys.JWT_TOKEN.value, "my-jwt-token"
+    )
+
+
+@patch.dict(os.environ, {EnvKeys.JWT_TOKEN.value: "old-token"})
+@patch("typer.confirm", return_value=True)
+@patch("t3api_utils.cli.utils.set_key")
+def test_offer_to_save_jwt_token_differs(mock_set_key, mock_confirm):
+    """Test updating JWT token when it differs from stored value."""
+    cli.offer_to_save_jwt_token(jwt_token="new-token")
+    mock_confirm.assert_called_once()
+    mock_set_key.assert_called_once_with(
+        cli.DEFAULT_ENV_PATH, EnvKeys.JWT_TOKEN.value, "new-token"
+    )
+
+
+@patch.dict(os.environ, {EnvKeys.JWT_TOKEN.value: "same-token"})
+@patch("typer.confirm")
+@patch("t3api_utils.cli.utils.set_key")
+def test_offer_to_save_jwt_token_same(mock_set_key, mock_confirm):
+    """Test no prompt when JWT token matches stored value."""
+    cli.offer_to_save_jwt_token(jwt_token="same-token")
+    mock_confirm.assert_not_called()
+    mock_set_key.assert_not_called()
+
+
+@patch.dict(os.environ, {EnvKeys.JWT_TOKEN.value: "old-token"})
+@patch("typer.confirm", return_value=False)
+@patch("t3api_utils.cli.utils.set_key")
+def test_offer_to_save_jwt_token_declined(mock_set_key, mock_confirm):
+    """Test no save when user declines JWT token update."""
+    cli.offer_to_save_jwt_token(jwt_token="new-token")
+    mock_confirm.assert_called_once()
+    mock_set_key.assert_not_called()
+
+
+# API Key Persistence Tests
+
+
+@patch("typer.confirm", return_value=True)
+@patch("t3api_utils.cli.utils.set_key")
+def test_offer_to_save_api_key_new_file(mock_set_key, mock_confirm):
+    """Test saving API key when no .t3.env file exists."""
+    with patch("os.path.exists", return_value=False):
+        cli.offer_to_save_api_key(api_key="my-api-key", state_code="CA")
+    mock_confirm.assert_called_once()
+    assert mock_set_key.call_count == 2
+    mock_set_key.assert_any_call(
+        cli.DEFAULT_ENV_PATH, EnvKeys.API_KEY.value, "my-api-key"
+    )
+    mock_set_key.assert_any_call(
+        cli.DEFAULT_ENV_PATH, EnvKeys.API_STATE_CODE.value, "CA"
+    )
+
+
+@patch.dict(os.environ, {
+    EnvKeys.API_KEY.value: "old-key",
+    EnvKeys.API_STATE_CODE.value: "MO",
+})
+@patch("typer.confirm", return_value=True)
+@patch("t3api_utils.cli.utils.set_key")
+def test_offer_to_save_api_key_differs(mock_set_key, mock_confirm):
+    """Test updating API key when it differs from stored value."""
+    cli.offer_to_save_api_key(api_key="new-key", state_code="CA")
+    mock_confirm.assert_called_once()
+    assert mock_set_key.call_count == 2
+    mock_set_key.assert_any_call(
+        cli.DEFAULT_ENV_PATH, EnvKeys.API_KEY.value, "new-key"
+    )
+    mock_set_key.assert_any_call(
+        cli.DEFAULT_ENV_PATH, EnvKeys.API_STATE_CODE.value, "CA"
+    )
+
+
+@patch.dict(os.environ, {
+    EnvKeys.API_KEY.value: "same-key",
+    EnvKeys.API_STATE_CODE.value: "CA",
+})
+@patch("typer.confirm")
+@patch("t3api_utils.cli.utils.set_key")
+def test_offer_to_save_api_key_same(mock_set_key, mock_confirm):
+    """Test no prompt when API key and state code match stored values."""
+    cli.offer_to_save_api_key(api_key="same-key", state_code="CA")
+    mock_confirm.assert_not_called()
+    mock_set_key.assert_not_called()
+
+
+@patch.dict(os.environ, {
+    EnvKeys.API_KEY.value: "old-key",
+    EnvKeys.API_STATE_CODE.value: "MO",
+})
+@patch("typer.confirm", return_value=False)
+@patch("t3api_utils.cli.utils.set_key")
+def test_offer_to_save_api_key_declined(mock_set_key, mock_confirm):
+    """Test no save when user declines API key update."""
+    cli.offer_to_save_api_key(api_key="new-key", state_code="CA")
+    mock_confirm.assert_called_once()
+    mock_set_key.assert_not_called()

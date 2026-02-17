@@ -1,10 +1,14 @@
 """Tests for authentication utilities using httpx-based implementation."""
+import base64
+import json
+import time
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from t3api_utils.api.client import T3APIClient
-from t3api_utils.auth.utils import create_jwt_authenticated_client
+from t3api_utils.auth.utils import _check_jwt_expiry, create_jwt_authenticated_client
+from t3api_utils.exceptions import AuthenticationError
 from t3api_utils.http.utils import HTTPConfig, LoggingHooks, RetryPolicy
 
 
@@ -171,5 +175,50 @@ class TestCreateJwtAuthenticatedClient:
         """Test that whitespace-only JWT token raises ValueError."""
         with pytest.raises(ValueError, match="JWT token cannot be empty or None"):
             create_jwt_authenticated_client(jwt_token="   ")
+
+    def test_jwt_authentication_expired_token_raises_error(self):
+        """Test that an expired JWT token raises AuthenticationError."""
+        header = base64.urlsafe_b64encode(json.dumps({"alg": "HS256", "typ": "JWT"}).encode()).rstrip(b"=").decode()
+        payload = base64.urlsafe_b64encode(json.dumps({"exp": int(time.time()) - 3600}).encode()).rstrip(b"=").decode()
+        expired_token = f"{header}.{payload}.fakesignature"
+
+        with pytest.raises(AuthenticationError, match="JWT token is expired"):
+            create_jwt_authenticated_client(jwt_token=expired_token)
+
+
+class TestCheckJwtExpiry:
+    """Test JWT expiry checking."""
+
+    def _make_token(self, exp: float) -> str:
+        """Helper to create a JWT with a given exp claim."""
+        header = base64.urlsafe_b64encode(json.dumps({"alg": "HS256", "typ": "JWT"}).encode()).rstrip(b"=").decode()
+        payload = base64.urlsafe_b64encode(json.dumps({"exp": exp}).encode()).rstrip(b"=").decode()
+        return f"{header}.{payload}.fakesignature"
+
+    def test_expired_token_raises(self):
+        """Test that an expired token raises AuthenticationError."""
+        token = self._make_token(time.time() - 3600)
+        with pytest.raises(AuthenticationError, match="JWT token is expired"):
+            _check_jwt_expiry(token)
+
+    def test_valid_token_does_not_raise(self):
+        """Test that a non-expired token passes without error."""
+        token = self._make_token(time.time() + 3600)
+        _check_jwt_expiry(token)  # Should not raise
+
+    def test_token_without_exp_does_not_raise(self):
+        """Test that a token with no exp claim passes without error."""
+        header = base64.urlsafe_b64encode(json.dumps({"alg": "HS256"}).encode()).rstrip(b"=").decode()
+        payload = base64.urlsafe_b64encode(json.dumps({"sub": "user"}).encode()).rstrip(b"=").decode()
+        token = f"{header}.{payload}.fakesignature"
+        _check_jwt_expiry(token)  # Should not raise
+
+    def test_malformed_token_does_not_raise(self):
+        """Test that a malformed token is silently ignored."""
+        _check_jwt_expiry("not-a-jwt")  # Should not raise
+
+    def test_invalid_base64_does_not_raise(self):
+        """Test that invalid base64 payload is silently ignored."""
+        _check_jwt_expiry("header.!!!invalid!!!.signature")  # Should not raise
 
 

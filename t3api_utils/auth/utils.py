@@ -6,6 +6,9 @@ with sync wrappers for compatibility.
 from __future__ import annotations
 
 import asyncio
+import base64
+import json
+import time
 from typing import Dict, Optional
 
 from t3api_utils.api.client import T3APIClient
@@ -280,6 +283,43 @@ def authenticate_and_get_response(
     ))
 
 
+def _check_jwt_expiry(jwt_token: str) -> None:
+    """Check if a JWT token has expired by decoding its payload.
+
+    Decodes the token payload without signature verification to read the
+    ``exp`` claim. If the token is expired, raises an
+    :class:`~t3api_utils.exceptions.AuthenticationError`. Malformed tokens
+    that cannot be decoded are silently ignored so that the server can
+    provide a more authoritative rejection.
+
+    Args:
+        jwt_token: The raw JWT string (header.payload.signature).
+
+    Raises:
+        AuthenticationError: If the token's ``exp`` claim is in the past.
+    """
+    try:
+        parts = jwt_token.strip().split(".")
+        if len(parts) != 3:
+            return
+
+        # Decode the payload (second segment) with base64url
+        payload_b64 = parts[1]
+        # Add padding if needed
+        payload_b64 += "=" * (-len(payload_b64) % 4)
+        payload_bytes = base64.urlsafe_b64decode(payload_b64)
+        payload = json.loads(payload_bytes)
+
+        exp = payload.get("exp")
+        if exp is not None and float(exp) < time.time():
+            raise AuthenticationError("JWT token is expired")
+    except AuthenticationError:
+        raise
+    except Exception:
+        # If we can't decode the token, let the server handle validation
+        pass
+
+
 def create_jwt_authenticated_client(
     *,
     jwt_token: str,
@@ -308,6 +348,7 @@ def create_jwt_authenticated_client(
 
     Raises:
         ValueError: If jwt_token is empty or None
+        AuthenticationError: If jwt_token is expired
 
     Example:
         >>> token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -316,6 +357,8 @@ def create_jwt_authenticated_client(
     """
     if not jwt_token or not jwt_token.strip():
         raise ValueError("JWT token cannot be empty or None")
+
+    _check_jwt_expiry(jwt_token)
 
     # Handle host and config parameters
     if config is None:
