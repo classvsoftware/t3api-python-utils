@@ -30,6 +30,7 @@ from t3api_utils.auth.utils import (
     create_credentials_authenticated_client_or_error_async,
     create_jwt_authenticated_client,
 )
+from t3api_utils.cli.consts import DEFAULT_ENV_PATH
 from t3api_utils.cli.utils import (
     config_manager,
     load_credentials_from_env,
@@ -163,7 +164,7 @@ def _authenticate_with_jwt() -> T3APIClient:
     stored_jwt = stored.get("jwt_token", "")
 
     if stored_jwt and typer.confirm(
-        "Use stored JWT token from .t3.env?", default=True
+        f"Use stored JWT token from {DEFAULT_ENV_PATH}?", default=True
     ):
         jwt_token = stored_jwt
     else:
@@ -185,7 +186,7 @@ def _authenticate_with_api_key() -> T3APIClient:
     stored_state_code = stored.get("api_state_code", "")
 
     if stored_api_key and typer.confirm(
-        "Use stored API key from .t3.env?", default=True
+        f"Use stored API key from {DEFAULT_ENV_PATH}?", default=True
     ):
         api_key = stored_api_key
         state_code = stored_state_code
