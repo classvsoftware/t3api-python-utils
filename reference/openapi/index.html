@@ -1312,12 +1312,7 @@ collection endpoints.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>t3api_utils/openapi/spec_fetcher.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-221">221</a></span>
-<span class="normal"><a href="#__codelineno-0-222">222</a></span>
-<span class="normal"><a href="#__codelineno-0-223">223</a></span>
-<span class="normal"><a href="#__codelineno-0-224">224</a></span>
-<span class="normal"><a href="#__codelineno-0-225">225</a></span>
-<span class="normal"><a href="#__codelineno-0-226">226</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-226">226</a></span>
 <span class="normal"><a href="#__codelineno-0-227">227</a></span>
 <span class="normal"><a href="#__codelineno-0-228">228</a></span>
 <span class="normal"><a href="#__codelineno-0-229">229</a></span>
@@ -1327,22 +1322,27 @@ collection endpoints.</p>
 <span class="normal"><a href="#__codelineno-0-233">233</a></span>
 <span class="normal"><a href="#__codelineno-0-234">234</a></span>
 <span class="normal"><a href="#__codelineno-0-235">235</a></span>
-<span class="normal"><a href="#__codelineno-0-236">236</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-221" name="__codelineno-0-221"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_collection_endpoints</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">CollectionEndpoint</span><span class="p">]:</span>
-<a id="__codelineno-0-222" name="__codelineno-0-222"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Fetch and parse collection endpoints from the live API.</span>
-<a id="__codelineno-0-223" name="__codelineno-0-223"></a>
-<a id="__codelineno-0-224" name="__codelineno-0-224"></a><span class="sd">    Convenience function that fetches the OpenAPI spec and extracts all</span>
-<a id="__codelineno-0-225" name="__codelineno-0-225"></a><span class="sd">    paginated collection endpoints in a single call.</span>
-<a id="__codelineno-0-226" name="__codelineno-0-226"></a>
-<a id="__codelineno-0-227" name="__codelineno-0-227"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-228" name="__codelineno-0-228"></a><span class="sd">        A list of ``CollectionEndpoint`` dicts describing each available</span>
-<a id="__codelineno-0-229" name="__codelineno-0-229"></a><span class="sd">        collection.</span>
-<a id="__codelineno-0-230" name="__codelineno-0-230"></a>
-<a id="__codelineno-0-231" name="__codelineno-0-231"></a><span class="sd">    Raises:</span>
-<a id="__codelineno-0-232" name="__codelineno-0-232"></a><span class="sd">        SystemExit: If the API spec cannot be fetched or contains no</span>
-<a id="__codelineno-0-233" name="__codelineno-0-233"></a><span class="sd">            collection endpoints.</span>
-<a id="__codelineno-0-234" name="__codelineno-0-234"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-235" name="__codelineno-0-235"></a>    <span class="n">spec</span> <span class="o">=</span> <span class="n">fetch_openapi_spec</span><span class="p">()</span>
-<a id="__codelineno-0-236" name="__codelineno-0-236"></a>    <span class="k">return</span> <span class="n">parse_collection_endpoints</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
+<span class="normal"><a href="#__codelineno-0-236">236</a></span>
+<span class="normal"><a href="#__codelineno-0-237">237</a></span>
+<span class="normal"><a href="#__codelineno-0-238">238</a></span>
+<span class="normal"><a href="#__codelineno-0-239">239</a></span>
+<span class="normal"><a href="#__codelineno-0-240">240</a></span>
+<span class="normal"><a href="#__codelineno-0-241">241</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-226" name="__codelineno-0-226"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_collection_endpoints</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">CollectionEndpoint</span><span class="p">]:</span>
+<a id="__codelineno-0-227" name="__codelineno-0-227"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Fetch and parse collection endpoints from the live API.</span>
+<a id="__codelineno-0-228" name="__codelineno-0-228"></a>
+<a id="__codelineno-0-229" name="__codelineno-0-229"></a><span class="sd">    Convenience function that fetches the OpenAPI spec and extracts all</span>
+<a id="__codelineno-0-230" name="__codelineno-0-230"></a><span class="sd">    paginated collection endpoints in a single call.</span>
+<a id="__codelineno-0-231" name="__codelineno-0-231"></a>
+<a id="__codelineno-0-232" name="__codelineno-0-232"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-233" name="__codelineno-0-233"></a><span class="sd">        A list of ``CollectionEndpoint`` dicts describing each available</span>
+<a id="__codelineno-0-234" name="__codelineno-0-234"></a><span class="sd">        collection.</span>
+<a id="__codelineno-0-235" name="__codelineno-0-235"></a>
+<a id="__codelineno-0-236" name="__codelineno-0-236"></a><span class="sd">    Raises:</span>
+<a id="__codelineno-0-237" name="__codelineno-0-237"></a><span class="sd">        SystemExit: If the API spec cannot be fetched or contains no</span>
+<a id="__codelineno-0-238" name="__codelineno-0-238"></a><span class="sd">            collection endpoints.</span>
+<a id="__codelineno-0-239" name="__codelineno-0-239"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-240" name="__codelineno-0-240"></a>    <span class="n">spec</span> <span class="o">=</span> <span class="n">fetch_openapi_spec</span><span class="p">()</span>
+<a id="__codelineno-0-241" name="__codelineno-0-241"></a>    <span class="k">return</span> <span class="n">parse_collection_endpoints</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
