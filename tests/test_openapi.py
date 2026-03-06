@@ -212,6 +212,27 @@ class TestIsCollectionEndpoint:
         operation: Dict[str, Any] = {}
         assert _is_collection_endpoint(operation, "/v2/packages/active") is False
 
+    def test_is_collection_endpoint_with_ref_collection_page(self):
+        """Test endpoint with $ref to CollectionPage is detected as collection."""
+        operation = {
+            "parameters": [
+                {"$ref": "#/components/parameters/LicenseNumber"},
+                {"$ref": "#/components/parameters/CollectionPage"},
+                {"$ref": "#/components/parameters/CollectionPageSize"},
+            ]
+        }
+        assert _is_collection_endpoint(operation, "/v2/packages/active") is True
+
+    def test_is_collection_endpoint_ref_without_collection_page(self):
+        """Test endpoint with $ref parameters but no CollectionPage is not detected."""
+        operation = {
+            "parameters": [
+                {"$ref": "#/components/parameters/LicenseNumber"},
+                {"$ref": "#/components/parameters/CollectionPageSize"},
+            ]
+        }
+        assert _is_collection_endpoint(operation, "/v2/packages/active") is False
+
 
 class TestHelperFunctions:
     """Unit tests for helper functions."""

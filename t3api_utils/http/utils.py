@@ -39,8 +39,8 @@ import logging
 import random
 import time
 from dataclasses import dataclass, field
-from typing import (Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple,
-                    Union)
+from typing import (Any, Dict, Iterable, List, Literal, Mapping, Optional, Sequence,
+                    Tuple, Union)
 
 import ssl
 import certifi
@@ -50,15 +50,24 @@ from httpx._types import RequestFiles
 # Import config manager for default values
 from t3api_utils.cli.utils import config_manager
 
+ResponseType = Literal["json", "bytes", "text", "response"]
+
 __all__ = [
     "HTTPConfig",
     "RetryPolicy",
     "LoggingHooks",
     "T3HTTPError",
+    "ResponseType",
     "build_client",
     "build_async_client",
     "request_json",
     "arequest_json",
+    "request_bytes",
+    "arequest_bytes",
+    "request_text",
+    "arequest_text",
+    "request_raw",
+    "arequest_raw",
     "set_bearer_token",
     "clear_bearer_token",
 ]
@@ -534,6 +543,162 @@ def _format_http_error_message(resp: httpx.Response) -> str:
         return f"HTTP {resp.status_code}: {text or '<no body>'}"
 
 
+def _request_core(
+    *,
+    client: httpx.Client,
+    method: str,
+    url: str,
+    params: Optional[Mapping[str, Any]] = None,
+    json_body: Optional[Any] = None,
+    files: Optional[RequestFiles] = None,
+    headers: Optional[Mapping[str, str]] = None,
+    policy: Optional[RetryPolicy] = None,
+    expected_status: Union[int, Iterable[int]] = (200, 201, 202, 204),
+    timeout: Optional[Union[float, httpx.Timeout]] = None,
+    request_id: Optional[str] = None,
+) -> httpx.Response:
+    """Execute a synchronous HTTP request with retry logic.
+
+    Handles the retry loop, status validation, and error wrapping.
+    Returns the raw ``httpx.Response`` on success. Callers are
+    responsible for interpreting the response body.
+
+    Args:
+        client: An ``httpx.Client`` (typically from :func:`build_client`).
+        method: HTTP method (e.g. ``"GET"``, ``"POST"``).
+        url: Request URL or path (resolved against the client's base URL).
+        params: Optional query-string parameters.
+        json_body: Optional JSON-serializable request body. Mutually
+            exclusive with *files*.
+        files: Optional multipart file upload data. Mutually exclusive
+            with *json_body*.
+        headers: Optional per-request headers.
+        policy: Retry policy. Defaults to ``RetryPolicy()`` when ``None``.
+        expected_status: Status code(s) considered successful.
+        timeout: Per-request timeout override.
+        request_id: Optional ``X-Request-ID`` header value.
+
+    Returns:
+        The ``httpx.Response`` with a status code in *expected_status*.
+
+    Raises:
+        ValueError: If both *json_body* and *files* are provided.
+        T3HTTPError: If the response status is not in *expected_status*
+            after all retries are exhausted.
+    """
+    if json_body is not None and files is not None:
+        raise ValueError("json_body and files are mutually exclusive; provide one or neither.")
+
+    pol = policy or RetryPolicy()
+    exp: Tuple[int, ...] = (
+        (expected_status,) if isinstance(expected_status, int) else tuple(expected_status)
+    )
+
+    # Merge headers + optional request id
+    merged_headers = dict(headers or {})
+    if request_id and "X-Request-ID" not in merged_headers:
+        merged_headers["X-Request-ID"] = request_id
+
+    attempt = 0
+    while True:
+        attempt += 1
+        try:
+            resp = client.request(
+                method.upper(),
+                url,
+                params=params,
+                json=json_body,
+                files=files,
+                headers=merged_headers or None,
+                timeout=timeout,
+            )
+            if resp.status_code not in exp:
+                if _should_retry(policy=pol, attempt=attempt, method=method, exc=None, resp=resp):
+                    _sleep_with_backoff(pol, attempt)
+                    continue
+                raise T3HTTPError(_format_http_error_message(resp), response=resp)
+
+            return resp
+        except httpx.HTTPError as e:
+            if _should_retry(policy=pol, attempt=attempt, method=method, exc=e, resp=None):
+                _sleep_with_backoff(pol, attempt)
+                continue
+            raise T3HTTPError(str(e)) from e
+
+
+async def _arequest_core(
+    *,
+    aclient: httpx.AsyncClient,
+    method: str,
+    url: str,
+    params: Optional[Mapping[str, Any]] = None,
+    json_body: Optional[Any] = None,
+    files: Optional[RequestFiles] = None,
+    headers: Optional[Mapping[str, str]] = None,
+    policy: Optional[RetryPolicy] = None,
+    expected_status: Union[int, Iterable[int]] = (200, 201, 202, 204),
+    timeout: Optional[Union[float, httpx.Timeout]] = None,
+    request_id: Optional[str] = None,
+) -> httpx.Response:
+    """Async equivalent of :func:`_request_core`."""
+    if json_body is not None and files is not None:
+        raise ValueError("json_body and files are mutually exclusive; provide one or neither.")
+
+    pol = policy or RetryPolicy()
+    exp: Tuple[int, ...] = (
+        (expected_status,) if isinstance(expected_status, int) else tuple(expected_status)
+    )
+
+    # Merge headers + optional request id
+    merged_headers = dict(headers or {})
+    if request_id and "X-Request-ID" not in merged_headers:
+        merged_headers["X-Request-ID"] = request_id
+
+    attempt = 0
+    while True:
+        attempt += 1
+        try:
+            resp = await aclient.request(
+                method.upper(),
+                url,
+                params=params,
+                json=json_body,
+                files=files,
+                headers=merged_headers or None,
+                timeout=timeout,
+            )
+            if resp.status_code not in exp:
+                if _should_retry(policy=pol, attempt=attempt, method=method, exc=None, resp=resp):
+                    await _async_sleep_with_backoff(pol, attempt)
+                    continue
+                raise T3HTTPError(_format_http_error_message(resp), response=resp)
+
+            return resp
+        except httpx.HTTPError as e:
+            if _should_retry(policy=pol, attempt=attempt, method=method, exc=e, resp=None):
+                await _async_sleep_with_backoff(pol, attempt)
+                continue
+            raise T3HTTPError(str(e)) from e
+
+
+def _parse_json_response(resp: httpx.Response) -> Any:
+    """Extract JSON from a successful response.
+
+    Returns ``None`` for 204 or empty bodies.
+
+    Raises:
+        T3HTTPError: If the body cannot be decoded as JSON.
+    """
+    if resp.status_code == 204:
+        return None
+    if not resp.content:
+        return None
+    try:
+        return resp.json()
+    except json.JSONDecodeError as e:
+        raise T3HTTPError("Failed to decode JSON response.", response=resp) from e
+
+
 def request_json(
     *,
     client: httpx.Client,
@@ -584,51 +749,136 @@ def request_json(
             after all retries are exhausted, or if the response body
             cannot be decoded as JSON.
     """
-    if json_body is not None and files is not None:
-        raise ValueError("json_body and files are mutually exclusive; provide one or neither.")
-
-    pol = policy or RetryPolicy()
-    exp: Tuple[int, ...] = (
-        (expected_status,) if isinstance(expected_status, int) else tuple(expected_status)
+    resp = _request_core(
+        client=client,
+        method=method,
+        url=url,
+        params=params,
+        json_body=json_body,
+        files=files,
+        headers=headers,
+        policy=policy,
+        expected_status=expected_status,
+        timeout=timeout,
+        request_id=request_id,
     )
+    return _parse_json_response(resp)
 
-    # Merge headers + optional request id
-    merged_headers = dict(headers or {})
-    if request_id and "X-Request-ID" not in merged_headers:
-        merged_headers["X-Request-ID"] = request_id
 
-    attempt = 0
-    while True:
-        attempt += 1
-        try:
-            resp = client.request(
-                method.upper(),
-                url,
-                params=params,
-                json=json_body,
-                files=files,
-                headers=merged_headers or None,
-                timeout=timeout,
-            )
-            if resp.status_code not in exp:
-                if _should_retry(policy=pol, attempt=attempt, method=method, exc=None, resp=resp):
-                    _sleep_with_backoff(pol, attempt)
-                    continue
-                raise T3HTTPError(_format_http_error_message(resp), response=resp)
+def request_bytes(
+    *,
+    client: httpx.Client,
+    method: str,
+    url: str,
+    params: Optional[Mapping[str, Any]] = None,
+    json_body: Optional[Any] = None,
+    files: Optional[RequestFiles] = None,
+    headers: Optional[Mapping[str, str]] = None,
+    policy: Optional[RetryPolicy] = None,
+    expected_status: Union[int, Iterable[int]] = (200, 201, 202, 204),
+    timeout: Optional[Union[float, httpx.Timeout]] = None,
+    request_id: Optional[str] = None,
+) -> bytes:
+    """Issue a synchronous request and return the response body as bytes.
 
-            if resp.status_code == 204:
-                return None
-            if not resp.content:
-                return None
-            try:
-                return resp.json()
-            except json.JSONDecodeError as e:
-                raise T3HTTPError("Failed to decode JSON response.", response=resp) from e
-        except httpx.HTTPError as e:
-            if _should_retry(policy=pol, attempt=attempt, method=method, exc=e, resp=None):
-                _sleep_with_backoff(pol, attempt)
-                continue
-            raise T3HTTPError(str(e)) from e
+    Same retry and error handling as :func:`request_json`, but returns
+    raw bytes instead of parsing JSON. Useful for downloading PDFs,
+    images, and other binary content.
+
+    Returns:
+        Response body as ``bytes``. Empty ``b""`` for 204 / empty responses.
+    """
+    resp = _request_core(
+        client=client,
+        method=method,
+        url=url,
+        params=params,
+        json_body=json_body,
+        files=files,
+        headers=headers,
+        policy=policy,
+        expected_status=expected_status,
+        timeout=timeout,
+        request_id=request_id,
+    )
+    return resp.content
+
+
+def request_text(
+    *,
+    client: httpx.Client,
+    method: str,
+    url: str,
+    params: Optional[Mapping[str, Any]] = None,
+    json_body: Optional[Any] = None,
+    files: Optional[RequestFiles] = None,
+    headers: Optional[Mapping[str, str]] = None,
+    policy: Optional[RetryPolicy] = None,
+    expected_status: Union[int, Iterable[int]] = (200, 201, 202, 204),
+    timeout: Optional[Union[float, httpx.Timeout]] = None,
+    request_id: Optional[str] = None,
+) -> str:
+    """Issue a synchronous request and return the response body as text.
+
+    Same retry and error handling as :func:`request_json`, but returns
+    decoded text instead of parsing JSON. Useful for CSV, HTML, and
+    other text content.
+
+    Returns:
+        Response body as ``str``. Empty ``""`` for 204 / empty responses.
+    """
+    resp = _request_core(
+        client=client,
+        method=method,
+        url=url,
+        params=params,
+        json_body=json_body,
+        files=files,
+        headers=headers,
+        policy=policy,
+        expected_status=expected_status,
+        timeout=timeout,
+        request_id=request_id,
+    )
+    return resp.text
+
+
+def request_raw(
+    *,
+    client: httpx.Client,
+    method: str,
+    url: str,
+    params: Optional[Mapping[str, Any]] = None,
+    json_body: Optional[Any] = None,
+    files: Optional[RequestFiles] = None,
+    headers: Optional[Mapping[str, str]] = None,
+    policy: Optional[RetryPolicy] = None,
+    expected_status: Union[int, Iterable[int]] = (200, 201, 202, 204),
+    timeout: Optional[Union[float, httpx.Timeout]] = None,
+    request_id: Optional[str] = None,
+) -> httpx.Response:
+    """Issue a synchronous request and return the raw ``httpx.Response``.
+
+    Same retry and error handling as :func:`request_json`, but returns
+    the full response object for callers that need access to headers,
+    content-type, or streaming.
+
+    Returns:
+        The validated ``httpx.Response``.
+    """
+    return _request_core(
+        client=client,
+        method=method,
+        url=url,
+        params=params,
+        json_body=json_body,
+        files=files,
+        headers=headers,
+        policy=policy,
+        expected_status=expected_status,
+        timeout=timeout,
+        request_id=request_id,
+    )
 
 
 async def arequest_json(
@@ -681,51 +931,112 @@ async def arequest_json(
             after all retries are exhausted, or if the response body
             cannot be decoded as JSON.
     """
-    if json_body is not None and files is not None:
-        raise ValueError("json_body and files are mutually exclusive; provide one or neither.")
-
-    pol = policy or RetryPolicy()
-    exp: Tuple[int, ...] = (
-        (expected_status,) if isinstance(expected_status, int) else tuple(expected_status)
+    resp = await _arequest_core(
+        aclient=aclient,
+        method=method,
+        url=url,
+        params=params,
+        json_body=json_body,
+        files=files,
+        headers=headers,
+        policy=policy,
+        expected_status=expected_status,
+        timeout=timeout,
+        request_id=request_id,
     )
+    return _parse_json_response(resp)
 
-    # Merge headers + optional request id
-    merged_headers = dict(headers or {})
-    if request_id and "X-Request-ID" not in merged_headers:
-        merged_headers["X-Request-ID"] = request_id
 
-    attempt = 0
-    while True:
-        attempt += 1
-        try:
-            resp = await aclient.request(
-                method.upper(),
-                url,
-                params=params,
-                json=json_body,
-                files=files,
-                headers=merged_headers or None,
-                timeout=timeout,
-            )
-            if resp.status_code not in exp:
-                if _should_retry(policy=pol, attempt=attempt, method=method, exc=None, resp=resp):
-                    await _async_sleep_with_backoff(pol, attempt)
-                    continue
-                raise T3HTTPError(_format_http_error_message(resp), response=resp)
+async def arequest_bytes(
+    *,
+    aclient: httpx.AsyncClient,
+    method: str,
+    url: str,
+    params: Optional[Mapping[str, Any]] = None,
+    json_body: Optional[Any] = None,
+    files: Optional[RequestFiles] = None,
+    headers: Optional[Mapping[str, str]] = None,
+    policy: Optional[RetryPolicy] = None,
+    expected_status: Union[int, Iterable[int]] = (200, 201, 202, 204),
+    timeout: Optional[Union[float, httpx.Timeout]] = None,
+    request_id: Optional[str] = None,
+) -> bytes:
+    """Async equivalent of :func:`request_bytes`."""
+    resp = await _arequest_core(
+        aclient=aclient,
+        method=method,
+        url=url,
+        params=params,
+        json_body=json_body,
+        files=files,
+        headers=headers,
+        policy=policy,
+        expected_status=expected_status,
+        timeout=timeout,
+        request_id=request_id,
+    )
+    return resp.content
 
-            if resp.status_code == 204:
-                return None
-            if not resp.content:
-                return None
-            try:
-                return resp.json()
-            except json.JSONDecodeError as e:
-                raise T3HTTPError("Failed to decode JSON response.", response=resp) from e
-        except httpx.HTTPError as e:
-            if _should_retry(policy=pol, attempt=attempt, method=method, exc=e, resp=None):
-                await _async_sleep_with_backoff(pol, attempt)
-                continue
-            raise T3HTTPError(str(e)) from e
+
+async def arequest_text(
+    *,
+    aclient: httpx.AsyncClient,
+    method: str,
+    url: str,
+    params: Optional[Mapping[str, Any]] = None,
+    json_body: Optional[Any] = None,
+    files: Optional[RequestFiles] = None,
+    headers: Optional[Mapping[str, str]] = None,
+    policy: Optional[RetryPolicy] = None,
+    expected_status: Union[int, Iterable[int]] = (200, 201, 202, 204),
+    timeout: Optional[Union[float, httpx.Timeout]] = None,
+    request_id: Optional[str] = None,
+) -> str:
+    """Async equivalent of :func:`request_text`."""
+    resp = await _arequest_core(
+        aclient=aclient,
+        method=method,
+        url=url,
+        params=params,
+        json_body=json_body,
+        files=files,
+        headers=headers,
+        policy=policy,
+        expected_status=expected_status,
+        timeout=timeout,
+        request_id=request_id,
+    )
+    return resp.text
+
+
+async def arequest_raw(
+    *,
+    aclient: httpx.AsyncClient,
+    method: str,
+    url: str,
+    params: Optional[Mapping[str, Any]] = None,
+    json_body: Optional[Any] = None,
+    files: Optional[RequestFiles] = None,
+    headers: Optional[Mapping[str, str]] = None,
+    policy: Optional[RetryPolicy] = None,
+    expected_status: Union[int, Iterable[int]] = (200, 201, 202, 204),
+    timeout: Optional[Union[float, httpx.Timeout]] = None,
+    request_id: Optional[str] = None,
+) -> httpx.Response:
+    """Async equivalent of :func:`request_raw`."""
+    return await _arequest_core(
+        aclient=aclient,
+        method=method,
+        url=url,
+        params=params,
+        json_body=json_body,
+        files=files,
+        headers=headers,
+        policy=policy,
+        expected_status=expected_status,
+        timeout=timeout,
+        request_id=request_id,
+    )
 
 
 # ----------------------

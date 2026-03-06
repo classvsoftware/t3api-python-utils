@@ -16,7 +16,8 @@ from typing import Any, Dict, List, Literal, Optional, Union, cast
 
 from t3api_utils.api.client import T3APIClient
 from t3api_utils.api.interfaces import MetrcCollectionResponse
-from t3api_utils.http.utils import T3HTTPError, arequest_json
+from t3api_utils.http.utils import ResponseType, T3HTTPError
+from t3api_utils.http import utils as _http_utils
 
 
 def send_api_request(
@@ -29,6 +30,7 @@ def send_api_request(
     files: Optional[Any] = None,
     headers: Optional[Dict[str, str]] = None,
     expected_status: Union[int, tuple[int, ...]] = 200,
+    response_type: ResponseType = "json",
 ) -> Any:
     """Send a request to any T3 API endpoint (sync wrapper).
 
@@ -48,9 +50,14 @@ def send_api_request(
             ``{"file": ("name.png", data, "image/png")}``).
         headers: Additional headers (optional)
         expected_status: Expected HTTP status code(s) (default: 200)
+        response_type: How to interpret the response body. ``"json"``
+            (default) parses as JSON, ``"bytes"`` returns raw bytes,
+            ``"text"`` returns decoded text, ``"response"`` returns the
+            full ``httpx.Response``.
 
     Returns:
-        Raw response data (could be dict, list, or any JSON-serializable type)
+        Response data whose type depends on *response_type*:
+        JSON-parsed ``Any``, ``bytes``, ``str``, or ``httpx.Response``.
 
     Raises:
         ValueError: If both *json_body* and *files* are provided.
@@ -59,13 +66,20 @@ def send_api_request(
     if json_body is not None and files is not None:
         raise ValueError("json_body and files are mutually exclusive; provide one or neither.")
 
-    # For sync wrapper, we need to handle the case where the client might have been
-    # created in a different event loop context. The safest approach is to create
-    # a new client instance for this operation.
+    from t3api_utils.http.utils import (
+        request_bytes,
+        request_json,
+        request_raw,
+        request_text,
+    )
 
-    from t3api_utils.http.utils import request_json
+    _sync_dispatchers = {
+        "json": request_json,
+        "bytes": request_bytes,
+        "text": request_text,
+        "response": request_raw,
+    }
 
-    # Use the sync version of request_json directly with the client's underlying config
     if not client.is_authenticated:
         raise T3HTTPError("Client is not authenticated. Call authenticate_with_credentials() first.")
 
@@ -90,8 +104,10 @@ def send_api_request(
     if client._config.proxies:
         client_kwargs["proxies"] = client._config.proxies
 
+    dispatch_fn = _sync_dispatchers[response_type]
+
     with httpx.Client(**client_kwargs) as sync_client:
-        return request_json(
+        return dispatch_fn(
             client=sync_client,
             method=method,
             url=path,
@@ -253,7 +269,7 @@ async def get_collection_async(
         params["filter"] = filter
 
     try:
-        response_data = await arequest_json(
+        response_data = await _http_utils.arequest_json(
             aclient=client._client,
             method="GET",
             url=path,
@@ -278,6 +294,7 @@ async def send_api_request_async(
     files: Optional[Any] = None,
     headers: Optional[Dict[str, str]] = None,
     expected_status: Union[int, tuple[int, ...]] = 200,
+    response_type: ResponseType = "json",
 ) -> Any:
     """Send a request to any T3 API endpoint using an async client.
 
@@ -296,9 +313,14 @@ async def send_api_request_async(
             ``files`` parameter.
         headers: Additional headers (optional)
         expected_status: Expected HTTP status code(s) (default: 200)
+        response_type: How to interpret the response body. ``"json"``
+            (default) parses as JSON, ``"bytes"`` returns raw bytes,
+            ``"text"`` returns decoded text, ``"response"`` returns the
+            full ``httpx.Response``.
 
     Returns:
-        Raw response data (could be dict, list, or any JSON-serializable type)
+        Response data whose type depends on *response_type*:
+        JSON-parsed ``Any``, ``bytes``, ``str``, or ``httpx.Response``.
 
     Raises:
         ValueError: If both *json_body* and *files* are provided.
@@ -310,8 +332,16 @@ async def send_api_request_async(
     if not client.is_authenticated:
         raise T3HTTPError("Client is not authenticated. Call authenticate_with_credentials() first.")
 
+    _async_dispatchers = {
+        "json": _http_utils.arequest_json,
+        "bytes": _http_utils.arequest_bytes,
+        "text": _http_utils.arequest_text,
+        "response": _http_utils.arequest_raw,
+    }
+    dispatch_fn = _async_dispatchers[response_type]
+
     try:
-        response_data = await arequest_json(
+        return await dispatch_fn(
             aclient=client._client,
             method=method,
             url=path,
@@ -322,8 +352,6 @@ async def send_api_request_async(
             policy=client._retry_policy,
             expected_status=expected_status,
         )
-
-        return response_data
 
     except T3HTTPError as e:
         raise T3HTTPError(f"Failed to get data from {path}: {e}", response=e.response) from e

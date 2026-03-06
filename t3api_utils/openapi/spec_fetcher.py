@@ -186,12 +186,17 @@ def _is_collection_endpoint(operation: Dict[str, Any], path: str) -> bool:
     # Check if the operation has parameters
     parameters = operation.get("parameters", [])
 
-    # Look for a 'page' parameter
+    # Look for a 'page' parameter (inline or $ref to CollectionPage)
     has_page_param = False
     for param in parameters:
-        if isinstance(param, dict) and param.get("name") == "page":
-            has_page_param = True
-            break
+        if isinstance(param, dict):
+            if param.get("name") == "page":
+                has_page_param = True
+                break
+            ref = param.get("$ref", "")
+            if ref.endswith("/CollectionPage"):
+                has_page_param = True
+                break
 
     if not has_page_param:
         return False

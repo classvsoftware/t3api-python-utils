@@ -11,7 +11,11 @@ import httpx
 
 from t3api_utils.http.utils import (
     HTTPConfig, RetryPolicy, LoggingHooks, T3HTTPError,
-    build_client, build_async_client, request_json, arequest_json,
+    build_client, build_async_client,
+    request_json, arequest_json,
+    request_bytes, arequest_bytes,
+    request_text, arequest_text,
+    request_raw, arequest_raw,
     set_bearer_token, clear_bearer_token,
     _create_ssl_context, _merge_headers, _should_retry, _sleep_with_backoff,
     _async_sleep_with_backoff, _format_http_error_message
@@ -887,3 +891,207 @@ class TestRequestHelpers:
             )
 
         mock_client.request.assert_not_called()
+
+
+class TestNonJsonRequestHelpers:
+    """Test request_bytes, request_text, and request_raw helpers."""
+
+    # ---- request_bytes (sync) ----
+
+    def test_request_bytes_success(self):
+        """Test request_bytes returns raw bytes."""
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.content = b"\x89PNG\r\n\x1a\n"
+        mock_client.request.return_value = mock_response
+
+        result = request_bytes(client=mock_client, method="GET", url="/file.png")
+
+        assert result == b"\x89PNG\r\n\x1a\n"
+        assert isinstance(result, bytes)
+
+    def test_request_bytes_204_returns_empty(self):
+        """Test request_bytes returns b'' for 204 No Content."""
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 204
+        mock_response.content = b""
+        mock_client.request.return_value = mock_response
+
+        result = request_bytes(client=mock_client, method="DELETE", url="/resource")
+
+        assert result == b""
+
+    @patch('t3api_utils.http.utils._sleep_with_backoff')
+    def test_request_bytes_retry_on_500(self, mock_sleep):
+        """Test request_bytes retries on transient failure."""
+        mock_client = MagicMock()
+
+        mock_error = MagicMock()
+        mock_error.status_code = 500
+        mock_error.json.return_value = {"error": "fail"}
+
+        mock_success = MagicMock()
+        mock_success.status_code = 200
+        mock_success.content = b"pdf-data"
+
+        mock_client.request.side_effect = [mock_error, mock_success]
+
+        result = request_bytes(
+            client=mock_client, method="GET", url="/report.pdf",
+            policy=RetryPolicy(max_attempts=3, backoff_factor=0.1),
+        )
+
+        assert result == b"pdf-data"
+        assert mock_client.request.call_count == 2
+
+    def test_request_bytes_error_propagation(self):
+        """Test request_bytes raises T3HTTPError on failure."""
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 404
+        mock_response.json.return_value = {"message": "Not found"}
+        mock_client.request.return_value = mock_response
+
+        with pytest.raises(T3HTTPError, match="404"):
+            request_bytes(
+                client=mock_client, method="GET", url="/missing",
+                expected_status=200, policy=RetryPolicy(max_attempts=1),
+            )
+
+    # ---- request_text (sync) ----
+
+    def test_request_text_success(self):
+        """Test request_text returns decoded text."""
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.text = "col1,col2\na,b\n"
+        mock_client.request.return_value = mock_response
+
+        result = request_text(client=mock_client, method="GET", url="/export.csv")
+
+        assert result == "col1,col2\na,b\n"
+        assert isinstance(result, str)
+
+    def test_request_text_204_returns_empty(self):
+        """Test request_text returns '' for 204 No Content."""
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 204
+        mock_response.text = ""
+        mock_client.request.return_value = mock_response
+
+        result = request_text(client=mock_client, method="DELETE", url="/resource")
+
+        assert result == ""
+
+    # ---- request_raw (sync) ----
+
+    def test_request_raw_returns_response(self):
+        """Test request_raw returns the httpx.Response object."""
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.headers = {"content-type": "application/pdf"}
+        mock_client.request.return_value = mock_response
+
+        result = request_raw(client=mock_client, method="GET", url="/report")
+
+        assert result is mock_response
+        assert result.headers["content-type"] == "application/pdf"
+
+    # ---- arequest_bytes (async) ----
+
+    @pytest.mark.asyncio
+    async def test_arequest_bytes_success(self):
+        """Test arequest_bytes returns raw bytes."""
+        mock_client = AsyncMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.content = b"\x89PNG"
+        mock_client.request.return_value = mock_response
+
+        result = await arequest_bytes(aclient=mock_client, method="GET", url="/img.png")
+
+        assert result == b"\x89PNG"
+        assert isinstance(result, bytes)
+
+    @pytest.mark.asyncio
+    @patch('t3api_utils.http.utils._async_sleep_with_backoff', new_callable=AsyncMock)
+    async def test_arequest_bytes_retry(self, mock_sleep):
+        """Test arequest_bytes retries on transient failure."""
+        mock_client = AsyncMock()
+
+        mock_error = MagicMock()
+        mock_error.status_code = 503
+        mock_error.json.return_value = {"error": "unavailable"}
+
+        mock_success = MagicMock()
+        mock_success.status_code = 200
+        mock_success.content = b"data"
+
+        mock_client.request.side_effect = [mock_error, mock_success]
+
+        result = await arequest_bytes(
+            aclient=mock_client, method="GET", url="/file",
+            policy=RetryPolicy(max_attempts=3, backoff_factor=0.1),
+        )
+
+        assert result == b"data"
+        assert mock_client.request.call_count == 2
+
+    # ---- arequest_text (async) ----
+
+    @pytest.mark.asyncio
+    async def test_arequest_text_success(self):
+        """Test arequest_text returns decoded text."""
+        mock_client = AsyncMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.text = "<html>Hello</html>"
+        mock_client.request.return_value = mock_response
+
+        result = await arequest_text(aclient=mock_client, method="GET", url="/page.html")
+
+        assert result == "<html>Hello</html>"
+        assert isinstance(result, str)
+
+    # ---- arequest_raw (async) ----
+
+    @pytest.mark.asyncio
+    async def test_arequest_raw_returns_response(self):
+        """Test arequest_raw returns the httpx.Response object."""
+        mock_client = AsyncMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.headers = {"content-type": "text/csv"}
+        mock_client.request.return_value = mock_response
+
+        result = await arequest_raw(aclient=mock_client, method="GET", url="/data.csv")
+
+        assert result is mock_response
+
+    # ---- mutual exclusivity carries through ----
+
+    def test_request_bytes_files_and_json_body_mutually_exclusive(self):
+        """Test request_bytes rejects both json_body and files."""
+        mock_client = MagicMock()
+
+        with pytest.raises(ValueError, match="mutually exclusive"):
+            request_bytes(
+                client=mock_client, method="POST", url="/test",
+                json_body={"a": 1}, files={"f": ("x.bin", b"x", "application/octet-stream")},
+            )
+
+    @pytest.mark.asyncio
+    async def test_arequest_text_files_and_json_body_mutually_exclusive(self):
+        """Test arequest_text rejects both json_body and files."""
+        mock_client = AsyncMock()
+
+        with pytest.raises(ValueError, match="mutually exclusive"):
+            await arequest_text(
+                aclient=mock_client, method="POST", url="/test",
+                json_body={"a": 1}, files={"f": ("x.txt", b"x", "text/plain")},
+            )

@@ -202,12 +202,70 @@ class TestSyncOperations:
 
         assert "Failed to get collection" in str(exc_info.value)
 
+    @patch('t3api_utils.http.utils.request_bytes')
+    def test_send_api_request_response_type_bytes(self, mock_request):
+        """Test send_api_request with response_type='bytes'."""
+        mock_request.return_value = b"\x89PNG\r\n\x1a\n"
+
+        client = T3APIClient()
+        client.set_access_token("test_token")
+
+        result = send_api_request(client, "/v2/reports/manifest", response_type="bytes")
+
+        assert result == b"\x89PNG\r\n\x1a\n"
+        assert isinstance(result, bytes)
+        mock_request.assert_called_once()
+
+    @patch('t3api_utils.http.utils.request_text')
+    def test_send_api_request_response_type_text(self, mock_request):
+        """Test send_api_request with response_type='text'."""
+        mock_request.return_value = "col1,col2\na,b\n"
+
+        client = T3APIClient()
+        client.set_access_token("test_token")
+
+        result = send_api_request(client, "/v2/exports/packages.csv", response_type="text")
+
+        assert result == "col1,col2\na,b\n"
+        assert isinstance(result, str)
+        mock_request.assert_called_once()
+
+    @patch('t3api_utils.http.utils.request_raw')
+    def test_send_api_request_response_type_response(self, mock_request):
+        """Test send_api_request with response_type='response'."""
+        from unittest.mock import MagicMock
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.headers = {"content-type": "application/pdf"}
+        mock_request.return_value = mock_response
+
+        client = T3APIClient()
+        client.set_access_token("test_token")
+
+        result = send_api_request(client, "/v2/reports/summary", response_type="response")
+
+        assert result is mock_response
+        assert result.headers["content-type"] == "application/pdf"
+
+    @patch('t3api_utils.http.utils.request_json')
+    def test_send_api_request_default_response_type(self, mock_request):
+        """Test send_api_request defaults to response_type='json'."""
+        mock_request.return_value = {"key": "value"}
+
+        client = T3APIClient()
+        client.set_access_token("test_token")
+
+        result = send_api_request(client, "/v2/licenses")
+
+        assert result == {"key": "value"}
+        mock_request.assert_called_once()
+
 
 class TestAsyncOperations:
     """Test asynchronous API operations."""
 
     @pytest.mark.asyncio
-    @patch('t3api_utils.api.operations.arequest_json')
+    @patch('t3api_utils.http.utils.arequest_json')
     async def test_send_api_request_async_success(self, mock_request):
         """Test successful async send_api_request."""
         mock_response = {
@@ -240,7 +298,7 @@ class TestAsyncOperations:
         assert len(result["data"]) == 1
 
     @pytest.mark.asyncio
-    @patch('t3api_utils.api.operations.arequest_json')
+    @patch('t3api_utils.http.utils.arequest_json')
     async def test_send_api_request_async_with_files(self, mock_request):
         """Test async send_api_request with multipart file upload."""
         mock_request.return_value = {"uploaded": True}
@@ -298,7 +356,7 @@ class TestAsyncOperations:
         assert "not authenticated" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    @patch('t3api_utils.api.operations.arequest_json')
+    @patch('t3api_utils.http.utils.arequest_json')
     async def test_get_packages_success(self, mock_request):
         """Test successful async packages retrieval."""
         mock_response = {
@@ -340,3 +398,64 @@ class TestAsyncOperations:
 
         assert "not authenticated" in str(exc_info.value)
         assert "not authenticated" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    @patch('t3api_utils.http.utils.arequest_bytes')
+    async def test_send_api_request_async_response_type_bytes(self, mock_request):
+        """Test async send_api_request with response_type='bytes'."""
+        mock_request.return_value = b"%PDF-1.4"
+
+        client = T3APIClient()
+        client.set_access_token("test_token")
+
+        result = await send_api_request_async(client, "/v2/reports/manifest", response_type="bytes")
+
+        assert result == b"%PDF-1.4"
+        assert isinstance(result, bytes)
+        mock_request.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch('t3api_utils.http.utils.arequest_text')
+    async def test_send_api_request_async_response_type_text(self, mock_request):
+        """Test async send_api_request with response_type='text'."""
+        mock_request.return_value = "<html><body>Report</body></html>"
+
+        client = T3APIClient()
+        client.set_access_token("test_token")
+
+        result = await send_api_request_async(client, "/v2/reports/summary", response_type="text")
+
+        assert result == "<html><body>Report</body></html>"
+        assert isinstance(result, str)
+        mock_request.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch('t3api_utils.http.utils.arequest_raw')
+    async def test_send_api_request_async_response_type_response(self, mock_request):
+        """Test async send_api_request with response_type='response'."""
+        from unittest.mock import MagicMock
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.headers = {"content-type": "text/csv"}
+        mock_request.return_value = mock_response
+
+        client = T3APIClient()
+        client.set_access_token("test_token")
+
+        result = await send_api_request_async(client, "/v2/exports/data.csv", response_type="response")
+
+        assert result is mock_response
+
+    @pytest.mark.asyncio
+    @patch('t3api_utils.http.utils.arequest_json')
+    async def test_send_api_request_async_default_response_type(self, mock_request):
+        """Test async send_api_request defaults to response_type='json'."""
+        mock_request.return_value = {"licenses": []}
+
+        client = T3APIClient()
+        client.set_access_token("test_token")
+
+        result = await send_api_request_async(client, "/v2/licenses")
+
+        assert result == {"licenses": []}
+        mock_request.assert_called_once()
