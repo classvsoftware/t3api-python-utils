@@ -44,6 +44,7 @@ It drops the HTTP wrappers, the sync/async duplication and DuckDB. What the libr
 | Data | Plain dicts, exactly as the API returns them. |
 | Writes | Dry run unless `submit=True`, matching the server. Routes with no dry run reject `submit`. |
 | Reports and tag lists | The server endpoints become first-class features. A small local CSV filter and CSV/JSON export stay. |
+| Report URLs | `client.report_url()` builds a report URL with the secret key in `?secretKey=`, for spreadsheets that pull a URL, and warns that the URL is a credential. Every other request sends the key in the header. |
 | Interactive | A `t3api` CLI plus the Textual inspector (optional `[tui]` extra). The numbered menu is removed. |
 | DuckDB and pyarrow | Removed entirely, because of Windows compatibility problems. |
 | Package | Name stays `t3api-utils` (import `t3api_utils`). Python 3.12 or later. GPL-3.0-only. |
@@ -217,7 +218,7 @@ Later, not in 2.0.0: a `t3api stubs` command that writes TypedDicts for response
 | Secret key | `X-T3-API-Key` header | Until deleted or disabled, or until the Metrc credentials behind it change | Default |
 | JWT | `Authorization: Bearer` header | 24 hours | Fallback |
 
-**Header only.** Secret keys go only in the header. The `?secretKey=` query form isn't supported, because it leaks into URLs and logs.
+**Header only, except report URLs.** Requests send secret keys only in the header, because the `?secretKey=` query form leaks into URLs and logs. The one exception is `client.report_url()` (section 10), which deliberately puts the key in a URL for spreadsheets.
 
 **How credentials are attached.** Each credential is an `httpx2.Auth` subclass attached to the client.
 
@@ -353,7 +354,7 @@ T3Error
 - **HTTP debug logging:** `T3_LOG_HTTP=1`, or `connect(log_http=True)`, logs each request and response at DEBUG, including headers and bodies. `T3_LOG_FILE` writes it to a file.
 - **What's hidden in those logs:**
   - `Authorization`, `X-T3-API-Key` and cookie headers.
-  - The key in `/v2/auth/secretkey/{key}` paths.
+  - The key in `/v2/auth/secretkey/{key}` paths, and any `secretKey` query parameter.
   - `password`, `otp` and `otpSeed` fields in JSON bodies.
 
   1.x logged credential-login bodies, password included, whenever HTTP logging was on.
@@ -420,6 +421,10 @@ client.report("ITEMS_REPORT", licenses=["LIC-1", "LIC-2"], format="xlsx",
 - **`licenses`** maps to the multi-valued `licenseNumber`. The spec allows up to 20 per call; more raises `ValueError`.
 - **`to=`** streams the download to a file and returns its path. Without it, `report` returns `bytes`, or parsed JSON for `format="json"`.
 - **Email delivery:** `delivery="email"` with `email=` asks the server to email the report instead.
+- **Report URLs:** `client.report_url(endpoint, *, licenses, format, columns, filter, sort, ...)` returns a URL with the profile's secret key in `?secretKey=`, for Excel or Google Sheets to pull directly. Every report endpoint accepts this parameter.
+    - It sends no request.
+    - It needs a secret key; a JWT in a URL would stop working within 24 hours.
+    - Every call warns that anyone with the URL can use the key. Deleting the key (`t3api keys revoke`) is the only way to cut off a leaked URL; rotating keeps the same key value.
 - **Saved reports and schedules** (`/v2/saved-reports`) are reachable through `client.request`. There's no dedicated helper in 2.0.0.
 
 ### Tag lists
@@ -477,7 +482,7 @@ The `t3api` command (Typer):
 | `t3api keys list` / `create` / `rotate` / `revoke` | Secret key management |
 | `t3api endpoints [QUERY] [--kind K]` | Search the spec |
 | `t3api pull ENDPOINT [-l LIC]... [--filter F]... [--sort S] [--mask M] [-o FILE] [--inspect]` | Load a collection to CSV or JSON (chosen by file extension), or open it in the inspector |
-| `t3api report ENDPOINT [-l LIC]... [--format F] [-o FILE]` | Download a server report |
+| `t3api report ENDPOINT [-l LIC]... [--format F] [-o FILE] [--url]` | Download a server report, or print its secret-key URL with `--url` |
 | `t3api tag-lists list` / `create FILE --column C` / `resolve ID [-o FILE]` | Common tag-list tasks |
 | `t3api inspect FILE` | Open a JSON or CSV file in the inspector |
 | `t3api spec info` / `spec refresh` | Show the spec copy in use, or force a refresh |
@@ -526,7 +531,7 @@ GitHub Actions runs `uv sync`, then mypy and pytest. The matrix is Ubuntu, macOS
 | `get_authenticated_client_or_error()` and about 22 other auth functions | `t3.connect()` |
 | `*_with_validation` variants | `connect(validate=True)`, the default |
 | API-key auth, `API_KEY`, `API_STATE_CODE` | Removed |
-| `?secretKey=` query transport | Removed; header only |
+| `?secretKey=` query transport | Header only for requests; `client.report_url()` for spreadsheet URLs |
 | `.t3.env`, `ConfigManager`, 37 `EnvKeys` | Profiles and keyring, plus 8 env vars (section 6) |
 | `T3APIClient` (async) and its sync wrappers | `T3Client` (sync) |
 | `send_api_request[_async]`, 8 `request_*` helpers | `client.request()`, `client.http` |
