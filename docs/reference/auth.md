@@ -1,9 +1,20 @@
-# Authentication
+# connect() and auth
 
-## Interfaces
+How `connect()` picks a credential is explained in the
+[authentication guide](../guide/authentication.md).
 
-::: t3api_utils.auth.interfaces
+::: t3api_utils.auth.resolve.connect
 
-## Utilities
+::: t3api_utils.auth.secret_keys.SecretKeys
 
-::: t3api_utils.auth.utils
+::: t3api_utils.auth.store.Profile
+    options:
+      members: false
+
+::: t3api_utils.auth.credentials.SecretKeyAuth
+    options:
+      members: false
+
+::: t3api_utils.auth.credentials.BearerAuth
+    options:
+      members: [expires_at]

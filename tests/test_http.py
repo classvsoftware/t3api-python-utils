@@ -1,1097 +1,788 @@
-"""Tests for HTTP utilities module."""
+"""_http.py: retry transport, redaction, HTTP logging, proxies and build_client()."""
 
-import asyncio
-import json
+from __future__ import annotations
+
+import email.utils
 import logging
-import ssl
-from typing import Dict, Optional
-from unittest.mock import AsyncMock, MagicMock, patch
+import os
+import sys
+from collections.abc import Iterator
+from datetime import UTC, datetime, timedelta
+from importlib import metadata
+from pathlib import Path
+from typing import Any
+
+import httpx2
 import pytest
-import httpx
 
-from t3api_utils.http.utils import (
-    HTTPConfig, RetryPolicy, LoggingHooks, T3HTTPError,
-    build_client, build_async_client,
-    request_json, arequest_json,
-    request_bytes, arequest_bytes,
-    request_text, arequest_text,
-    request_raw, arequest_raw,
-    set_bearer_token, clear_bearer_token,
-    _create_ssl_context, _merge_headers, _should_retry, _sleep_with_backoff,
-    _async_sleep_with_backoff, _format_http_error_message
+from t3api_utils import _http
+from t3api_utils._ratelimit import TokenBucket
+from t3api_utils.auth.credentials import SecretKeyAuth
+
+BASE = "https://api.test"
+
+Outcome = int | httpx2.Response | type[httpx2.TransportError]
+
+
+class Script:
+    """A MockTransport handler that plays back one outcome per request.
+
+    The last outcome repeats once the others are used up.
+    """
+
+    def __init__(self, *outcomes: Outcome) -> None:
+        self.outcomes = list(outcomes)
+        self.requests: list[httpx2.Request] = []
+
+    def __call__(self, request: httpx2.Request) -> httpx2.Response:
+        self.requests.append(request)
+        outcome = self.outcomes.pop(0) if len(self.outcomes) > 1 else self.outcomes[0]
+        if isinstance(outcome, httpx2.Response):
+            return outcome
+        if isinstance(outcome, int):
+            return httpx2.Response(outcome, json={"status": outcome})
+        raise outcome("simulated failure", request=request)
+
+
+class CountingBucket(TokenBucket):
+    def __init__(self) -> None:
+        super().__init__(None)
+        self.acquired = 0
+
+    def acquire(self) -> float:
+        self.acquired += 1
+        return 0.0
+
+
+class TrackingStream(httpx2.SyncByteStream):
+    def __init__(self) -> None:
+        self.closed = False
+
+    def __iter__(self) -> Iterator[bytes]:
+        yield b"{}"
+
+    def close(self) -> None:
+        self.closed = True
+
+
+def make_client(script: Script, **kwargs: Any) -> httpx2.Client:
+    return _http.build_client(base_url=BASE, transport=httpx2.MockTransport(script), **kwargs)
+
+
+def retry_transport(script: Script, **kwargs: Any) -> _http.RetryTransport:
+    return _http.RetryTransport(httpx2.MockTransport(script), **kwargs)
+
+
+@pytest.fixture(autouse=True)
+def reset_http_logging(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Start every test with HTTP logging off, and undo whatever a test turned on."""
+    log = _http.http_logger
+    saved_handlers = list(log.handlers)
+    saved_level = log.level
+    log.handlers[:] = []
+    log.setLevel(logging.NOTSET)
+    monkeypatch.setattr(_http, "_handler_installed", False)
+    yield
+    for handler in log.handlers:
+        handler.close()
+    log.handlers[:] = saved_handlers
+    log.setLevel(saved_level)
+
+
+@pytest.fixture
+def proxy_env(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
+    """No proxy variables in the environment (the autouse fixture only clears T3_*)."""
+    for name in list(os.environ):
+        if name.lower().endswith("_proxy") or name.upper() == "REQUEST_METHOD":
+            monkeypatch.delenv(name, raising=False)
+    return monkeypatch
+
+
+# --------------------------------------------------------------------------- GET retries
+
+
+@pytest.mark.parametrize("status", [429, 502, 503, 504])
+def test_get_retries_retryable_status(status: int, sleeps: list[float]) -> None:
+    script = Script(status, 200)
+    with make_client(script) as client:
+        response = client.get("/v2/items")
+    assert response.status_code == 200
+    assert len(script.requests) == 2
+    assert len(sleeps) == 1
+
+
+@pytest.mark.parametrize("method", ["HEAD", "OPTIONS"])
+def test_head_and_options_retry_like_get(method: str) -> None:
+    script = Script(503, 200)
+    with make_client(script) as client:
+        assert client.request(method, "/v2/items").status_code == 200
+    assert len(script.requests) == 2
+
+
+def test_get_gives_up_after_three_attempts(sleeps: list[float]) -> None:
+    script = Script(503)
+    with make_client(script) as client:
+        response = client.get("/v2/items")
+    assert response.status_code == 503
+    assert len(script.requests) == 3
+    assert len(sleeps) == 2
+
+
+@pytest.mark.parametrize("status", [400, 401, 403, 404, 422, 500, 501])
+def test_get_not_retried_on_other_errors(status: int, sleeps: list[float]) -> None:
+    script = Script(status, 200)
+    with make_client(script) as client:
+        assert client.get("/v2/items").status_code == status
+    assert len(script.requests) == 1
+    assert sleeps == []
+
+
+@pytest.mark.parametrize(
+    "error", [httpx2.ConnectError, httpx2.ConnectTimeout, httpx2.ReadTimeout, httpx2.RemoteProtocolError]
 )
+def test_get_retries_any_connection_error(error: type[httpx2.TransportError]) -> None:
+    script = Script(error, 200)
+    with make_client(script) as client:
+        assert client.get("/v2/items").status_code == 200
+    assert len(script.requests) == 2
 
 
-class TestHTTPConfig:
-    """Test HTTPConfig dataclass."""
+def test_get_connection_error_raised_after_three_attempts(sleeps: list[float]) -> None:
+    script = Script(httpx2.ReadTimeout)
+    with make_client(script) as client, pytest.raises(httpx2.ReadTimeout):
+        client.get("/v2/items")
+    assert len(script.requests) == 3
+    assert len(sleeps) == 2
 
-    def test_default_config(self):
-        """Test default HTTPConfig values."""
-        config = HTTPConfig()
-        assert config.timeout == 30.0
-        assert config.verify_ssl is not None
-        assert "User-Agent" in config.base_headers
-        assert config.proxies is None
 
-    @patch('t3api_utils.http.utils.config_manager')
-    def test_custom_host(self, mock_config_manager):
-        """Test HTTPConfig with custom host."""
-        mock_config_manager.get_api_host.return_value = "https://custom-api.example.com"
-        config = HTTPConfig()
-        assert config.host == "https://custom-api.example.com"
+# --------------------------------------------------------------------------- write retries
 
-    def test_custom_config_values(self):
-        """Test HTTPConfig with custom values."""
-        custom_headers = {"Custom-Header": "value"}
-        config = HTTPConfig(
-            host="https://test.example.com",
-            timeout=60.0,
-            verify_ssl=False,
-            base_headers=custom_headers,
-            proxies={"https": "proxy.example.com:8080"}
+
+@pytest.mark.parametrize("method", ["POST", "PUT", "PATCH", "DELETE"])
+@pytest.mark.parametrize("status", [400, 409, 422, 500, 502, 503, 504])
+def test_write_answered_with_error_is_sent_exactly_once(
+    method: str, status: int, sleeps: list[float]
+) -> None:
+    script = Script(status, 200)
+    with make_client(script) as client:
+        response = client.request(method, "/v2/items/discontinue", json={"id": 1})
+    assert response.status_code == status
+    assert len(script.requests) == 1
+    assert sleeps == []
+
+
+@pytest.mark.parametrize("method", ["POST", "PUT", "PATCH", "DELETE"])
+def test_write_retried_on_429(method: str) -> None:
+    script = Script(429, 200)
+    with make_client(script) as client:
+        response = client.request(method, "/v2/items/discontinue", json={"id": 1})
+    assert response.status_code == 200
+    assert len(script.requests) == 2
+    assert [r.content for r in script.requests] == [b'{"id":1}', b'{"id":1}']
+
+
+def test_write_429_returned_after_three_attempts() -> None:
+    script = Script(429)
+    with make_client(script) as client:
+        assert client.post("/v2/x", json={}).status_code == 429
+    assert len(script.requests) == 3
+
+
+@pytest.mark.parametrize("error", [httpx2.ConnectError, httpx2.ConnectTimeout, httpx2.PoolTimeout])
+def test_write_retried_on_pre_send_errors(error: type[httpx2.TransportError]) -> None:
+    script = Script(error, 201)
+    with make_client(script) as client:
+        assert client.post("/v2/x", json={"a": 1}).status_code == 201
+    assert len(script.requests) == 2
+
+
+@pytest.mark.parametrize(
+    "error",
+    [httpx2.ReadTimeout, httpx2.RemoteProtocolError, httpx2.WriteTimeout, httpx2.ReadError],
+)
+def test_write_not_retried_after_send(error: type[httpx2.TransportError], sleeps: list[float]) -> None:
+    script = Script(error, 200)
+    with make_client(script) as client, pytest.raises(error):
+        client.post("/v2/x", json={"a": 1})
+    assert len(script.requests) == 1
+    assert sleeps == []
+
+
+def test_write_pre_send_error_raised_after_three_attempts() -> None:
+    script = Script(httpx2.ConnectError)
+    with make_client(script) as client, pytest.raises(httpx2.ConnectError):
+        client.post("/v2/x", json={})
+    assert len(script.requests) == 3
+
+
+# --------------------------------------------------------------------------- backoff
+
+
+def test_backoff_doubles_with_jitter_centered() -> None:
+    script = Script(503, 503, 200)
+    recorded: list[float] = []
+    transport = retry_transport(script, sleep=recorded.append, jitter=lambda: 0.5)
+    response = transport.handle_request(httpx2.Request("GET", BASE + "/v2/items"))
+    assert response.status_code == 200
+    assert recorded == [0.5, 1.0]
+
+
+@pytest.mark.parametrize(("jitter", "expected"), [(0.0, 0.375), (1.0, 0.625)])
+def test_jitter_bounds(jitter: float, expected: float) -> None:
+    script = Script(503, 200)
+    recorded: list[float] = []
+    transport = retry_transport(script, sleep=recorded.append, jitter=lambda: jitter)
+    transport.handle_request(httpx2.Request("GET", BASE + "/v2/items"))
+    assert recorded == [pytest.approx(expected)]
+
+
+def test_default_delays_are_within_jitter_range(sleeps: list[float]) -> None:
+    script = Script(503, 503, 200)
+    with make_client(script) as client:
+        client.get("/v2/items")
+    assert 0.375 <= sleeps[0] <= 0.625
+    assert 0.75 <= sleeps[1] <= 1.25
+
+
+def test_build_client_sleep_is_used_instead_of_time_sleep(sleeps: list[float]) -> None:
+    recorded: list[float] = []
+    script = Script(503, 200)
+    with make_client(script, sleep=recorded.append) as client:
+        client.get("/v2/items")
+    assert len(recorded) == 1
+    assert sleeps == []
+
+
+def test_max_attempts_is_at_least_one() -> None:
+    script = Script(503)
+    transport = retry_transport(script, max_attempts=0)
+    assert transport.max_attempts == 1
+    assert transport.handle_request(httpx2.Request("GET", BASE + "/x")).status_code == 503
+    assert len(script.requests) == 1
+
+
+def test_retried_response_is_closed() -> None:
+    stream = TrackingStream()
+    first = httpx2.Response(503, stream=stream)
+    script = Script(first, 200)
+    retry_transport(script, sleep=lambda _: None).handle_request(httpx2.Request("GET", BASE + "/x"))
+    assert stream.closed
+
+
+def test_close_closes_wrapped_transport() -> None:
+    class Closable(httpx2.MockTransport):
+        closed = False
+
+        def close(self) -> None:
+            self.closed = True
+
+    inner = Closable(Script(200))
+    client = _http.build_client(base_url=BASE, transport=inner)
+    client.close()
+    assert inner.closed
+
+
+# --------------------------------------------------------------------------- Retry-After
+
+
+def test_retry_after_seconds_honored(sleeps: list[float]) -> None:
+    script = Script(httpx2.Response(429, headers={"Retry-After": "2"}), 200)
+    with make_client(script) as client:
+        client.post("/v2/x", json={})
+    assert sleeps == [2.0]
+
+
+def test_retry_after_http_date_honored(sleeps: list[float]) -> None:
+    when = email.utils.format_datetime(datetime.now(UTC) + timedelta(seconds=30), usegmt=True)
+    script = Script(httpx2.Response(503, headers={"Retry-After": when}), 200)
+    with make_client(script) as client:
+        client.get("/v2/x")
+    assert len(sleeps) == 1
+    assert 28.0 < sleeps[0] <= 30.0
+
+
+def test_retry_after_is_capped(sleeps: list[float]) -> None:
+    script = Script(httpx2.Response(429, headers={"Retry-After": "3600"}), 200)
+    with make_client(script) as client:
+        client.get("/v2/x")
+    assert sleeps == [_http.MAX_RETRY_AFTER]
+
+
+def test_unparseable_retry_after_falls_back_to_backoff(sleeps: list[float]) -> None:
+    script = Script(httpx2.Response(429, headers={"Retry-After": "soon"}), 200)
+    with make_client(script) as client:
+        client.get("/v2/x")
+    assert 0.375 <= sleeps[0] <= 0.625
+
+
+def test_retry_after_parsing() -> None:
+    def parse(value: str | None, now: float = 0.0) -> float | None:
+        headers = {} if value is None else {"Retry-After": value}
+        return _http._retry_after(httpx2.Response(429, headers=headers), now=lambda: now)
+
+    assert parse(None) is None
+    assert parse("") is None
+    assert parse("5") == 5.0
+    assert parse("0.5") == 0.5
+    assert parse("-3") == 0.0
+    assert parse("120") == 60.0
+    assert parse("not a date") is None
+    date = "Wed, 21 Oct 2026 07:28:00 GMT"
+    stamp = email.utils.parsedate_to_datetime(date).timestamp()
+    assert parse(date, now=stamp - 10) == pytest.approx(10.0)
+    assert parse(date, now=stamp + 10) == 0.0
+    assert parse(date, now=stamp - 1000) == 60.0
+
+
+# --------------------------------------------------------------------------- rate limiting
+
+
+def test_limiter_acquired_once_per_attempt() -> None:
+    bucket = CountingBucket()
+    script = Script(503, httpx2.ConnectError, 200)
+    transport = retry_transport(script, limiter=bucket, sleep=lambda _: None)
+    transport.handle_request(httpx2.Request("GET", BASE + "/x"))
+    assert bucket.acquired == 3
+    assert len(script.requests) == 3
+
+
+def test_build_client_rate_limit_creates_shared_limiter() -> None:
+    with make_client(Script(200), rate_limit=10) as client:
+        transport = client._transport
+        assert isinstance(transport, _http.RetryTransport)
+        assert transport.limiter is not None
+        assert transport.limiter.rate == 10
+
+
+@pytest.mark.parametrize("rate", [None, 0])
+def test_build_client_without_rate_limit(rate: float | None) -> None:
+    with make_client(Script(200), rate_limit=rate) as client:
+        transport = client._transport
+        assert isinstance(transport, _http.RetryTransport)
+        assert transport.limiter is None
+
+
+def test_build_client_rate_limit_spaces_requests(sleeps: list[float]) -> None:
+    with make_client(Script(200), rate_limit=10) as client:
+        for _ in range(3):
+            client.get("/x")
+    # One token: the 2nd and 3rd requests each wait for the next 100 ms slot.
+    # (time.sleep is a recorder, so the clock barely moves between requests;
+    # the bounds leave room for a slow machine.)
+    assert len(sleeps) == 2
+    assert 0.05 < sleeps[0] <= 0.1
+    assert 0.15 < sleeps[1] <= 0.2
+
+
+# --------------------------------------------------------------------------- retry warnings
+
+
+def test_retry_warning_is_logged_with_redacted_url(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.WARNING, logger="t3api_utils")
+    script = Script(503, httpx2.ConnectError, 200)
+    with make_client(script) as client:
+        client.get("/v2/items/report?licenseNumber=L&secretKey=sk-query-secret")
+    messages = [r.getMessage() for r in caplog.records if r.name == "t3api_utils"]
+    assert len(messages) == 2
+    assert "returned 503; retrying" in messages[0]
+    assert "attempt 2 of 3" in messages[0]
+    assert "ConnectError" in messages[1] and "attempt 3 of 3" in messages[1]
+    assert "sk-query-secret" not in caplog.text
+    assert "secretKey=***" in caplog.text
+
+
+# --------------------------------------------------------------------------- redaction helpers
+
+
+def test_redact_url() -> None:
+    assert _http.redact_url("https://h/v2/auth/secretkey/abc-123") == "https://h/v2/auth/secretkey/***"
+    assert _http.redact_url("/v2/auth/SecretKey/abc?x=1") == "/v2/auth/SecretKey/***?x=1"
+    assert _http.redact_url("/v2/auth/secretkey/abc/extra") == "/v2/auth/secretkey/***/extra"
+    assert _http.redact_url("/r?secretKey=s1&a=1") == "/r?secretKey=***&a=1"
+    assert _http.redact_url("/r?a=1&secretkey=s2#frag") == "/r?a=1&secretkey=***#frag"
+    assert _http.redact_url("/v2/auth/secretkey") == "/v2/auth/secretkey"
+    assert _http.redact_url("/v2/items?licenseNumber=L") == "/v2/items?licenseNumber=L"
+
+
+def test_redact_headers() -> None:
+    headers = {
+        "Authorization": "Bearer t",
+        "x-t3-api-key": "k",
+        "Cookie": "c=1",
+        "Set-Cookie": "s=2",
+        "Accept": "application/json",
+    }
+    assert _http.redact_headers(headers) == {
+        "Authorization": "***",
+        "x-t3-api-key": "***",
+        "Cookie": "***",
+        "Set-Cookie": "***",
+        "Accept": "application/json",
+    }
+
+
+def test_redact_json_at_any_depth() -> None:
+    value = {
+        "username": "jdoe",
+        "Password": "p",
+        "otp": "123456",
+        "otpSeed": "SEED",
+        "nested": {"secretKey": "sk", "list": [{"accessToken": "a"}, {"refreshToken": "r"}, 3]},
+        1: "non-string key kept",
+    }
+    assert _http.redact_json(value) == {
+        "username": "jdoe",
+        "Password": "***",
+        "otp": "***",
+        "otpSeed": "***",
+        "nested": {"secretKey": "***", "list": [{"accessToken": "***"}, {"refreshToken": "***"}, 3]},
+        1: "non-string key kept",
+    }
+    assert _http.redact_json("plain") == "plain"
+
+
+def test_redact_body() -> None:
+    assert _http._redact_body(b"", "application/json") == ""
+    assert _http._redact_body(b'{"password": "x", "a": 1}', "application/json") == '{"password": "***", "a": 1}'
+    assert _http._redact_body(b"{not json", "application/json") == "<unparseable JSON body>"
+    assert _http._redact_body(b"\xff\xfe", "application/json") == "<unparseable JSON body>"
+    assert _http._redact_body(b"password=x", "application/x-www-form-urlencoded") == "<form body not logged>"
+    assert _http._redact_body(b"--b\r\n", "multipart/form-data; boundary=b") == "<form body not logged>"
+    assert _http._redact_body(b"hello", "text/plain") == "hello"
+    assert _http._redact_body(b"\xff\xfe\x00", "application/octet-stream") == "<3 bytes>"
+    long_text = _http._redact_body(b"z" * 5000, "text/plain")
+    assert long_text == "z" * 4000 + "…"
+    long_json = _http._redact_body(b'"' + b"q" * 5000 + b'"', "application/json")
+    assert long_json.endswith("…") and len(long_json) == 4001
+
+
+# --------------------------------------------------------------------------- DEBUG logging
+
+
+def http_debug_text(caplog: pytest.LogCaptureFixture) -> str:
+    return "\n".join(r.getMessage() for r in caplog.records if r.name == "t3api_utils.http")
+
+
+def test_debug_logs_never_contain_secrets(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG, logger="t3api_utils.http")
+    response = httpx2.Response(
+        200,
+        json={"accessToken": "tok-SECRET-1", "refreshToken": "tok-SECRET-2", "user": {"secretKey": "sk-SECRET-3"}},
+        headers={"Set-Cookie": "session=cookie-SECRET-4"},
+    )
+    script = Script(response)
+    with make_client(script, auth=SecretKeyAuth("hdr-SECRET-5")) as client:
+        client.post(
+            "/v2/auth/secretkey/path-SECRET-6?secretKey=query-SECRET-7&licenseNumber=LIC-1",
+            json={
+                "username": "jdoe",
+                "password": "pw-SECRET-8",
+                "otp": "otp-SECRET-9",
+                "otpSeed": "seed-SECRET-10",
+                "deep": [{"secretKey": "deep-SECRET-11"}],
+            },
+            headers={"Authorization": "Bearer jwt-SECRET-12", "Cookie": "c=cookie-SECRET-13"},
         )
+    text = http_debug_text(caplog)
+    assert "→ POST" in text and "← 200 POST" in text
+    assert "SECRET" not in text
+    # Non-secret parts are still useful.
+    assert "jdoe" in text and "licenseNumber=LIC-1" in text
+    assert "/v2/auth/secretkey/***" in text
+    # The request really carried the secrets; only the logs hide them.
+    sent = script.requests[0]
+    assert sent.headers["X-T3-API-Key"] == "hdr-SECRET-5"
+    assert b"pw-SECRET-8" in sent.content
+
+
+def test_debug_logs_form_and_streamed_bodies(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG, logger="t3api_utils.http")
+
+    def chunks() -> Iterator[bytes]:
+        yield b"password=streamed-SECRET"
+
+    with make_client(Script(200)) as client:
+        client.post("/v2/form", data={"password": "form-SECRET"})
+        client.post("/v2/stream", content=chunks())
+    text = http_debug_text(caplog)
+    assert "<form body not logged>" in text
+    assert "<streamed body>" in text
+    assert "SECRET" not in text
+
+
+def test_debug_logs_skip_non_json_response_bodies(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG, logger="t3api_utils.http")
+    csv_response = httpx2.Response(200, content=b"a,b\n1,2\n", headers={"content-type": "text/csv"})
+    with make_client(Script(csv_response, httpx2.Response(200, content=b"raw"))) as client:
+        client.get("/v2/items/report")
+        client.get("/v2/blob")
+    text = http_debug_text(caplog)
+    assert "<text/csv body not logged>" in text
+    assert "<unknown body not logged>" in text
+    assert "a,b" not in text
+
+
+def test_nothing_logged_when_debug_is_off(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO, logger="t3api_utils.http")
+    stream = TrackingStream()
+    response = httpx2.Response(200, stream=stream, headers={"content-type": "application/json"})
+    with make_client(Script(response, 200)) as client:
+        with client.stream("GET", "/v2/items") as streamed:
+            # The response hook didn't read the body when it had nothing to log.
+            assert not streamed.is_stream_consumed
+        client.post("/v2/x", json={"password": "p"})
+    assert http_debug_text(caplog) == ""
+
+
+# --------------------------------------------------------------------------- enable_http_logging
+
+
+def test_enable_http_logging_to_file(tmp_path: Path) -> None:
+    log_file = tmp_path / "http.log"
+    _http.enable_http_logging(str(log_file))
+    log = _http.http_logger
+    assert log.level == logging.DEBUG
+    assert _http._handler_installed is True
+    [handler] = log.handlers
+    assert isinstance(handler, logging.FileHandler)
+    with make_client(Script(200)) as client:
+        client.post("/v2/auth/credentials", json={"password": "file-SECRET"})
+    handler.flush()
+    text = log_file.read_text(encoding="utf-8")
+    assert "→ POST https://api.test/v2/auth/credentials" in text
+    assert "t3api_utils.http" in text
+    assert "file-SECRET" not in text
+
+
+def test_enable_http_logging_installs_only_once(tmp_path: Path) -> None:
+    _http.enable_http_logging(str(tmp_path / "a.log"))
+    _http.http_logger.setLevel(logging.WARNING)
+    _http.enable_http_logging(str(tmp_path / "b.log"))
+    assert len(_http.http_logger.handlers) == 1
+    assert _http.http_logger.level == logging.DEBUG
+    assert not (tmp_path / "b.log").exists()
 
-        assert config.host == "https://test.example.com"
-        assert config.timeout == 60.0
-        assert config.verify_ssl is False
-        assert config.base_headers == custom_headers
-        assert config.proxies == {"https": "proxy.example.com:8080"}
-
-    def test_ssl_context_property(self):
-        """Test ssl_context property."""
-        # Test with boolean
-        config = HTTPConfig(verify_ssl=True)
-        assert config.ssl_context is True
-
-        config = HTTPConfig(verify_ssl=False)
-        assert config.ssl_context is False
-
-        # Test with certificate file path - mock the ssl context creation
-        with patch('t3api_utils.http.utils._create_ssl_context') as mock_create:
-            mock_ssl_context = MagicMock(spec=ssl.SSLContext)
-            mock_create.return_value = mock_ssl_context
-            config = HTTPConfig(verify_ssl="/path/to/cert.pem")
-            ssl_context = config.ssl_context
-            mock_create.assert_called_once_with("/path/to/cert.pem")
-            assert ssl_context == mock_ssl_context
-
-
-class TestRetryPolicy:
-    """Test RetryPolicy dataclass."""
-
-    def test_default_retry_policy(self):
-        """Test default RetryPolicy values."""
-        policy = RetryPolicy()
-        assert policy.max_attempts == 3
-        assert policy.backoff_factor == 0.5
-        assert "GET" in policy.retry_methods
-        assert "POST" in policy.retry_methods
-        assert 500 in policy.retry_statuses
-        assert 429 in policy.retry_statuses
-
-    def test_custom_retry_policy(self):
-        """Test RetryPolicy with custom values."""
-        policy = RetryPolicy(
-            max_attempts=5,
-            backoff_factor=1.0,
-            retry_methods=("GET", "HEAD"),
-            retry_statuses=(500, 502, 503)
-        )
-
-        assert policy.max_attempts == 5
-        assert policy.backoff_factor == 1.0
-        assert policy.retry_methods == ("GET", "HEAD")
-        assert policy.retry_statuses == (500, 502, 503)
-
-
-class TestLoggingHooks:
-    """Test LoggingHooks dataclass."""
-
-    def test_disabled_hooks(self):
-        """Test LoggingHooks when disabled."""
-        hooks = LoggingHooks(enabled=False)
-        assert hooks.as_hooks() is None
-        assert hooks.as_hooks(async_client=True) is None
-
-    def test_enabled_sync_hooks(self):
-        """Test LoggingHooks for sync client."""
-        hooks = LoggingHooks(enabled=True)
-        hook_dict = hooks.as_hooks(async_client=False)
-
-        assert hook_dict is not None
-        assert "request" in hook_dict
-        assert "response" in hook_dict
-        assert len(hook_dict["request"]) == 1
-        assert len(hook_dict["response"]) == 1
-
-    def test_enabled_async_hooks(self):
-        """Test LoggingHooks for async client."""
-        hooks = LoggingHooks(enabled=True)
-        hook_dict = hooks.as_hooks(async_client=True)
-
-        assert hook_dict is not None
-        assert "request" in hook_dict
-        assert "response" in hook_dict
-        assert len(hook_dict["request"]) == 1
-        assert len(hook_dict["response"]) == 1
-
-    def test_default_field_values(self):
-        """Test LoggingHooks default field values."""
-        hooks = LoggingHooks(enabled=True)
-        assert hooks.log_headers is True
-        assert hooks.log_body is True
-        assert hooks.file_path is None
-
-    def test_custom_field_values(self):
-        """Test LoggingHooks with custom field values."""
-        hooks = LoggingHooks(
-            enabled=True,
-            log_headers=False,
-            log_body=False,
-            file_path="/tmp/test.log",
-        )
-        assert hooks.log_headers is False
-        assert hooks.log_body is False
-        assert hooks.file_path == "/tmp/test.log"
-
-    @patch.dict('os.environ', {"T3_LOG_HTTP": "true"}, clear=False)
-    def test_from_env_enabled(self):
-        """Test LoggingHooks.from_env() with T3_LOG_HTTP=true."""
-        hooks = LoggingHooks.from_env()
-        assert hooks.enabled is True
-        assert hooks.log_headers is True
-        assert hooks.log_body is True
-        assert hooks.file_path is None
-
-    @patch.dict('os.environ', {}, clear=False)
-    def test_from_env_disabled_by_default(self):
-        """Test LoggingHooks.from_env() returns disabled when env var not set."""
-        # Remove T3_LOG_HTTP if it exists
-        import os
-        os.environ.pop("T3_LOG_HTTP", None)
-        hooks = LoggingHooks.from_env()
-        assert hooks.enabled is False
-
-    @patch.dict('os.environ', {
-        "T3_LOG_HTTP": "true",
-        "T3_LOG_HEADERS": "false",
-        "T3_LOG_BODY": "false",
-        "T3_LOG_FILE": "/tmp/debug.log",
-    }, clear=False)
-    def test_from_env_granular_controls(self):
-        """Test LoggingHooks.from_env() with granular env vars."""
-        hooks = LoggingHooks.from_env()
-        assert hooks.enabled is True
-        assert hooks.log_headers is False
-        assert hooks.log_body is False
-        assert hooks.file_path == "/tmp/debug.log"
-
-    @patch.dict('os.environ', {"T3_LOG_HTTP": "1"}, clear=False)
-    def test_from_env_truthy_values(self):
-        """Test LoggingHooks.from_env() accepts various truthy values."""
-        hooks = LoggingHooks.from_env()
-        assert hooks.enabled is True
-
-    def test_file_handler_setup(self, tmp_path):
-        """Test that file handler is created when file_path is set."""
-        log_file = tmp_path / "test_http.log"
-        hooks = LoggingHooks(enabled=True, file_path=str(log_file))
-        logger = hooks._get_logger()
-
-        # Should have a file handler
-        file_handlers = [
-            h for h in logger.handlers
-            if isinstance(h, logging.FileHandler)
-        ]
-        assert len(file_handlers) >= 1
-
-        # Clean up handlers to avoid test pollution
-        for h in file_handlers:
-            logger.removeHandler(h)
-            h.close()
-
-
-class TestHeaderMasking:
-    """Test header value masking for sensitive headers."""
-
-    def test_mask_authorization_header(self):
-        """Test that Authorization header values are masked."""
-        from t3api_utils.http.utils import _mask_header_value
-        result = _mask_header_value("Authorization", "Bearer eyJhbGciOiJIUzI1NiJ9.test.sig")
-        assert result.startswith("Bearer e")
-        assert result.endswith(".sig")
-        assert "****" in result
-
-    def test_mask_short_value(self):
-        """Test that short sensitive values are fully masked."""
-        from t3api_utils.http.utils import _mask_header_value
-        result = _mask_header_value("Authorization", "short")
-        assert result == "****"
-
-    def test_non_sensitive_header_unchanged(self):
-        """Test that non-sensitive headers are not masked."""
-        from t3api_utils.http.utils import _mask_header_value
-        result = _mask_header_value("Content-Type", "application/json")
-        assert result == "application/json"
-
-    def test_mask_cookie_header(self):
-        """Test that Cookie header values are masked."""
-        from t3api_utils.http.utils import _mask_header_value
-        result = _mask_header_value("Cookie", "session=abcdef123456789xyz")
-        assert "****" in result
-
-    def test_mask_api_key_header(self):
-        """Test that X-Api-Key header values are masked."""
-        from t3api_utils.http.utils import _mask_header_value
-        result = _mask_header_value("X-Api-Key", "sk-1234567890abcdef")
-        assert "****" in result
-
-    def test_mask_case_insensitive(self):
-        """Test that header name matching is case-insensitive."""
-        from t3api_utils.http.utils import _mask_header_value
-        result = _mask_header_value("AUTHORIZATION", "Bearer eyJhbGciOiJIUzI1NiJ9.test.sig")
-        assert "****" in result
-
-
-class TestBodyFormatting:
-    """Test request body formatting for logging."""
-
-    def test_format_empty_body(self):
-        """Test formatting of empty body."""
-        from t3api_utils.http.utils import _format_body
-        result = _format_body(None)
-        assert "(empty)" in result
-
-    def test_format_json_body(self):
-        """Test formatting of JSON body."""
-        from t3api_utils.http.utils import _format_body
-        body = b'{"key":"value","nested":{"a":1}}'
-        result = _format_body(body)
-        assert "key" in result
-        assert "value" in result
-
-    def test_format_non_json_body(self):
-        """Test formatting of non-JSON body."""
-        from t3api_utils.http.utils import _format_body
-        body = b"plain text body content"
-        result = _format_body(body)
-        assert "plain text body content" in result
-
-    def test_format_large_body_truncated(self):
-        """Test that large bodies are truncated."""
-        from t3api_utils.http.utils import _format_body
-        body = b'{"data":"' + b"x" * 3000 + b'"}'
-        result = _format_body(body)
-        assert "truncated" in result
-
-
-class TestT3HTTPError:
-    """Test T3HTTPError exception class."""
-
-    def test_basic_error(self):
-        """Test T3HTTPError with basic message."""
-        error = T3HTTPError("Something went wrong")
-        assert str(error) == "Something went wrong"
-        assert error.response is None
-        assert error.status_code is None
-
-    def test_error_with_response(self):
-        """Test T3HTTPError with response."""
-        mock_response = MagicMock()
-        mock_response.status_code = 404
-
-        error = T3HTTPError("Not found", response=mock_response)
-        assert str(error) == "Not found"
-        assert error.response == mock_response
-        assert error.status_code == 404
-
-    def test_inheritance(self):
-        """Test that T3HTTPError inherits from httpx.HTTPError."""
-        error = T3HTTPError("Test error")
-        assert isinstance(error, httpx.HTTPError)
-
-
-class TestHelperFunctions:
-    """Test internal helper functions."""
-
-    def test_create_ssl_context_boolean(self):
-        """Test _create_ssl_context with boolean values."""
-        assert _create_ssl_context(True) is True
-        assert _create_ssl_context(False) is False
-
-    @patch('ssl.create_default_context')
-    def test_create_ssl_context_string(self, mock_create_default_context):
-        """Test _create_ssl_context with string path."""
-        mock_context = MagicMock(spec=ssl.SSLContext)
-        mock_create_default_context.return_value = mock_context
-
-        result = _create_ssl_context("/path/to/cert.pem")
-
-        mock_create_default_context.assert_called_once_with(cafile="/path/to/cert.pem")
-        assert result == mock_context
-
-    def test_merge_headers_no_extra(self):
-        """Test _merge_headers with no extra headers."""
-        base = {"User-Agent": "test", "Accept": "application/json"}
-        result = _merge_headers(base, None)
-        assert result == base
-        assert result is not base  # Should be a copy
-
-    def test_merge_headers_with_extra(self):
-        """Test _merge_headers with extra headers."""
-        base = {"User-Agent": "test", "Accept": "application/json"}
-        extra = {"Authorization": "Bearer token", "Accept": "text/plain"}
-
-        result = _merge_headers(base, extra)
-
-        assert result["User-Agent"] == "test"
-        assert result["Accept"] == "text/plain"  # Extra should override base
-        assert result["Authorization"] == "Bearer token"
-
-    def test_merge_headers_with_none_values(self):
-        """Test _merge_headers filters out None values."""
-        base = {"User-Agent": "test"}
-        extra: Dict[str, Optional[str]] = {"Authorization": "Bearer token", "Custom": None}
-
-        result = _merge_headers(base, extra)  # type: ignore[arg-type]
-
-        assert result["User-Agent"] == "test"
-        assert result["Authorization"] == "Bearer token"
-        assert "Custom" not in result
-
-    def test_should_retry_max_attempts_exceeded(self):
-        """Test _should_retry when max attempts exceeded."""
-        policy = RetryPolicy(max_attempts=3)
-
-        result = _should_retry(
-            policy=policy,
-            attempt=3,
-            method="GET",
-            exc=None,
-            resp=None
-        )
-        assert result is False
-
-    def test_should_retry_method_not_allowed(self):
-        """Test _should_retry with method not in retry list."""
-        policy = RetryPolicy(retry_methods=("GET", "HEAD"))
-
-        result = _should_retry(
-            policy=policy,
-            attempt=1,
-            method="POST",
-            exc=None,
-            resp=None
-        )
-        assert result is False
-
-    def test_should_retry_with_exception(self):
-        """Test _should_retry with network exception."""
-        policy = RetryPolicy()
-
-        result = _should_retry(
-            policy=policy,
-            attempt=1,
-            method="GET",
-            exc=httpx.ConnectError("Connection failed"),
-            resp=None
-        )
-        assert result is True
-
-    def test_should_retry_with_retryable_status(self):
-        """Test _should_retry with retryable status code."""
-        policy = RetryPolicy()
-        mock_response = MagicMock()
-        mock_response.status_code = 500
-
-        result = _should_retry(
-            policy=policy,
-            attempt=1,
-            method="GET",
-            exc=None,
-            resp=mock_response
-        )
-        assert result is True
-
-    def test_should_retry_with_non_retryable_status(self):
-        """Test _should_retry with non-retryable status code."""
-        policy = RetryPolicy()
-        mock_response = MagicMock()
-        mock_response.status_code = 404
-
-        result = _should_retry(
-            policy=policy,
-            attempt=1,
-            method="GET",
-            exc=None,
-            resp=mock_response
-        )
-        assert result is False
-
-    @patch('time.sleep')
-    def test_sleep_with_backoff_first_attempt(self, mock_sleep):
-        """Test _sleep_with_backoff doesn't sleep on first attempt."""
-        policy = RetryPolicy()
-        _sleep_with_backoff(policy, 1)
-        mock_sleep.assert_not_called()
-
-    @patch('time.sleep')
-    def test_sleep_with_backoff_second_attempt(self, mock_sleep):
-        """Test _sleep_with_backoff sleeps on retry."""
-        policy = RetryPolicy(backoff_factor=1.0)
-        _sleep_with_backoff(policy, 2)
-        mock_sleep.assert_called_once()
-        # Should sleep for approximately 1 second (with jitter)
-        sleep_time = mock_sleep.call_args[0][0]
-        assert 0.8 <= sleep_time <= 1.2
-
-    @pytest.mark.asyncio
-    async def test_async_sleep_with_backoff(self):
-        """Test _async_sleep_with_backoff."""
-        with patch('asyncio.sleep', new_callable=AsyncMock) as mock_sleep:
-            policy = RetryPolicy(backoff_factor=1.0)
-            await _async_sleep_with_backoff(policy, 2)
-            mock_sleep.assert_called_once()
-
-    def test_format_http_error_message_with_json(self):
-        """Test _format_http_error_message with JSON response."""
-        mock_response = MagicMock()
-        mock_response.status_code = 400
-        mock_response.json.return_value = {"message": "Invalid request"}
-
-        result = _format_http_error_message(mock_response)
-        assert result == "HTTP 400: Invalid request"
-
-    def test_format_http_error_message_with_detail(self):
-        """Test _format_http_error_message with detail field."""
-        mock_response = MagicMock()
-        mock_response.status_code = 422
-        mock_response.json.return_value = {"detail": "Validation failed"}
-
-        result = _format_http_error_message(mock_response)
-        assert result == "HTTP 422: Validation failed"
-
-    def test_format_http_error_message_with_text(self):
-        """Test _format_http_error_message with text response."""
-        mock_response = MagicMock()
-        mock_response.status_code = 500
-        mock_response.json.side_effect = json.JSONDecodeError("Invalid JSON", "", 0)
-        mock_response.text = "Internal Server Error"
-
-        result = _format_http_error_message(mock_response)
-        assert result == "HTTP 500: Internal Server Error"
-
-    def test_format_http_error_message_long_text(self):
-        """Test _format_http_error_message with long text response."""
-        mock_response = MagicMock()
-        mock_response.status_code = 500
-        mock_response.json.side_effect = json.JSONDecodeError("Invalid JSON", "", 0)
-        mock_response.text = "A" * 3000  # Long text
-
-        result = _format_http_error_message(mock_response)
-        assert result.startswith("HTTP 500: ")
-        assert result.endswith("…")
-        assert len(result) < 2100  # Should be truncated
-
-
-class TestClientBuilders:
-    """Test client builder functions."""
-
-    @patch('t3api_utils.http.utils.HTTPConfig')
-    @patch('httpx.Client')
-    def test_build_client_default(self, mock_client_class, mock_config_class):
-        """Test build_client with default parameters."""
-        mock_config = MagicMock()
-        mock_config_class.return_value = mock_config
-        mock_config.host = "https://api.example.com"
-        mock_config.timeout = 30.0
-        mock_config.ssl_context = True
-        mock_config.base_headers = {"User-Agent": "test"}
-        mock_config.proxies = None
-
-        build_client()
-
-        mock_client_class.assert_called_once_with(
-            base_url="https://api.example.com",
-            timeout=30.0,
-            verify=True,
-            headers={"User-Agent": "test"},
-            proxy=None,
-            http2=False,
-            event_hooks=None
-        )
-
-    @patch('httpx.Client')
-    def test_build_client_with_custom_config(self, mock_client_class):
-        """Test build_client with custom HTTPConfig."""
-        config = HTTPConfig(
-            host="https://custom.example.com",
-            timeout=60.0,
-            verify_ssl=False
-        )
-
-        build_client(config=config)
-
-        call_args = mock_client_class.call_args[1]
-        assert call_args["base_url"] == "https://custom.example.com"
-        assert call_args["timeout"] == 60.0
-        assert call_args["verify"] is False
-
-    @patch('httpx.Client')
-    def test_build_client_with_extra_headers(self, mock_client_class):
-        """Test build_client with extra headers."""
-        extra_headers = {"Authorization": "Bearer token"}
-
-        build_client(headers=extra_headers)
-
-        call_args = mock_client_class.call_args[1]
-        headers = call_args["headers"]
-        assert "Authorization" in headers
-        assert headers["Authorization"] == "Bearer token"
-
-    @patch('httpx.Client')
-    def test_build_client_with_logging_hooks(self, mock_client_class):
-        """Test build_client with logging hooks."""
-        hooks = LoggingHooks(enabled=True)
-
-        build_client(hooks=hooks)
-
-        call_args = mock_client_class.call_args[1]
-        assert call_args["event_hooks"] is not None
-
-    @patch('httpx.AsyncClient')
-    def test_build_async_client(self, mock_client_class):
-        """Test build_async_client."""
-        build_async_client()
-
-        # Should call AsyncClient with similar arguments
-        mock_client_class.assert_called_once()
-        call_args = mock_client_class.call_args[1]
-        assert "base_url" in call_args
-        assert "timeout" in call_args
-        assert "verify" in call_args
-
-
-class TestTokenHelpers:
-    """Test token header helper functions."""
-
-    def test_set_bearer_token_sync(self):
-        """Test set_bearer_token with sync client."""
-        mock_client = MagicMock()
-        mock_client.headers = {}
-
-        set_bearer_token(client=mock_client, token="test-token")
-
-        assert mock_client.headers["Authorization"] == "Bearer test-token"
-
-    def test_set_bearer_token_async(self):
-        """Test set_bearer_token with async client."""
-        mock_client = MagicMock()
-        mock_client.headers = {}
-
-        set_bearer_token(client=mock_client, token="async-token")
-
-        assert mock_client.headers["Authorization"] == "Bearer async-token"
-
-    def test_set_bearer_token_replace_existing(self):
-        """Test set_bearer_token replaces existing token."""
-        mock_client = MagicMock()
-        mock_client.headers = {"Authorization": "Bearer old-token"}
-
-        set_bearer_token(client=mock_client, token="new-token")
-
-        assert mock_client.headers["Authorization"] == "Bearer new-token"
-
-    def test_clear_bearer_token_exists(self):
-        """Test clear_bearer_token when token exists."""
-        mock_client = MagicMock()
-        mock_client.headers = {"Authorization": "Bearer token", "User-Agent": "test"}
-
-        clear_bearer_token(client=mock_client)
-
-        assert "Authorization" not in mock_client.headers
-        assert "User-Agent" in mock_client.headers
-
-    def test_clear_bearer_token_not_exists(self):
-        """Test clear_bearer_token when no token exists."""
-        mock_client = MagicMock()
-        mock_client.headers = {"User-Agent": "test"}
-
-        clear_bearer_token(client=mock_client)
-
-        # Should not raise error
-        assert "Authorization" not in mock_client.headers
-
-
-class TestRequestHelpers:
-    """Test request helper functions."""
-
-    @patch('httpx.Client')
-    def test_request_json_success(self, mock_client_class):
-        """Test successful request_json call."""
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.content = b'{"key": "value"}'
-        mock_response.json.return_value = {"key": "value"}
-        mock_client.request.return_value = mock_response
-
-        result = request_json(
-            client=mock_client,
-            method="GET",
-            url="/test"
-        )
-
-        assert result == {"key": "value"}
-        mock_client.request.assert_called_once_with(
-            "GET", "/test", params=None, json=None, files=None, headers=None, timeout=None
-        )
-
-    @patch('httpx.Client')
-    def test_request_json_204_no_content(self, mock_client_class):
-        """Test request_json with 204 No Content response."""
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 204
-        mock_client.request.return_value = mock_response
-
-        result = request_json(
-            client=mock_client,
-            method="DELETE",
-            url="/test"
-        )
-
-        assert result is None
-
-    @patch('httpx.Client')
-    def test_request_json_with_parameters(self, mock_client_class):
-        """Test request_json with various parameters."""
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 201
-        mock_response.content = b'{"created": true}'
-        mock_response.json.return_value = {"created": True}
-        mock_client.request.return_value = mock_response
-
-        result = request_json(
-            client=mock_client,
-            method="POST",
-            url="/create",
-            params={"param": "value"},
-            json_body={"data": "test"},
-            headers={"Custom": "header"},
-            request_id="req-123"
-        )
-
-        assert result == {"created": True}
-
-        call_args = mock_client.request.call_args
-        assert call_args[0] == ("POST", "/create")
-        assert call_args[1]["params"] == {"param": "value"}
-        assert call_args[1]["json"] == {"data": "test"}
-        assert call_args[1]["headers"]["Custom"] == "header"
-        assert call_args[1]["headers"]["X-Request-ID"] == "req-123"
-
-    def test_request_json_http_error(self):
-        """Test request_json with HTTP error response."""
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 404
-        mock_response.json.return_value = {"message": "Not found"}
-        mock_client.request.return_value = mock_response
-
-        # Use try-except to debug what exception is actually raised
-        try:
-            request_json(
-                client=mock_client,
-                method="GET",
-                url="/missing",
-                expected_status=200,
-                policy=RetryPolicy(max_attempts=1)
-            )
-            assert False, "Expected T3HTTPError to be raised"
-        except T3HTTPError as e:
-            assert "HTTP 404" in str(e)
-            # Just check that the error message is correct, not the response object
-            assert e.response is not None or True  # Allow test to pass either way
-
-    @patch('httpx.Client')
-    @patch('t3api_utils.http.utils._sleep_with_backoff')
-    def test_request_json_retry_on_500(self, mock_sleep, mock_client_class):
-        """Test request_json retries on 500 error."""
-        mock_client = MagicMock()
-
-        # First call returns 500, second call succeeds
-        mock_response_error = MagicMock()
-        mock_response_error.status_code = 500
-        mock_response_error.json.return_value = {"error": "Server error"}
-
-        mock_response_success = MagicMock()
-        mock_response_success.status_code = 200
-        mock_response_success.content = b'{"success": true}'
-        mock_response_success.json.return_value = {"success": True}
-
-        mock_client.request.side_effect = [mock_response_error, mock_response_success]
-
-        result = request_json(
-            client=mock_client,
-            method="GET",
-            url="/test",
-            policy=RetryPolicy(max_attempts=3, backoff_factor=0.1)
-        )
-
-        assert result == {"success": True}
-        assert mock_client.request.call_count == 2
-        mock_sleep.assert_called_once()
-
-    @patch('httpx.Client')
-    def test_request_json_max_retries_exceeded(self, mock_client_class):
-        """Test request_json fails after max retries."""
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 500
-        mock_response.json.return_value = {"error": "Server error"}
-        mock_client.request.return_value = mock_response
-
-        policy = RetryPolicy(max_attempts=2)
-
-        with pytest.raises(T3HTTPError):
-            request_json(
-                client=mock_client,
-                method="GET",
-                url="/test",
-                policy=policy
-            )
-
-        assert mock_client.request.call_count == 2
-
-    @pytest.mark.asyncio
-    async def test_arequest_json_success(self):
-        """Test successful arequest_json call."""
-        mock_client = AsyncMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.content = b'{"async": true}'
-        mock_response.json.return_value = {"async": True}
-        mock_client.request.return_value = mock_response
-
-        result = await arequest_json(
-            aclient=mock_client,
-            method="GET",
-            url="/async-test"
-        )
-
-        assert result == {"async": True}
-        mock_client.request.assert_called_once()
-
-    @pytest.mark.asyncio
-    @patch('t3api_utils.http.utils._async_sleep_with_backoff', new_callable=AsyncMock)
-    async def test_arequest_json_retry(self, mock_sleep):
-        """Test arequest_json retries on failure."""
-        mock_client = AsyncMock()
-
-        # First call fails, second succeeds
-        mock_response_error = MagicMock()
-        mock_response_error.status_code = 503
-        mock_response_error.json.return_value = {"error": "Service unavailable"}
-
-        mock_response_success = MagicMock()
-        mock_response_success.status_code = 200
-        mock_response_success.content = b'{"retry": "success"}'
-        mock_response_success.json.return_value = {"retry": "success"}
-
-        mock_client.request.side_effect = [mock_response_error, mock_response_success]
-
-        result = await arequest_json(
-            aclient=mock_client,
-            method="GET",
-            url="/test",
-            policy=RetryPolicy(max_attempts=3, backoff_factor=0.1)
-        )
-
-        assert result == {"retry": "success"}
-        assert mock_client.request.call_count == 2
-        mock_sleep.assert_called_once()
-
-    def test_request_json_with_files(self):
-        """Test request_json with multipart file upload."""
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.content = b'{"uploaded": true}'
-        mock_response.json.return_value = {"uploaded": True}
-        mock_client.request.return_value = mock_response
-
-        test_files = {"file": ("test.png", b"\x89PNG", "image/png")}
-        result = request_json(
-            client=mock_client,
-            method="POST",
-            url="/upload",
-            params={"licenseNumber": "LIC-001"},
-            files=test_files,
-        )
-
-        assert result == {"uploaded": True}
-        call_args = mock_client.request.call_args
-        assert call_args[0] == ("POST", "/upload")
-        assert call_args[1]["files"] == test_files
-        assert call_args[1]["json"] is None
-        assert call_args[1]["params"] == {"licenseNumber": "LIC-001"}
-
-    def test_request_json_files_and_json_body_mutually_exclusive(self):
-        """Test that providing both json_body and files raises ValueError."""
-        mock_client = MagicMock()
-
-        with pytest.raises(ValueError, match="mutually exclusive"):
-            request_json(
-                client=mock_client,
-                method="POST",
-                url="/test",
-                json_body={"data": "test"},
-                files={"file": ("test.png", b"\x89PNG", "image/png")},
-            )
-
-        mock_client.request.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_arequest_json_with_files(self):
-        """Test arequest_json with multipart file upload."""
-        mock_client = AsyncMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.content = b'{"uploaded": true}'
-        mock_response.json.return_value = {"uploaded": True}
-        mock_client.request.return_value = mock_response
-
-        test_files = {"file": ("test.png", b"\x89PNG", "image/png")}
-        result = await arequest_json(
-            aclient=mock_client,
-            method="POST",
-            url="/upload",
-            files=test_files,
-        )
-
-        assert result == {"uploaded": True}
-        call_args = mock_client.request.call_args
-        assert call_args[1]["files"] == test_files
-        assert call_args[1]["json"] is None
-
-    @pytest.mark.asyncio
-    async def test_arequest_json_files_and_json_body_mutually_exclusive(self):
-        """Test that providing both json_body and files raises ValueError (async)."""
-        mock_client = AsyncMock()
-
-        with pytest.raises(ValueError, match="mutually exclusive"):
-            await arequest_json(
-                aclient=mock_client,
-                method="POST",
-                url="/test",
-                json_body={"data": "test"},
-                files={"file": ("test.png", b"\x89PNG", "image/png")},
-            )
-
-        mock_client.request.assert_not_called()
-
-
-class TestNonJsonRequestHelpers:
-    """Test request_bytes, request_text, and request_raw helpers."""
-
-    # ---- request_bytes (sync) ----
-
-    def test_request_bytes_success(self):
-        """Test request_bytes returns raw bytes."""
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.content = b"\x89PNG\r\n\x1a\n"
-        mock_client.request.return_value = mock_response
-
-        result = request_bytes(client=mock_client, method="GET", url="/file.png")
-
-        assert result == b"\x89PNG\r\n\x1a\n"
-        assert isinstance(result, bytes)
-
-    def test_request_bytes_204_returns_empty(self):
-        """Test request_bytes returns b'' for 204 No Content."""
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 204
-        mock_response.content = b""
-        mock_client.request.return_value = mock_response
-
-        result = request_bytes(client=mock_client, method="DELETE", url="/resource")
-
-        assert result == b""
-
-    @patch('t3api_utils.http.utils._sleep_with_backoff')
-    def test_request_bytes_retry_on_500(self, mock_sleep):
-        """Test request_bytes retries on transient failure."""
-        mock_client = MagicMock()
-
-        mock_error = MagicMock()
-        mock_error.status_code = 500
-        mock_error.json.return_value = {"error": "fail"}
-
-        mock_success = MagicMock()
-        mock_success.status_code = 200
-        mock_success.content = b"pdf-data"
-
-        mock_client.request.side_effect = [mock_error, mock_success]
-
-        result = request_bytes(
-            client=mock_client, method="GET", url="/report.pdf",
-            policy=RetryPolicy(max_attempts=3, backoff_factor=0.1),
-        )
-
-        assert result == b"pdf-data"
-        assert mock_client.request.call_count == 2
-
-    def test_request_bytes_error_propagation(self):
-        """Test request_bytes raises T3HTTPError on failure."""
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 404
-        mock_response.json.return_value = {"message": "Not found"}
-        mock_client.request.return_value = mock_response
-
-        with pytest.raises(T3HTTPError, match="404"):
-            request_bytes(
-                client=mock_client, method="GET", url="/missing",
-                expected_status=200, policy=RetryPolicy(max_attempts=1),
-            )
-
-    # ---- request_text (sync) ----
-
-    def test_request_text_success(self):
-        """Test request_text returns decoded text."""
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.text = "col1,col2\na,b\n"
-        mock_client.request.return_value = mock_response
-
-        result = request_text(client=mock_client, method="GET", url="/export.csv")
-
-        assert result == "col1,col2\na,b\n"
-        assert isinstance(result, str)
-
-    def test_request_text_204_returns_empty(self):
-        """Test request_text returns '' for 204 No Content."""
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 204
-        mock_response.text = ""
-        mock_client.request.return_value = mock_response
-
-        result = request_text(client=mock_client, method="DELETE", url="/resource")
-
-        assert result == ""
-
-    # ---- request_raw (sync) ----
-
-    def test_request_raw_returns_response(self):
-        """Test request_raw returns the httpx.Response object."""
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.headers = {"content-type": "application/pdf"}
-        mock_client.request.return_value = mock_response
-
-        result = request_raw(client=mock_client, method="GET", url="/report")
-
-        assert result is mock_response
-        assert result.headers["content-type"] == "application/pdf"
-
-    # ---- arequest_bytes (async) ----
-
-    @pytest.mark.asyncio
-    async def test_arequest_bytes_success(self):
-        """Test arequest_bytes returns raw bytes."""
-        mock_client = AsyncMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.content = b"\x89PNG"
-        mock_client.request.return_value = mock_response
-
-        result = await arequest_bytes(aclient=mock_client, method="GET", url="/img.png")
-
-        assert result == b"\x89PNG"
-        assert isinstance(result, bytes)
-
-    @pytest.mark.asyncio
-    @patch('t3api_utils.http.utils._async_sleep_with_backoff', new_callable=AsyncMock)
-    async def test_arequest_bytes_retry(self, mock_sleep):
-        """Test arequest_bytes retries on transient failure."""
-        mock_client = AsyncMock()
-
-        mock_error = MagicMock()
-        mock_error.status_code = 503
-        mock_error.json.return_value = {"error": "unavailable"}
-
-        mock_success = MagicMock()
-        mock_success.status_code = 200
-        mock_success.content = b"data"
-
-        mock_client.request.side_effect = [mock_error, mock_success]
-
-        result = await arequest_bytes(
-            aclient=mock_client, method="GET", url="/file",
-            policy=RetryPolicy(max_attempts=3, backoff_factor=0.1),
-        )
-
-        assert result == b"data"
-        assert mock_client.request.call_count == 2
-
-    # ---- arequest_text (async) ----
-
-    @pytest.mark.asyncio
-    async def test_arequest_text_success(self):
-        """Test arequest_text returns decoded text."""
-        mock_client = AsyncMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.text = "<html>Hello</html>"
-        mock_client.request.return_value = mock_response
-
-        result = await arequest_text(aclient=mock_client, method="GET", url="/page.html")
-
-        assert result == "<html>Hello</html>"
-        assert isinstance(result, str)
-
-    # ---- arequest_raw (async) ----
-
-    @pytest.mark.asyncio
-    async def test_arequest_raw_returns_response(self):
-        """Test arequest_raw returns the httpx.Response object."""
-        mock_client = AsyncMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.headers = {"content-type": "text/csv"}
-        mock_client.request.return_value = mock_response
-
-        result = await arequest_raw(aclient=mock_client, method="GET", url="/data.csv")
-
-        assert result is mock_response
-
-    # ---- mutual exclusivity carries through ----
-
-    def test_request_bytes_files_and_json_body_mutually_exclusive(self):
-        """Test request_bytes rejects both json_body and files."""
-        mock_client = MagicMock()
-
-        with pytest.raises(ValueError, match="mutually exclusive"):
-            request_bytes(
-                client=mock_client, method="POST", url="/test",
-                json_body={"a": 1}, files={"f": ("x.bin", b"x", "application/octet-stream")},
-            )
-
-    @pytest.mark.asyncio
-    async def test_arequest_text_files_and_json_body_mutually_exclusive(self):
-        """Test arequest_text rejects both json_body and files."""
-        mock_client = AsyncMock()
-
-        with pytest.raises(ValueError, match="mutually exclusive"):
-            await arequest_text(
-                aclient=mock_client, method="POST", url="/test",
-                json_body={"a": 1}, files={"f": ("x.txt", b"x", "text/plain")},
-            )
+
+def test_enable_http_logging_stderr_when_nothing_else_prints(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(logging.getLogger(), "handlers", [])
+    _http.enable_http_logging()
+    [handler] = _http.http_logger.handlers
+    assert type(handler) is logging.StreamHandler
+    assert handler.stream is sys.stderr
+    assert _http._handler_installed is True
+
+
+def test_enable_http_logging_adds_nothing_when_root_has_handlers(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(logging.getLogger(), "handlers", [logging.NullHandler()])
+    _http.enable_http_logging()
+    assert _http.http_logger.handlers == []
+    assert _http.http_logger.level == logging.DEBUG
+    assert _http._handler_installed is False
+
+
+def test_enable_http_logging_adds_nothing_when_logger_has_handler(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(logging.getLogger(), "handlers", [])
+    own = logging.NullHandler()
+    _http.http_logger.addHandler(own)
+    _http.enable_http_logging()
+    assert _http.http_logger.handlers == [own]
+    assert _http._handler_installed is False
+
+
+def test_build_client_log_http_uses_t3_log_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    log_file = tmp_path / "from-env.log"
+    monkeypatch.setenv("T3_LOG_FILE", str(log_file))
+    with make_client(Script(200), log_http=True) as client:
+        client.get("/v2/licenses")
+    [handler] = _http.http_logger.handlers
+    assert isinstance(handler, logging.FileHandler)
+    assert handler.baseFilename == os.path.abspath(log_file)
+    handler.flush()
+    assert "→ GET https://api.test/v2/licenses" in log_file.read_text(encoding="utf-8")
+
+
+def test_build_client_log_http_without_file(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(logging.getLogger(), "handlers", [logging.NullHandler()])
+    with make_client(Script(200), log_http=True):
+        pass
+    assert _http.http_logger.level == logging.DEBUG
+    assert _http.http_logger.handlers == []
+
+
+def test_build_client_without_log_http_leaves_logging_alone() -> None:
+    with make_client(Script(200)):
+        pass
+    assert _http.http_logger.level == logging.NOTSET
+    assert _http._handler_installed is False
+
+
+# --------------------------------------------------------------------------- env_flag
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [("1", True), ("true", True), ("YES", True), (" on ", True), ("0", False), ("no", False), ("", False)],
+)
+def test_env_flag(value: str, expected: bool, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("T3_LOG_HTTP", value)
+    assert _http.env_flag("T3_LOG_HTTP") is expected
+
+
+def test_env_flag_unset() -> None:
+    assert _http.env_flag("T3_LOG_HTTP") is False
+
+
+# --------------------------------------------------------------------------- env_proxy
+
+
+def test_env_proxy_none_without_variables(proxy_env: pytest.MonkeyPatch) -> None:
+    assert _http.env_proxy(BASE) is None
+
+
+def test_env_proxy_https(proxy_env: pytest.MonkeyPatch) -> None:
+    proxy_env.setenv("HTTPS_PROXY", "http://proxy.corp:3128")
+    assert _http.env_proxy(BASE) == "http://proxy.corp:3128"
+
+
+def test_env_proxy_http_only_applies_to_http_urls(proxy_env: pytest.MonkeyPatch) -> None:
+    proxy_env.setenv("HTTP_PROXY", "http://plain.corp:80")
+    assert _http.env_proxy("http://api.test") == "http://plain.corp:80"
+    assert _http.env_proxy(BASE) is None
+
+
+def test_env_proxy_all_proxy_fallback(proxy_env: pytest.MonkeyPatch) -> None:
+    proxy_env.setenv("ALL_PROXY", "socks5://all.corp:1080")
+    assert _http.env_proxy(BASE) == "socks5://all.corp:1080"
+    proxy_env.setenv("HTTPS_PROXY", "http://https.corp:3128")
+    assert _http.env_proxy(BASE) == "http://https.corp:3128"
+
+
+def test_env_proxy_url_without_scheme_uses_https(proxy_env: pytest.MonkeyPatch) -> None:
+    proxy_env.setenv("HTTPS_PROXY", "http://proxy.corp:3128")
+    assert _http.env_proxy("api.test") == "http://proxy.corp:3128"
+
+
+@pytest.mark.parametrize(
+    "no_proxy",
+    [
+        "*",
+        "api.test",
+        "API.TEST",
+        "test",
+        ".test",
+        "other.org, api.test",
+        "api.test:443",
+        ",, ,api.test",
+    ],
+)
+def test_env_proxy_no_proxy_matches(no_proxy: str, proxy_env: pytest.MonkeyPatch) -> None:
+    proxy_env.setenv("HTTPS_PROXY", "http://proxy.corp:3128")
+    proxy_env.setenv("NO_PROXY", no_proxy)
+    assert _http.env_proxy(BASE) is None
+
+
+@pytest.mark.parametrize("no_proxy", ["other.org", "pi.test", "api.test.evil", "example.com,,"])
+def test_env_proxy_no_proxy_does_not_match(no_proxy: str, proxy_env: pytest.MonkeyPatch) -> None:
+    proxy_env.setenv("HTTPS_PROXY", "http://proxy.corp:3128")
+    proxy_env.setenv("NO_PROXY", no_proxy)
+    assert _http.env_proxy(BASE) == "http://proxy.corp:3128"
+
+
+def test_env_proxy_lowercase_no_proxy(proxy_env: pytest.MonkeyPatch) -> None:
+    proxy_env.setenv("https_proxy", "http://proxy.corp:3128")
+    proxy_env.setenv("no_proxy", "api.test")
+    assert _http.env_proxy("https://API.test/v2") is None
+    assert _http.env_proxy("https://elsewhere.org") == "http://proxy.corp:3128"
+
+
+# --------------------------------------------------------------------------- build_client
+
+
+class TransportRecorder:
+    def __init__(self) -> None:
+        self.calls: list[dict[str, Any]] = []
+
+    def __call__(self, **kwargs: Any) -> httpx2.BaseTransport:
+        self.calls.append(kwargs)
+        return httpx2.MockTransport(Script(200))
+
+
+@pytest.fixture
+def transport_recorder(monkeypatch: pytest.MonkeyPatch) -> TransportRecorder:
+    recorder = TransportRecorder()
+    # _http calls httpx2.HTTPTransport through the module, so patch it there.
+    monkeypatch.setattr(httpx2, "HTTPTransport", recorder)
+    return recorder
+
+
+def test_build_client_uses_env_proxy(
+    proxy_env: pytest.MonkeyPatch, transport_recorder: TransportRecorder
+) -> None:
+    proxy_env.setenv("HTTPS_PROXY", "http://proxy.corp:3128")
+    with _http.build_client(base_url=BASE) as client:
+        assert client.get("/x").status_code == 200
+    assert transport_recorder.calls == [{"verify": True, "proxy": "http://proxy.corp:3128"}]
+
+
+def test_build_client_explicit_proxy_wins(
+    proxy_env: pytest.MonkeyPatch, transport_recorder: TransportRecorder
+) -> None:
+    proxy_env.setenv("HTTPS_PROXY", "http://proxy.corp:3128")
+    with _http.build_client(base_url=BASE, proxy="http://mine:8080", verify="/ca.pem"):
+        pass
+    assert transport_recorder.calls == [{"verify": "/ca.pem", "proxy": "http://mine:8080"}]
+
+
+def test_build_client_honors_no_proxy(
+    proxy_env: pytest.MonkeyPatch, transport_recorder: TransportRecorder
+) -> None:
+    proxy_env.setenv("HTTPS_PROXY", "http://proxy.corp:3128")
+    proxy_env.setenv("NO_PROXY", "api.test")
+    with _http.build_client(base_url=BASE):
+        pass
+    assert transport_recorder.calls == [{"verify": True, "proxy": None}]
+
+
+def test_build_client_with_transport_builds_no_http_transport(transport_recorder: TransportRecorder) -> None:
+    with make_client(Script(200)):
+        pass
+    assert transport_recorder.calls == []
+
+
+def test_build_client_default_transport_is_wrapped(proxy_env: pytest.MonkeyPatch) -> None:
+    with _http.build_client() as client:
+        transport = client._transport
+        assert isinstance(transport, _http.RetryTransport)
+        assert isinstance(transport.wrapped, httpx2.HTTPTransport)
+        assert str(client.base_url).rstrip("/") == _http.DEFAULT_HOST
+        assert client.timeout.read == _http.DEFAULT_TIMEOUT
+
+
+def test_build_client_headers_base_url_auth_and_timeout() -> None:
+    script = Script(200)
+    with make_client(
+        script,
+        auth=SecretKeyAuth("sk-1"),
+        timeout=7.0,
+        headers={"Accept": "text/csv", "X-Extra": "1"},
+    ) as client:
+        assert client.timeout.read == 7.0
+        client.get("/v2/items")
+    [sent] = script.requests
+    assert str(sent.url) == BASE + "/v2/items"
+    assert sent.headers["User-Agent"] == _http.user_agent()
+    assert sent.headers["Accept"] == "text/csv"
+    assert sent.headers["X-Extra"] == "1"
+    assert sent.headers["X-T3-API-Key"] == "sk-1"
+
+
+def test_build_client_strips_trailing_slash() -> None:
+    script = Script(200)
+    with _http.build_client(base_url=BASE + "/", transport=httpx2.MockTransport(script)) as client:
+        client.get("/v2/items")
+    assert str(script.requests[0].url) == BASE + "/v2/items"
+    assert script.requests[0].headers["Accept"] == "application/json"
+
+
+def test_user_agent() -> None:
+    assert _http.user_agent() == f"t3api-utils/{metadata.version('t3api-utils')}"

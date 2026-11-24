@@ -1,63 +1,34 @@
 #!/usr/bin/env python3
 # /// script
-# requires-python = ">=3.8"
-# dependencies = [
-#     "duckdb",
-#     "httpx",
-#     "typer",
-#     "rich",
-#     "pyarrow"
-# ]
+# requires-python = ">=3.12"
+# dependencies = ["t3api-utils>=2.0"]
 # ///
+"""Discontinue every item named in input.csv.
 
-from typing import Any, Dict, List
+Every row is validated with a dry run first. Nothing is sent to Metrc unless
+all rows pass (or you choose to send only the valid ones).
+"""
 
-from t3api_utils.api.interfaces import MetrcObject
-from t3api_utils.api.operations import send_api_request
-from t3api_utils.api.parallel import load_all_data_sync
-from t3api_utils.main.utils import (get_authenticated_client_or_error,
-                                    interactive_collection_handler,
-                                    match_collection_from_csv, pick_license)
-from t3api_utils.openapi import pick_collection
-from t3api_utils.style import print_warning
+from pathlib import Path
+
+import t3api_utils as t3
+
+INPUT = Path(__file__).with_name("input.csv")
 
 
-def main():
-    # Get authenticated httpx-based client
-    api_client = get_authenticated_client_or_error()
-
-    # Pick a license interactively
-    license = pick_license(api_client=api_client)
-
-    # selected_collection = pick_collection()
-
-    # Load all data for the selected collection and license
-    collection: List[MetrcObject] = load_all_data_sync(
-        client=api_client,
-        path="/v2/items",
-        license_number=license["licenseNumber"],
-    )
-
-    # interactive_collection_handler(data=collection)
-
-    filtered_collection = match_collection_from_csv(
-        data=collection, on_no_match="error"
-    )
-
-    for item in filtered_collection:
-        send_api_request(
-            client=api_client,
-            path="/v2/items/discontinue",
-            method="POST",
-            params={
-                "licenseNumber": license["licenseNumber"],
-                "submit": True
-            },
-            json_body={
-                "id": item["id"]
-            }
+def main() -> None:
+    with t3.connect() as client:
+        license = client.license or client.pick_license()
+        items = client.collect("METRC_ACTIVE_ITEMS", license=license, mask=["id", "name"])
+        matches = t3.filter_rows(items, INPUT, columns=["name"], on_unmatched="error")
+        result = client.bulk(
+            "/v2/items/discontinue",
+            rows=[{"id": item["id"]} for item in matches],
+            license=license,
+            submit=True,
+            log_to="discontinue-results.csv",
         )
-        
+        print(result.summary())
 
 
 if __name__ == "__main__":

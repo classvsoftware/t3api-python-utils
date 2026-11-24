@@ -1,49 +1,27 @@
 #!/usr/bin/env python3
 # /// script
-# requires-python = ">=3.8"
-# dependencies = [
-#     "duckdb",
-#     "httpx",
-#     "typer",
-#     "rich",
-#     "pyarrow"
-# ]
+# requires-python = ">=3.12"
+# dependencies = ["t3api-utils[tui]>=2.0"]
 # ///
+"""Pick a collection, load all of it, and browse the rows that match input.csv."""
 
-from typing import Any, Dict, List
+from pathlib import Path
 
-from t3api_utils.api.interfaces import MetrcObject
-from t3api_utils.api.parallel import load_all_data_sync
-from t3api_utils.main.utils import (get_authenticated_client_or_error,
-                                    interactive_collection_handler,
-                                    match_collection_from_csv, pick_license)
-from t3api_utils.openapi import pick_collection
-from t3api_utils.style import print_warning
+import t3api_utils as t3
+
+INPUT = Path(__file__).with_name("input.csv")
 
 
-def main():
-    # Get authenticated httpx-based client
-    api_client = get_authenticated_client_or_error()
+def main() -> None:
+    with t3.connect() as client:
+        license = client.license or client.pick_license()
+        endpoint = client.pick_endpoint(kind="collection")
+        rows = client.collect(endpoint.id or endpoint.path, license=license)
+        t3.inspect(rows, title=endpoint.id or endpoint.path)
 
-    # Pick a license interactively
-    license = pick_license(api_client=api_client)
-
-    selected_collection = pick_collection()
-
-    # Load all data for the selected collection and license
-    collection: List[MetrcObject] = load_all_data_sync(
-        client=api_client,
-        path=selected_collection["path"],
-        license_number=license["licenseNumber"],
-    )
-
-    interactive_collection_handler(data=collection)
-
-    filtered_collection = match_collection_from_csv(
-        data=collection, on_no_match="error"
-    )
-
-    interactive_collection_handler(data=filtered_collection)
+        matches = t3.filter_rows(rows, INPUT, on_unmatched="warn")
+        print(f"Saved {len(matches)} matching rows to {t3.to_csv(matches)}")
+        t3.inspect(matches, title="matches")
 
 
 if __name__ == "__main__":

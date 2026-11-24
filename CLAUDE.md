@@ -4,133 +4,111 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Strategy
 
-- The data returned from Metrc collection API endpoints may slightly change over time. Extra fields may be added. Don't write python classes that assume an exact data shape, they should fall back gracefully.
+- The data returned from Metrc collection API endpoints may slightly change over time. Extra fields may be added. Don't write python classes that assume an exact data shape, they should fall back gracefully. In 2.0, rows are plain dicts exactly as the API returns them; never rename, drop or validate fields.
+- What the library knows about endpoints comes from the T3 OpenAPI spec at runtime. Don't hardcode endpoint lists, ID parameters or per-endpoint behaviour; derive it from the spec (see `t3api_utils/spec/registry.py`) so new endpoints work without a release.
+- `V2_DESIGN.md` is the design. Where the code and the design differ in small ways, the code wins; keep the docs in `docs/` matching the code.
 
 ## Development Setup
 
-This project uses `uv` for Python package management:
+This project uses `uv`. Python 3.12 or later.
 
 ```bash
-# Create virtual environment and install dependencies
-uv venv
-source .venv/bin/activate
-uv pip install -e .[dev]
+uv sync                                   # create .venv with the dev group (includes textual)
+
+uv run pytest                             # all tests; coverage must stay at 100%
+uv run pytest --cov --cov-branch --cov-report=term-missing
+uv run pytest tests/test_collect.py       # one file
+uv run mypy                               # strict; checks t3api_utils, tests and scripts (see pyproject)
+
+uv run mkdocs serve                       # docs preview at http://127.0.0.1:8000
+uv run mkdocs build --strict              # what CI runs; must pass with no warnings
+
+T3_SPEC=bundled uv run t3api endpoints harvest   # try the CLI offline against the bundled spec
 ```
 
-### Essential Commands
+Before each release:
 
 ```bash
-# Testing
-pytest                    # Run all tests
-pytest tests/specific/    # Run specific test directory
-
-# Type checking
-mypy t3api_utils tests    # Type check source and tests
-
-# Type generation (if needed)
-python bin/generate_types.py  # Update TypedDict definitions from OpenAPI spec
-
-# Documentation
-mkdocs serve              # Local preview at http://127.0.0.1:8000
-mkdocs build              # Build static site to site/
-mkdocs gh-deploy          # Deploy to GitHub Pages
+uv run python scripts/update_spec.py      # refresh t3api_utils/spec/openapi.json.gz from the live spec
+T3_SMOKE_SECRET_KEY=... uv run pytest -m sandbox
 ```
+
+`update_spec.py` prints how the endpoint-kind counts changed; mention notable changes in `CHANGELOG.md`. CI (`.github/workflows/ci.yml`) runs mypy and pytest on Linux, macOS and Windows with Python 3.12 and 3.13, plus a strict docs build. `.github/workflows/release.yml` publishes to PyPI on a published GitHub release.
 
 ## Architecture
 
-### Package Structure
-The `t3api_utils` package is organized into focused modules:
+### Package layout
 
-- **`auth/`** - Authentication utilities for T3 API credentials and client creation
-- **`api/`** - httpx-based T3 API client with async support and enhanced features
-- **`db/`** - Database utilities using DuckDB for data processing and table creation
-- **`file/`** - File I/O operations including CSV/JSON serialization
-- **`http/`** - HTTP utilities using httpx with retry policies and rate limiting
-- **`main/`** - Main utility functions that orchestrate other modules
-
-### Core Interfaces
-- `HasData[T]` - Protocol for objects with a `data` attribute containing lists
-- `SerializableObject` - Protocol for objects with `index`, `license_number`, and `to_dict()` method
-- `T3Credentials` - Authentication credentials interface
-- `PaginatedResponse[T]` - Protocol for paginated API responses
-
-### Data Flow
-1. **Authentication** (`auth/`) - Create authenticated httpx-based API clients
-2. **Collection** (`api/`) - Enhanced parallel data fetching with rate limiting
-3. **Processing** (`db/`) - Flatten nested data and create relational tables
-4. **Output** (`file/`) - Export to CSV/JSON formats
-
-### Key Dependencies
-- **httpx >= 0.25.0** - HTTP client with async support
-- **DuckDB + PyArrow** - High-performance data operations
-- **Typer + Rich** - CLI interfaces with purple-themed output
-- **MyPy** - Strict typing enforced with `disallow_untyped_defs`
-
-## Authentication
-
-### Interactive Picker (Recommended)
-```python
-from t3api_utils.main.utils import get_authenticated_client_or_error
-
-# Shows interactive picker with authentication options
-client = get_authenticated_client_or_error()
+```
+t3api_utils/
+  __init__.py          public API: connect, T3Client, inspect, filter_rows, to_csv, to_json, read_rows,
+                       pick_file, errors, WriteResult/BulkResult/RowResult, TagList, Endpoint, auth classes
+  client.py            T3Client: request(), get/post/put/patch/delete(), collect(), iter_rows(), bulk(),
+                       report(), report_url(), whoami(), licenses(), pickers, namespaces
+  errors.py            exception hierarchy; error_from_response() maps status codes to classes
+  writes.py            WriteResult, BulkResult, RowResult, bulk()
+  reports.py           report(), report_url()
+  tag_lists.py         TagLists (client.tag_lists) and TagList
+  local.py             filter_rows(), to_csv(), to_json(), read_rows(), flatten()
+  pickers.py           choose(), pick_license(), pick_endpoint(), pick_file() as Rich tables
+  _http.py             httpx2 client builder, RetryTransport, HTTP log redaction
+  _ratelimit.py        thread-safe token bucket
+  _api.py              send/parse helpers that raise APIError subclasses
+  _console.py          Rich consoles, purple theme, message/prompt/progress helpers (internal)
+  _paths.py            platformdirs config and cache folders (tests patch these)
+  spec/
+    loader.py          cached live spec -> live fetch -> stale cache -> bundled copy
+    registry.py        Endpoint, Param, Registry: classification, lookup, parameter checks
+    openapi.json.gz    bundled spec
+  auth/
+    credentials.py     SecretKeyAuth, BearerAuth (httpx2.Auth), JWT expiry and OTP helpers
+    resolve.py         connect(): argument -> env var -> profile -> login flow -> AuthRequired
+    login.py           interactive login flow and secret-key offer
+    store.py           Profile, Store: config.toml plus OS keyring (secrets.toml fallback)
+    secret_keys.py     SecretKeys (client.secret_keys): list/create/rotate/delete
+    states.py          GET /v2/states (requiresEmail/requiresOtp), cached, with 1.x fallback lists
+  tui/inspector.py     Textual inspector, imported lazily by t3.inspect()
+  cli/main.py          Typer app behind the `t3api` command
+scripts/               example.py, discontinue-items.py (user-facing examples), update_spec.py
+docs/                  mkdocs-material site; reference pages are mkdocstrings
 ```
 
-**Picker Features:**
-- Rich table display with consistent purple styling
-- Clear descriptions for each authentication method
-- Input validation and keyboard interrupt handling
-- Automatic routing to appropriate auth flow
+### Rules
 
-### Direct Authentication Methods
+- Importing the package has no side effects: no files written, no logging configured, no network calls. The spec loads the first time something needs it.
+- Library code never calls `sys.exit()` or `typer.Exit`. Only `cli/` does.
+- Modules whose names start with `_` are private. Anything a user needs is re-exported from `t3api_utils/__init__.py`.
+- Every exception raised on purpose derives from `T3Error` (`errors.py`). Every `APIError` keeps its `response`.
+- The library logs to `logging.getLogger("t3api_utils")` and never adds handlers or touches the root logger, except `enable_http_logging()` when HTTP logging is explicitly requested.
+- Prompts and pickers work only when `_console.is_interactive()` (a terminal or Jupyter); otherwise they raise `NotInteractive`. Every interactive helper must have a non-interactive form. `connect()` must never hang waiting for input.
+- Sync only. Parallel collection paging uses a thread pool behind the client's one shared rate limiter.
+- Optional dependencies (Textual) are imported inside the function that needs them, with an `ImportError` that names the extra.
+- No DuckDB, pyarrow, `.t3.env` or `python-dotenv`. Export is CSV/JSON only.
 
-**Credentials Authentication:**
-```python
-client = create_credentials_authenticated_client_or_error(
-    hostname="...",
-    username="...",
-    password="..."
-)
-```
-- Interactive prompts for hostname, username, password
-- Automatic credential saving to `.t3.env` file
-- Environment variable support for automation
+### Key behaviours to preserve
 
-**JWT Token Authentication:**
-```python
-# Basic JWT authentication
-client = get_jwt_authenticated_client_or_error(jwt_token="your_jwt_token_here")
+- **Endpoint kinds** come from spec structure alone (`registry.classify`): collection, report, metrc_write, immediate_write, file, object, other. Tests check named endpoints' kinds, not counts.
+- **Writes**: `metrc_write` routes are a dry run unless `submit=True`; `immediate_write` routes reject `submit=` entirely. `bulk()` validates every row before submitting; row statuses are valid/invalid/submitted/failed/not_sent.
+- **Retries** (`_http.RetryTransport`): GET/HEAD/OPTIONS retry on connection errors and 429/502/503/504; writes retry only on 429 and pre-send connection failures. Never retry a write on 5xx or a post-send timeout. Max 3 attempts.
+- **Credentials**: secret keys go in the `X-T3-API-Key` header, never the query string, except `report_url()`. The Metrc password is never stored.
+- **Redaction**: HTTP debug logs mask auth headers, `/v2/auth/secretkey/{key}` paths, `secretKey=` queries, and `password`/`otp`/`otpSeed`/`secretKey`/`accessToken`/`refreshToken` body fields.
+- **Default license** (`client.license`) is applied only to endpoints whose `licenseNumber` is required. An explicit `license=` always wins.
 
-# JWT with validation (recommended)
-client = get_jwt_authenticated_client_or_error_with_validation(jwt_token="your_jwt_token_here")
-```
-- Automatic token validation via `/v2/auth/whoami` endpoint
-- Clear error messages for expired/invalid tokens
-- Automatic client cleanup on validation failure
+### Docs
 
-### Auto-Generated TypedDict Interfaces
-
-The `interfaces/` directory contains auto-generated TypedDict definitions from the OpenAPI specification:
-
-```python
-# Import specific types
-from interfaces import MetrcLicense, MetrcPackage, SearchResponse
-
-# Use in type annotations
-def process_licenses(licenses: List[MetrcLicense]) -> None:
-    for license in licenses:
-        print(license["licenseName"])  # Full type safety with dict access
-```
-
-**Benefits:**
-- Always up-to-date from live OpenAPI spec
-- Complete API schema coverage
-- Full MyPy support with TypedDict
-- Flexible handling of optional fields with `NotRequired[]`
+- Docstrings are Google style. They're rendered by mkdocstrings on the `docs/reference/` pages; `docs/_ext/griffe_roles.py` turns Sphinx roles like `:func:` into inline code at build time.
+- When behaviour changes, update the matching guide page in `docs/guide/`, and `CHANGELOG.md`.
 
 ## Testing
 
-Unit test coverage should be 100%
+- **Coverage is 100%, line and branch**, enforced: `fail_under = 100` and `branch = true` are set in `pyproject.toml`, so `uv run pytest --cov` fails below that. Use `# pragma: no cover` only for code that can't run in tests (and say why).
+- **HTTP is mocked with `httpx2.MockTransport`** through the `Router` fixture in `tests/conftest.py`: `router.add("GET", "/v2/licenses", json=[...])` answers a route (paths may contain `{placeholders}`; later routes win; unmatched requests get 404), and `router.calls` / `router.requests(...)` record what was sent. `paginated(rows)` serves rows as a T3 paginated collection. The `client` fixture is a `T3Client` with a secret key, the bundled spec, no rate limit and the router's transport.
+- **Autouse fixtures** isolate every test: config and cache folders in a temp dir, no `T3_*` environment variables, an in-memory keyring, a temp working directory, no terminal (`_console.is_interactive()` is False unless a test patches it), and `time.sleep` replaced with a recorder so retries don't wait.
+- `filterwarnings = ["error"]`: a warning fails the test.
+- **Spec tests** use the bundled spec and assert the kind of specific named endpoints, not totals.
+- **Retry tests** must check that a POST answered with 400 or 500 is sent exactly once.
+- **Sandbox smoke tests** (`tests/test_sandbox.py`, marker `sandbox`) run against the real T3 API and the Metrc sandbox. They're skipped unless `T3_SMOKE_SECRET_KEY` is set (`T3_SMOKE_API_HOST` optionally points at another host): `T3_SMOKE_SECRET_KEY=... uv run pytest -m sandbox`. Run them before each release.
+- mypy is strict for `t3api_utils`, `tests` and `scripts`.
 
 ## CLI Standards
 
@@ -148,22 +126,25 @@ Unit test coverage should be 100%
 - `warning` - `#F59E0B` (Amber-500) - Warnings, cautions
 - `info` - `#6366F1` (Indigo-500) - Information, help text
 
+These are defined as the Rich theme in `t3api_utils/_console.py` (`THEME`).
+
 ### Style Conventions
 
-**Message Types:**
+**Message Types** (use the helpers in `t3api_utils/_console.py`, which print exactly these):
 ```python
-# Success, Error, Warning, Info, Progress
-console.print("[bold green]✓[/bold green] Operation completed successfully")
-console.print("[bold red]✗[/bold red] Operation failed: {error_message}")
-console.print("[bold yellow]⚠[/bold yellow] Warning: {warning_message}")
-console.print("[bold blue]ℹ[/bold blue] {info_message}")
-console.print("[bold magenta]⋯[/bold magenta] {status_message}")
+from t3api_utils import _console
+
+_console.success("Operation completed successfully")   # [bold green]✓[/bold green] ...
+_console.error(f"Operation failed: {error_message}")   # [bold red]✗[/bold red] ...
+_console.warning(f"Warning: {warning_message}")        # [bold yellow]⚠[/bold yellow] ...
+_console.info(info_message)                            # [bold blue]ℹ[/bold blue] ...
+_console.progress(status_message)                      # [bold magenta]⋯[/bold magenta] ...
 ```
 
 **Headers and Structure:**
 ```python
 # Main headers, section headers, sub-headers
-console.print("[bold magenta]═══ {title} ═══[/bold magenta]")
+_console.header(title)   # [bold magenta]═══ {title} ═══[/bold magenta]
 console.print("[bold bright_magenta]── {section_name} ──[/bold bright_magenta]")
 console.print("[magenta]{sub_header}:[/magenta]")
 ```
@@ -171,17 +152,19 @@ console.print("[magenta]{sub_header}:[/magenta]")
 **Interactive Elements:**
 ```python
 # Tables, prompts, file paths
-table = Table(border_style="magenta", header_style="bold magenta")
-user_input = typer.prompt("[magenta]Enter your choice[/magenta]")
+table = _console.table("Title")        # Table(border_style="magenta", header_style="bold magenta")
+value = _console.ask("Enter your choice")          # Rich prompt, raises NotInteractive without a terminal
+ok = _console.confirm("Continue?", default=False)
 console.print(f"[cyan]{file_path}[/cyan]")
 ```
 
 ### Implementation Guidelines
 
 **Centralized Styling:**
-- Use `t3api_utils.style` module for all styling constants
-- Import styled console: `from t3api_utils.style import console, style`
-- Never use plain `print()` - always use Rich console
+- Use `t3api_utils/_console.py` for all styling, prompts and progress bars: `from t3api_utils._console import console, out`.
+- `console` writes to **stderr** (messages, prompts, tables meant for a person). `out` writes to **stdout** and is only for data a user might pipe or capture (e.g. `t3api whoami` tables, printed IDs and URLs).
+- Never use plain `print()` in library or CLI code - always use the Rich consoles. (The user-facing example scripts in `scripts/` may use `print()`.)
+- Progress bars go through `_console.progress_bar(label, total, enabled)`, which is transient and disabled when stderr isn't a terminal.
 
 **Consistency Rules:**
 - All success messages use green with checkmark: `[bold green]✓[/bold green]`
@@ -196,38 +179,35 @@ console.print(f"[cyan]{file_path}[/cyan]")
 
 ### CLI Picker Standards
 
-All selection interfaces should use consistent Rich Table formatting:
+All selection interfaces use consistent Rich Table formatting. Build new pickers on `choose()` in `t3api_utils/pickers.py` rather than writing the loop again.
 
 **Standard Implementation:**
 ```python
-from rich.table import Table
-from t3api_utils.style import console
+from t3api_utils.pickers import choose
 
-def pick_something(items: List[SomeType]) -> SomeType:
+def pick_something(items: Sequence[SomeType]) -> SomeType:
     """Standard picker implementation."""
-    table = Table(title="Available Items", border_style="magenta", header_style="bold magenta")
-    table.add_column("#", style="magenta", justify="right")
-    table.add_column("Name", style="bright_white")
-    table.add_column("Details", style="cyan")  # Optional third column
-
-    for i, item in enumerate(items, 1):
-        table.add_row(str(i), item.name, item.details)
-
-    console.print(table)
-    choice = typer.prompt("Select item (number)", type=int)
-    # ... validation and return logic
+    return choose(
+        "Available Items",
+        items,
+        ["Name", "Details"],                      # columns after the "#" column
+        lambda item: [item.name, item.details],   # one string per column
+        filterable=len(items) > 10,               # typing text narrows the list
+    )
 ```
 
+`choose()` produces:
+- A Rich Table from `_console.table()` (magenta border, bold magenta header)
+- A numbered selection column with `style="magenta", justify="right"`
+- The primary content column with `style="bright_white"`
+- Further detail columns with `style="cyan"`
+
 **Requirements:**
-- Rich Table with magenta border styling
-- Numbered selection column with `style="magenta", justify="right"`
-- Primary content column with `style="bright_white"`
-- Optional details column with `style="cyan"`
-- Always validate user input range
-- Always handle keyboard interruption gracefully
+- Always validate the user's input range (re-prompt on a bad number).
+- Call `_console.require_interactive()` first, so a picker without a terminal raises `NotInteractive` instead of hanging.
+- Let `KeyboardInterrupt` propagate to the caller. Library code never exits; the CLI's `handle_errors` turns Ctrl-C into "Cancelled." and exit code 130.
 
 **Examples in Codebase:**
-- `pick_license()` in `t3api_utils/main/utils.py`
-- `pick_file()` in `t3api_utils/main/utils.py`
-- `pick_collection()` in `t3api_utils/openapi/collection_picker.py`
-- `interactive_collection_handler()` in `t3api_utils/main/utils.py`
+- `choose()`, `pick_license()`, `pick_endpoint()` and `pick_file()` in `t3api_utils/pickers.py`
+- `T3Client.pick_license()` and `T3Client.pick_endpoint()` in `t3api_utils/client.py`
+- The failed-rows table in `writes._show_invalid()` and the CLI tables in `t3api_utils/cli/main.py`

@@ -1,6 +1,6 @@
 # t3api-utils 2.0 design
 
-Draft, 2026-11-23. Spec figures are from the live T3 OpenAPI spec as of that date.
+Written 2026-11-23 and implemented on the `2_0` branch the same day. Spec figures are from the live T3 OpenAPI spec as of that date. Where the implementation settled a detail differently from the first draft, this document has been updated to match the code.
 
 ## 1. Summary
 
@@ -50,7 +50,7 @@ It drops the HTTP wrappers, the sync/async duplication and DuckDB. What the libr
 | Package | Name stays `t3api-utils` (import `t3api_utils`). Python 3.12 or later. GPL-3.0-only. |
 | Testing | 100% unit coverage with mocked HTTP, plus an opt-in smoke suite against the Metrc sandbox. CI on Linux, macOS and Windows. |
 | 1.x | Frozen at 1.5.0. No further releases. |
-| Repo | Tag `v1.5.0`, keep a `1.x` branch, and build 2.0 from scratch on a `v2` branch. |
+| Repo | Tag `v1.5.0`, keep a `1.x` branch, and build 2.0 from scratch on the `2_0` branch. |
 
 ## 3. Package layout
 
@@ -60,6 +60,8 @@ t3api_utils/
   client.py            T3Client: request(), get/post/put/patch/delete(), collect(), iter_rows(), bulk(), report()
   errors.py            exception hierarchy (section 7)
   _http.py             httpx2 client builder, retry transport, log redaction
+  _api.py              send a request, raise APIError on non-2xx, parse the body
+  _paths.py            user config and cache folders (platformdirs)
   _ratelimit.py        thread-safe token bucket
   spec/
     loader.py          picks bundled vs cached vs live copy
@@ -72,12 +74,13 @@ t3api_utils/
     store.py           profiles (TOML) and keyring access
     secret_keys.py     list / create / rotate / delete
     states.py          GET /v2/states lookup (requiresOtp, requiresEmail)
-  writes.py            submit handling, WriteResult, bulk helper
+  writes.py            WriteResult, BulkResult, bulk helper
+  reports.py           report() and report_url()
   tag_lists.py         TagLists namespace and TagList object
   local.py             filter_rows(), to_csv(), to_json()
   pickers.py           pick_license(), pick_endpoint(), pick_file() as Rich tables
   tui/inspector.py     Textual app, imported lazily
-  cli/                 Typer app behind the `t3api` command
+  cli/main.py          Typer app behind the `t3api` command
   _console.py          Rich console and purple theme (internal)
   py.typed
 scripts/update_spec.py downloads the live spec into spec/openapi.json.gz before each release
@@ -148,7 +151,7 @@ client.http.get("/v2/anything-new", params={"licenseNumber": lic}).json()
 | `pick_license()`, `pick_endpoint(kind=)` | Interactive pickers (section 11). |
 | `http` | The underlying `httpx2.Client`. |
 
-`license` can be left out when the profile has a default license. A license passed in code always wins. `collect` and `iter_rows` also accept a list of licenses and run one per license in turn. Every row already carries its `licenseNumber`.
+`license` can be left out when the profile has a default license. The default is applied only to endpoints whose `licenseNumber` parameter is required, so an optional license filter (for example on `/v2/tag-lists`) isn't narrowed by surprise. A license passed in code always wins. `collect` and `iter_rows` also accept a list of licenses and run one per license in turn. Every row already carries its `licenseNumber`.
 
 ## 5. Spec registry
 
@@ -304,7 +307,7 @@ Related commands:
 ### Client
 
 - Each `T3Client` owns one `httpx2.Client`.
-- **Base URL:** from the profile, then `T3_API_HOST`, then `https://api.trackandtrace.tools`.
+- **Base URL:** the `api_host=` argument, then `T3_API_HOST`, then the profile, then `https://api.trackandtrace.tools`. Environment variables override saved settings, as they do for credentials.
 - **Timeout:** 30 seconds; report downloads get 5 minutes.
 - **User-Agent:** `t3api-utils/<version>`.
 - **Threads:** the client is shared across the paging threads.
@@ -325,7 +328,8 @@ Retries live in a small custom transport.
 ### Rate limiting
 
 - One thread-safe token bucket per client (a lock plus a monotonic clock), shared by every request that client makes.
-- **Defaults:** 10 requests per second and 10 paging workers, carried over from 1.x. Change them with `connect(rate_limit=..., concurrency=...)`.
+- **Defaults:** 10 requests per second and 10 paging workers, carried over from 1.x. Change them with `connect(rate_limit=..., concurrency=...)`; `rate_limit=None` turns limiting off.
+- **Spacing:** the bucket holds one token, so requests are spaced evenly (every 100 ms at the default) rather than sent in bursts. Each retry attempt also takes a token.
 - **The 1.x bug this fixes:** 1.x's limiter let 20 requests through in 0.2 seconds.
 
 ### Errors
@@ -355,7 +359,8 @@ T3Error
 - **What's hidden in those logs:**
   - `Authorization`, `X-T3-API-Key` and cookie headers.
   - The key in `/v2/auth/secretkey/{key}` paths, and any `secretKey` query parameter.
-  - `password`, `otp` and `otpSeed` fields in JSON bodies.
+  - `password`, `otp`, `otpSeed`, `secretKey`, `accessToken` and `refreshToken` fields in JSON bodies, at any depth. Responses from the auth endpoints carry keys and tokens, so they're masked too.
+  - Response bodies are logged only for JSON content, so report downloads aren't read into memory.
 
   1.x logged credential-login bodies, password included, whenever HTTP logging was on.
 - **The CLI** sets up Rich logging for itself.
@@ -399,6 +404,9 @@ The route's kind in the spec decides how a write behaves.
    - Non-interactive callers pass `on_error="skip"` to do that without asking.
 3. **Submit**, only when `submit=True`: send each valid row with `submit=true`, one at a time, in order.
 4. **Return** a `BulkResult` with each row's status, message and response data. `log_to="results.csv"` also writes it to a file.
+   - Row statuses: `valid` (passed the dry run, not submitted), `invalid` (failed the dry run), `submitted`, `failed` (the submit was rejected) and `not_sent`.
+   - With `on_error="stop"`, the first failed submit stops the rest, which are marked `not_sent`. With `on_error="skip"`, the remaining rows are still sent.
+   - An `AuthError` always stops the run and propagates: it isn't a problem with one row.
 
 Notes:
 
@@ -417,9 +425,10 @@ client.report("ITEMS_REPORT", licenses=["LIC-1", "LIC-2"], format="xlsx",
               filter=["name__contains:flower"], sort="name:asc")
 ```
 
-- **`format`** maps to `contentType`: `json`, `csv`, `xlsx` or `googleSheets`.
+- **`format`** maps to `contentType`: `json`, `csv`, `xlsx` or `googleSheets`. Left out, it follows the extension of `to=` (`.csv`, `.xlsx`, `.json`), else `csv`.
+- **Google Sheets:** `format="googleSheets"` returns the new sheet's URL (from the 302 `Location` header, or `sheetUrl` in the body).
 - **`licenses`** maps to the multi-valued `licenseNumber`. The spec allows up to 20 per call; more raises `ValueError`.
-- **`to=`** streams the download to a file and returns its path. Without it, `report` returns `bytes`, or parsed JSON for `format="json"`.
+- **`to=`** streams the download to a temporary file beside the target and renames it when complete, so a failed download never leaves a partial file. It returns the path. Without it, `report` returns `bytes`, or parsed JSON for `format="json"`.
 - **Email delivery:** `delivery="email"` with `email=` asks the server to email the report instead.
 - **Report URLs:** `client.report_url(endpoint, *, licenses, format, columns, filter, sort, ...)` returns a URL with the profile's secret key in `?secretKey=`, for Excel or Google Sheets to pull directly. Every report endpoint accepts this parameter.
     - It sends no request.
@@ -446,7 +455,8 @@ client.report("ITEMS_REPORT", licenses=["LIC-1", "LIC-2"], format="xlsx",
 How resolve behaves:
 
 - **All or nothing:** if any handle matches zero objects or several, the server returns 422. The helper raises `TagListResolveError`, carrying the server's per-handle `errors`, so a script can fix its CSV.
-- **Matching:** the server matches on one field per collection: `label` for packages, plants and tags; `name` for items, harvests, plant batches and strains; `manifestNumber` for transfers. The client doesn't hardcode any of this.
+- **Matching:** the server matches on one field per collection: `label` for packages, plants and tags; `packageLabel` for transferred packages; `name` for items, harvests, plant batches and strains; `manifestNumber` for transfers. The client doesn't hardcode any of this.
+- **Size:** each request carries at most 5,000 entries, so the helpers send larger lists in chunks. A list can grow past 5,000, but resolve answers 400 for lists over 5,000 entries, so `create()` warns when it builds one.
 - **COA extraction** (`.../coa-extraction`) is reachable through `client.request`. A dedicated helper can come later.
 
 ### Local filter
@@ -474,7 +484,7 @@ The `t3api` command (Typer):
 
 | Command | What it does |
 |---|---|
-| `t3api login [--profile P] [--host URL]` | Login flow (section 6) |
+| `t3api login [--profile P] [--host URL]` | Login flow (section 6). Every command that uses a credential takes `--profile/-p` (or `T3_PROFILE`). |
 | `t3api logout [--profile P] [--everywhere]` | Remove the saved credential; optionally log out all Metrc sessions |
 | `t3api whoami` | Current user, profile and credential type |
 | `t3api profiles list` / `use P` / `remove P` | Manage profiles |

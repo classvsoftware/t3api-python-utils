@@ -1,106 +1,95 @@
-# t3api-python-utils
+# t3api-utils
 
-Utility functions and helpers for the T3 API ecosystem.
+A Python library and `t3api` command for the [T3 API](https://api.trackandtrace.tools/v2/docs)
+(Track & Trace Tools), which serves Metrc cannabis-compliance data. It handles
+login and secret keys, loads whole collections, sends writes safely (dry run
+unless you say otherwise), downloads server-side reports and builds tag lists.
 
-This library is designed to support development of tools and clients that integrate with the Track & Trace Tools (T3) platform and Metrc data. It includes shared logic, validation helpers, transformation utilities, and other reusable Python components.
+**Documentation: <https://classvsoftware.github.io/t3api-python-utils/>**
 
----
+> 2.0 is a rewrite and doesn't share an API with 1.x. See
+> [Migrating from 1.x](https://classvsoftware.github.io/t3api-python-utils/migration/).
+> 1.x is frozen at 1.5.0.
 
-## 🚀 Getting Started
+## Install
 
-### 1. Clone the repo
-
-```bash
-git clone https://github.com/classvsoftware/t3api-python-utils.git
-cd t3api-python-utils
-````
-
-### 2. Create virtual environment with `uv`
+Python 3.12 or later.
 
 ```bash
-uv venv
-source .venv/bin/activate
+uv add t3api-utils
+pip install "t3api-utils[tui]"    # [tui] adds the terminal row inspector
 ```
 
-### 3. Install the package (editable mode)
+## Quickstart
+
+Log in once. This creates a T3 secret key from your Metrc login and saves it to
+your OS keyring; your Metrc password isn't stored.
 
 ```bash
-uv pip install -e .
+t3api login
 ```
 
----
+Then, in a script:
 
-## 🧪 Running Tests
+```python
+import t3api_utils as t3
+
+client = t3.connect()
+items = client.collect("METRC_ACTIVE_ITEMS", license="LIC-00001")
+t3.to_csv(items, "items.csv")
+```
+
+For scheduled jobs and CI, set `T3_SECRET_KEY` instead of logging in.
+
+A few more things it does:
+
+```python
+# Writes are a dry run unless submit=True
+client.post("/v2/items/discontinue", license="LIC-00001", json={"id": 12345}, submit=True)
+
+# Validate every row, then submit
+client.bulk("/v2/items/discontinue", rows=[{"id": i["id"]} for i in items], license="LIC-00001", submit=True)
+
+# Server-side report straight to a file
+client.report("ITEMS_REPORT", licenses=["LIC-00001"], to="items.xlsx")
+
+# A column of tag labels to full package records
+tl = client.tag_lists.from_csv("labels.csv", column="label", license="LIC-00001",
+                               endpoint="METRC_ACTIVE_PACKAGES")
+packages = tl.resolve()
+```
+
+## The t3api command
 
 ```bash
-pytest
+t3api login                                                   # save a secret key to a profile
+t3api pull METRC_ACTIVE_PACKAGES -l LIC-00001 -o packages.csv # a whole collection to CSV or JSON
+t3api report ITEMS_REPORT -l LIC-00001 -o items.xlsx          # a server-side report
+t3api endpoints harvest --kind collection                     # search the T3 spec
+t3api keys list                                               # manage secret keys
 ```
 
-Add test modules under the `tests/` directory.
+`t3api --help` lists every command.
 
----
-
-## 🛠️ Development Tips
-
-* All core source files live in the `t3api_python_utils/` directory.
-* Add type annotations and follow [PEP 8](https://peps.python.org/pep-0008/) and [mypy strict rules](https://mypy.readthedocs.io/en/stable/config_file.html).
-
----
-
-## 📦 Building the Package
-
-Make sure your virtualenv is activated:
+## Development
 
 ```bash
-uv pip install build
-python -m build
+uv sync
+uv run pytest
+uv run mypy
+uv run mkdocs serve
 ```
 
-This generates `.tar.gz` and `.whl` files inside the `dist/` folder.
+See [CLAUDE.md](CLAUDE.md) for the project layout and conventions, and
+[CHANGELOG.md](CHANGELOG.md) for release notes.
 
----
+## License
 
-## 🚀 Publishing to PyPI
+[GPL-3.0-only](LICENSE).
 
-### 1. Install Twine
+## Links
 
-```bash
-uv pip install twine
-```
-
-### 2. Upload to TestPyPI (recommended for first-time testing)
-
-```bash
-twine upload --repository testpypi dist/*
-```
-
-Test it via:
-
-```bash
-uv pip install --index-url https://test.pypi.org/simple/ t3api-python-utils
-```
-
-### 3. Upload to PyPI (when ready)
-
-```bash
-twine upload dist/*
-```
-
-You’ll need a valid `.pypirc` file or Twine will prompt for your PyPI credentials.
-
----
-
-## 📎 License
-
-Licensed under the GNU General Public License v3.0.
-
----
-
-## 🔗 Links
-
-* [Documentation](https://classvsoftware.github.io/t3api-python-utils/)
-* [T3 Website](https://trackandtrace.tools)
-* [T3 API Docs](https://api.trackandtrace.tools/v2/docs)
-* [GitHub Repo](https://github.com/classvsoftware/t3api-python-utils)
-
----
+- [Documentation](https://classvsoftware.github.io/t3api-python-utils/)
+- [T3 API docs](https://api.trackandtrace.tools/v2/docs)
+- [T3 website](https://www.trackandtrace.tools) and [wiki](https://www.trackandtrace.tools/wiki)
+- [Example scripts](https://github.com/classvsoftware/t3-api-examples)
