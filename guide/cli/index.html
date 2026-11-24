@@ -1,0 +1,1734 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Secret-key auth, collection loading, reports and tag lists for the T3 API">
+      
+      
+      
+        <link rel="canonical" href="https://classvsoftware.github.io/t3api-python-utils/guide/cli/">
+      
+      
+        <link rel="prev" href="../local-data/">
+      
+      
+        <link rel="next" href="../errors-and-logging/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
+    
+    
+      
+        <title>The t3api command - t3api-utils</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="purple">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#the-t3api-command" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="t3api-utils" class="md-header__button md-logo" aria-label="t3api-utils" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            t3api-utils
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              The t3api command
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="purple"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="purple"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/classvsoftware/t3api-python-utils" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    classvsoftware/t3api-python-utils
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="t3api-utils" class="md-nav__button md-logo" aria-label="t3api-utils" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    t3api-utils
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/classvsoftware/t3api-python-utils" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    classvsoftware/t3api-python-utils
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authentication
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../endpoints-and-spec/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Endpoints and the spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../collections/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Collections
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../writes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reports-and-tag-lists/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reports and tag lists
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../local-data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The t3api command
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The t3api command
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conventions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#logging-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Logging in
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Logging in">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#login" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        login
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#logout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        logout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#whoami" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        whoami
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Profiles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-license" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default license
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#secret-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secret keys
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        endpoints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pull" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pull
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#report" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        report
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inspect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        inspect
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tag-lists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tag lists
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-spec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The spec
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../errors-and-logging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Errors and logging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migrating from 1.x
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/client/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T3Client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/auth/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    connect() and auth
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/writes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/reports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tag-lists/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tag lists
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/local/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/errors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Errors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/spec/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conventions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#logging-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Logging in
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Logging in">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#login" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        login
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#logout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        logout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#whoami" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        whoami
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Profiles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-license" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default license
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#secret-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secret keys
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        endpoints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pull" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pull
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#report" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        report
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inspect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        inspect
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tag-lists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tag lists
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-spec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The spec
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="the-t3api-command">The t3api command<a class="headerlink" href="#the-t3api-command" title="Permanent link">&para;</a></h1>
+<p>Installing <code>t3api-utils</code> adds a <code>t3api</code> command. It covers logging in,
+profiles, secret keys, and the common data tasks, without writing Python.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>t3api<span class="w"> </span>--help
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>t3api<span class="w"> </span>pull<span class="w"> </span>--help
+</code></pre></div>
+<p>How to run it:</p>
+<table>
+<thead>
+<tr>
+<th>Setup</th>
+<th>Command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Installed with pip, or <code>uv tool install t3api-utils</code></td>
+<td><code>t3api ...</code></td>
+</tr>
+<tr>
+<td>In a uv project that depends on <code>t3api-utils</code></td>
+<td><code>uv run t3api ...</code></td>
+</tr>
+<tr>
+<td>Nothing installed</td>
+<td><code>uvx --from t3api-utils t3api ...</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="conventions">Conventions<a class="headerlink" href="#conventions" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Profiles.</strong> Every command that uses a credential takes <code>--profile</code> / <code>-p</code>.
+  Without it, the profile is <code>T3_PROFILE</code>, then the default profile, then one
+  named <code>default</code>. Credentials are found the same way as
+  <a href="../authentication/#how-connect-finds-a-credential"><code>connect()</code></a>, so
+  <code>T3_SECRET_KEY</code> works here too.</li>
+<li><strong>Licenses.</strong> <code>--license</code> / <code>-l</code> takes a license number. On <code>pull</code> and
+  <code>report</code>, repeat it for several licenses. Leave it out to use the profile's
+  default license.</li>
+<li><strong>Output.</strong> Data (tables, IDs, URLs) goes to stdout. Messages, prompts and
+  progress go to stderr, so <code>t3api ... &gt; file</code> captures only the data.</li>
+<li><strong>Exit codes.</strong> 0 on success, 1 on an error (with a red ✗ message), 130 when
+  cancelled with Ctrl-C.</li>
+<li><strong>Global options</strong>, before the command: <code>--verbose</code> / <code>-v</code> shows the
+  library's progress logs, and <code>--version</code> prints the version.</li>
+</ul>
+<h2 id="logging-in">Logging in<a class="headerlink" href="#logging-in" title="Permanent link">&para;</a></h2>
+<h3 id="login">login<a class="headerlink" href="#login" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>t3api<span class="w"> </span>login<span class="w"> </span><span class="o">[</span>--profile<span class="w"> </span>P<span class="o">]</span><span class="w"> </span><span class="o">[</span>--host<span class="w"> </span>URL<span class="o">]</span>
+</code></pre></div>
+<p>Runs the <a href="../authentication/#the-login-flow">login flow</a>: paste an existing
+secret key, or log in with Metrc credentials and accept the offer to create
+one. Saves it to the profile (creating the profile if needed) and optionally
+sets a default license. The first profile becomes the default.</p>
+<p><code>--host</code> sets the T3 API base URL for the profile. It defaults to
+<code>T3_API_HOST</code>, then the profile's saved host, then
+<code>https://api.trackandtrace.tools</code>.</p>
+<h3 id="logout">logout<a class="headerlink" href="#logout" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>t3api<span class="w"> </span><span class="nb">logout</span><span class="w"> </span><span class="o">[</span>--profile<span class="w"> </span>P<span class="o">]</span><span class="w"> </span><span class="o">[</span>--everywhere<span class="o">]</span>
+</code></pre></div>
+<p>Removes the profile's saved credential from the keyring (or secrets file). The
+profile and its settings stay. A secret key itself keeps working; delete it
+with <code>t3api keys revoke</code> if it's no longer needed.</p>
+<p><code>--everywhere</code> first calls <code>POST /v2/auth/logout</code>, which logs out all of the
+account's Metrc sessions.</p>
+<h3 id="whoami">whoami<a class="headerlink" href="#whoami" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>t3api<span class="w"> </span>whoami<span class="w"> </span><span class="o">[</span>--profile<span class="w"> </span>P<span class="o">]</span>
+</code></pre></div>
+<p>Shows the profile, credential type, API host and default license, plus the
+username, Metrc hostname and subscription details T3 reports.</p>
+<h2 id="profiles">Profiles<a class="headerlink" href="#profiles" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>t3api<span class="w"> </span>profiles<span class="w"> </span>list<span class="w">              </span><span class="c1"># every profile; the default is ticked</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>t3api<span class="w"> </span>profiles<span class="w"> </span>use<span class="w"> </span>NAME<span class="w">          </span><span class="c1"># make NAME the default</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>t3api<span class="w"> </span>profiles<span class="w"> </span>remove<span class="w"> </span>NAME<span class="w">       </span><span class="c1"># delete NAME and its saved credential</span>
+</code></pre></div>
+<p><code>profiles list</code> shows each profile's credential type, Metrc host, username,
+default license and API host. Secrets are never shown.</p>
+<h2 id="default-license">Default license<a class="headerlink" href="#default-license" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>t3api<span class="w"> </span>license<span class="w"> </span><span class="o">[</span>--profile<span class="w"> </span>P<span class="o">]</span><span class="w">                </span><span class="c1"># show it</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>t3api<span class="w"> </span>license<span class="w"> </span>pick<span class="w"> </span><span class="o">[</span>--profile<span class="w"> </span>P<span class="o">]</span><span class="w">           </span><span class="c1"># choose from the account's licenses</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>t3api<span class="w"> </span>license<span class="w"> </span><span class="nb">set</span><span class="w"> </span>LIC-00001<span class="w"> </span><span class="o">[</span>--profile<span class="w"> </span>P<span class="o">]</span><span class="w">  </span><span class="c1"># set it directly</span>
+</code></pre></div>
+<p>Scripts pick it up as <code>client.license</code>, and calls that need a license use it
+when you leave <code>license=</code> out.</p>
+<h2 id="secret-keys">Secret keys<a class="headerlink" href="#secret-keys" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>t3api<span class="w"> </span>keys<span class="w"> </span>list<span class="w"> </span><span class="o">[</span>--profile<span class="w"> </span>P<span class="o">]</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>t3api<span class="w"> </span>keys<span class="w"> </span>create<span class="w"> </span><span class="o">[</span>--profile<span class="w"> </span>P<span class="o">]</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>t3api<span class="w"> </span>keys<span class="w"> </span>rotate<span class="w"> </span><span class="o">[</span>KEY<span class="o">]</span><span class="w"> </span><span class="o">[</span>--profile<span class="w"> </span>P<span class="o">]</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>t3api<span class="w"> </span>keys<span class="w"> </span>revoke<span class="w"> </span>KEY<span class="w"> </span><span class="o">[</span>--profile<span class="w"> </span>P<span class="o">]</span><span class="w"> </span><span class="o">[</span>--yes<span class="o">]</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>keys list</code></td>
+<td>Every secret key on the account, masked to the last 4 characters, with whether it's enabled, managed, when it was created and last used, and which one this profile uses.</td>
+</tr>
+<tr>
+<td><code>keys create</code></td>
+<td>Asks for Metrc hostname, username and password (plus email or OTP seed where the state needs them), creates a key, prints it <strong>once</strong>, and offers to save it to the profile.</td>
+</tr>
+<tr>
+<td><code>keys rotate</code></td>
+<td>After a Metrc password, email or OTP change: asks for the new login details and updates the key. The key value doesn't change. Without <code>KEY</code>, rotates the profile's saved key.</td>
+</tr>
+<tr>
+<td><code>keys revoke</code></td>
+<td>Deletes a key after asking for confirmation (<code>--yes</code> skips the question). Anything using it stops working, including report URLs that contain it. Removes it from any profile that saved it.</td>
+</tr>
+</tbody>
+</table>
+<p>See <a href="../authentication/#managing-secret-keys">Managing secret keys</a>.</p>
+<h2 id="data">Data<a class="headerlink" href="#data" title="Permanent link">&para;</a></h2>
+<h3 id="endpoints">endpoints<a class="headerlink" href="#endpoints" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>t3api<span class="w"> </span>endpoints<span class="w"> </span><span class="o">[</span>QUERY<span class="o">]</span><span class="w"> </span><span class="o">[</span>--kind<span class="w"> </span>KIND<span class="o">]</span><span class="w"> </span><span class="o">[</span>--profile<span class="w"> </span>P<span class="o">]</span>
+</code></pre></div>
+<p>Searches the T3 spec. Every word of <code>QUERY</code> must appear in the endpoint ID,
+path, summary or tags. <code>--kind</code> / <code>-k</code> is one of <code>collection</code>, <code>report</code>,
+<code>metrc_write</code>, <code>immediate_write</code>, <code>file</code>, <code>object</code> or <code>other</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>t3api<span class="w"> </span>endpoints<span class="w"> </span>harvest
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>t3api<span class="w"> </span>endpoints<span class="w"> </span>transfers<span class="w"> </span>incoming<span class="w"> </span>--kind<span class="w"> </span>collection
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>t3api<span class="w"> </span>endpoints<span class="w"> </span>--kind<span class="w"> </span>report
+</code></pre></div>
+<p>It needs no credential, only the spec. <code>T3_SPEC=bundled t3api endpoints ...</code>
+works offline.</p>
+<h3 id="pull">pull<a class="headerlink" href="#pull" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>t3api<span class="w"> </span>pull<span class="w"> </span><span class="o">[</span>ENDPOINT<span class="o">]</span><span class="w"> </span><span class="o">[</span>-l<span class="w"> </span>LIC<span class="o">]</span>...<span class="w"> </span><span class="o">[</span>-f<span class="w"> </span>FILTER<span class="o">]</span>...<span class="w"> </span><span class="o">[</span>--sort<span class="w"> </span>S<span class="o">]</span><span class="w"> </span><span class="o">[</span>--mask<span class="w"> </span>FIELDS<span class="o">]</span><span class="w"> </span><span class="o">[</span>-o<span class="w"> </span>FILE<span class="o">]</span><span class="w"> </span><span class="o">[</span>--inspect<span class="o">]</span><span class="w"> </span><span class="o">[</span>-p<span class="w"> </span>P<span class="o">]</span>
+</code></pre></div>
+<p>Loads a whole collection, as <code>client.collect()</code> does, and writes it to a file
+or opens it in the inspector.</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ENDPOINT</code></td>
+<td>A collection's endpoint ID or path. Leave it out to pick one from a searchable table.</td>
+</tr>
+<tr>
+<td><code>-l</code>, <code>--license</code></td>
+<td>License number. Repeat for several. Without it, the profile's default license is used, or you're asked to pick one.</td>
+</tr>
+<tr>
+<td><code>-f</code>, <code>--filter</code></td>
+<td><code>field__op:value</code>. Repeat for several (all must match).</td>
+</tr>
+<tr>
+<td><code>--sort</code></td>
+<td><code>field:asc</code> or <code>field:desc</code>.</td>
+</tr>
+<tr>
+<td><code>--mask</code></td>
+<td>Comma-separated fields to return.</td>
+</tr>
+<tr>
+<td><code>-o</code>, <code>--output</code></td>
+<td>File to write. <code>.json</code> writes JSON, <code>.jsonl</code> JSON Lines, anything else CSV. Without it, a CSV named after the data model, license and time.</td>
+</tr>
+<tr>
+<td><code>--inspect</code></td>
+<td>Open the rows in the inspector instead of writing a file (needs <code>[tui]</code>).</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>t3api<span class="w"> </span>pull<span class="w"> </span>METRC_ACTIVE_PACKAGES<span class="w"> </span>-l<span class="w"> </span>LIC-00001<span class="w"> </span>-o<span class="w"> </span>packages.csv
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>t3api<span class="w"> </span>pull<span class="w"> </span>METRC_ACTIVE_ITEMS<span class="w"> </span>-l<span class="w"> </span>LIC-00001<span class="w"> </span>-l<span class="w"> </span>LIC-00002<span class="w"> </span>-f<span class="w"> </span>name__contains:flower<span class="w"> </span>--sort<span class="w"> </span>name:asc<span class="w"> </span>-o<span class="w"> </span>items.json
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>t3api<span class="w"> </span>pull<span class="w"> </span>/v2/harvests/active<span class="w"> </span>--mask<span class="w"> </span>id,name,currentWeight
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>t3api<span class="w"> </span>pull<span class="w"> </span>--inspect
+</code></pre></div>
+<h3 id="report">report<a class="headerlink" href="#report" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>t3api<span class="w"> </span>report<span class="w"> </span>ENDPOINT<span class="w"> </span><span class="o">[</span>-l<span class="w"> </span>LIC<span class="o">]</span>...<span class="w"> </span><span class="o">[</span>--format<span class="w"> </span>F<span class="o">]</span><span class="w"> </span><span class="o">[</span>-o<span class="w"> </span>FILE<span class="o">]</span><span class="w"> </span><span class="o">[</span>--columns<span class="w"> </span>C<span class="o">]</span><span class="w"> </span><span class="o">[</span>-f<span class="w"> </span>FILTER<span class="o">]</span>...<span class="w"> </span><span class="o">[</span>--sort<span class="w"> </span>S<span class="o">]</span><span class="w"> </span><span class="o">[</span>--url<span class="o">]</span><span class="w"> </span><span class="o">[</span>-p<span class="w"> </span>P<span class="o">]</span>
+</code></pre></div>
+<p>Downloads a <a href="../reports-and-tag-lists/#reports">server-side report</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ENDPOINT</code></td>
+<td>A report's endpoint ID or path, e.g. <code>ITEMS_REPORT</code>.</td>
+</tr>
+<tr>
+<td><code>-l</code>, <code>--license</code></td>
+<td>License number. Repeat for up to 20.</td>
+</tr>
+<tr>
+<td><code>--format</code></td>
+<td><code>csv</code>, <code>xlsx</code>, <code>json</code> or <code>googleSheets</code>. Defaults to the extension of <code>-o</code>, else <code>csv</code>.</td>
+</tr>
+<tr>
+<td><code>-o</code>, <code>--output</code></td>
+<td>File to write. Without it, <code>&lt;ENDPOINT&gt;__&lt;time&gt;.&lt;format&gt;</code> in the current folder.</td>
+</tr>
+<tr>
+<td><code>--columns</code></td>
+<td>Comma-separated columns.</td>
+</tr>
+<tr>
+<td><code>-f</code>, <code>--filter</code>, <code>--sort</code></td>
+<td>As for <code>pull</code>.</td>
+</tr>
+<tr>
+<td><code>--url</code></td>
+<td>Print a report URL containing the secret key instead of downloading. See <a href="../reports-and-tag-lists/#report-urls-for-spreadsheets">the warning</a>.</td>
+</tr>
+</tbody>
+</table>
+<p>With <code>--format googleSheets</code>, it prints the new sheet's URL.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>t3api<span class="w"> </span>report<span class="w"> </span>ITEMS_REPORT<span class="w"> </span>-l<span class="w"> </span>LIC-00001<span class="w"> </span>-o<span class="w"> </span>items.xlsx
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>t3api<span class="w"> </span>report<span class="w"> </span>ACTIVE_PACKAGES_REPORT<span class="w"> </span>-l<span class="w"> </span>LIC-00001<span class="w"> </span>-l<span class="w"> </span>LIC-00002<span class="w"> </span>--columns<span class="w"> </span>label,quantity,locationName<span class="w"> </span>-o<span class="w"> </span>packages.csv
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>t3api<span class="w"> </span>report<span class="w"> </span>ACTIVE_PACKAGES_REPORT<span class="w"> </span>-l<span class="w"> </span>LIC-00001<span class="w"> </span>--url
+</code></pre></div>
+<h3 id="inspect">inspect<a class="headerlink" href="#inspect" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>t3api<span class="w"> </span>inspect<span class="w"> </span>FILE
+</code></pre></div>
+<p>Opens a JSON, JSON Lines or CSV file in the <a href="../local-data/#the-inspector">inspector</a>.
+Needs the <code>[tui]</code> extra.</p>
+<h2 id="tag-lists">Tag lists<a class="headerlink" href="#tag-lists" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>t3api<span class="w"> </span>tag-lists<span class="w"> </span>list<span class="w"> </span><span class="o">[</span>-l<span class="w"> </span>LIC<span class="o">]</span><span class="w"> </span><span class="o">[</span>-p<span class="w"> </span>P<span class="o">]</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>t3api<span class="w"> </span>tag-lists<span class="w"> </span>create<span class="w"> </span>FILE<span class="w"> </span>--column<span class="w"> </span>COL<span class="w"> </span><span class="o">[</span>--name<span class="w"> </span>N<span class="o">]</span><span class="w"> </span><span class="o">[</span>--endpoint<span class="w"> </span>E<span class="o">]</span><span class="w"> </span><span class="o">[</span>-l<span class="w"> </span>LIC<span class="o">]</span><span class="w"> </span><span class="o">[</span>--shared<span class="o">]</span><span class="w"> </span><span class="o">[</span>-p<span class="w"> </span>P<span class="o">]</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>t3api<span class="w"> </span>tag-lists<span class="w"> </span>resolve<span class="w"> </span>LIST_ID<span class="w"> </span><span class="o">[</span>--endpoint<span class="w"> </span>E<span class="o">]</span><span class="w"> </span><span class="o">[</span>-o<span class="w"> </span>FILE<span class="o">]</span><span class="w"> </span><span class="o">[</span>-p<span class="w"> </span>P<span class="o">]</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tag-lists list</code></td>
+<td>Your tag lists with their ID, name, license, endpoint, entry count and scanned count.</td>
+</tr>
+<tr>
+<td><code>tag-lists create</code></td>
+<td>Creates a list from one column (<code>--column</code> / <code>-c</code>) of a CSV or TSV file. <code>--name</code> defaults to the file name. <code>--endpoint</code> / <code>-e</code> sets the collection it resolves against by default. <code>--shared</code> makes it visible to everyone with access to the license. Prints the new list's ID on stdout.</td>
+</tr>
+<tr>
+<td><code>tag-lists resolve</code></td>
+<td>Resolves a list to its objects and writes them like <code>pull</code> does (<code>-o</code> picks CSV, JSON or JSON Lines). <code>--endpoint</code> / <code>-e</code> resolves against a different collection. If any handle doesn't resolve, prints a table of them and exits 1.</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nv">LIST_ID</span><span class="o">=</span><span class="k">$(</span>t3api<span class="w"> </span>tag-lists<span class="w"> </span>create<span class="w"> </span>labels.csv<span class="w"> </span>-c<span class="w"> </span>label<span class="w"> </span>-e<span class="w"> </span>METRC_ACTIVE_PACKAGES<span class="w"> </span>--name<span class="w"> </span><span class="s2">"Room A"</span><span class="k">)</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>t3api<span class="w"> </span>tag-lists<span class="w"> </span>resolve<span class="w"> </span><span class="s2">"</span><span class="nv">$LIST_ID</span><span class="s2">"</span><span class="w"> </span>-o<span class="w"> </span>room-a.csv
+</code></pre></div>
+<p>See <a href="../reports-and-tag-lists/#tag-lists">Tag lists</a>.</p>
+<h2 id="the-spec">The spec<a class="headerlink" href="#the-spec" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>t3api<span class="w"> </span>spec<span class="w"> </span>info<span class="w"> </span><span class="o">[</span>-p<span class="w"> </span>P<span class="o">]</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>t3api<span class="w"> </span>spec<span class="w"> </span>refresh<span class="w"> </span><span class="o">[</span>-p<span class="w"> </span>P<span class="o">]</span>
+</code></pre></div>
+<p><code>spec info</code> shows which copy of the T3 OpenAPI spec is in use (cached, live,
+stale or bundled), how old it is, its version, and how many operations of each
+kind it has. <code>spec refresh</code> fetches the live spec now and caches it, for
+example right after T3 announces a new endpoint. See
+<a href="../endpoints-and-spec/#where-the-spec-comes-from">Where the spec comes from</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../local-data/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Local data">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Local data
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../errors-and-logging/" class="md-footer__link md-footer__link--next" aria-label="Next: Errors and logging">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Errors and logging
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      GPL-3.0-only · Track & Trace Tools
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["content.code.copy", "content.tabs.link", "navigation.sections", "navigation.top", "navigation.footer", "search.highlight", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+    
+  </body>
+</html>

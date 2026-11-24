@@ -1,0 +1,1595 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Secret-key auth, collection loading, reports and tag lists for the T3 API">
+      
+      
+      
+        <link rel="canonical" href="https://classvsoftware.github.io/t3api-python-utils/guide/reports-and-tag-lists/">
+      
+      
+        <link rel="prev" href="../writes/">
+      
+      
+        <link rel="next" href="../local-data/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
+    
+    
+      
+        <title>Reports and tag lists - t3api-utils</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="purple">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#reports-and-tag-lists" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="t3api-utils" class="md-header__button md-logo" aria-label="t3api-utils" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            t3api-utils
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Reports and tag lists
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="purple"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="purple"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/classvsoftware/t3api-python-utils" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    classvsoftware/t3api-python-utils
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="t3api-utils" class="md-nav__button md-logo" aria-label="t3api-utils" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    t3api-utils
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/classvsoftware/t3api-python-utils" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    classvsoftware/t3api-python-utils
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authentication
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../endpoints-and-spec/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Endpoints and the spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../collections/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Collections
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../writes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reports and tag lists
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reports and tag lists
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#reports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reports
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reports">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#downloading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Downloading
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#report-urls-for-spreadsheets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Report URLs for spreadsheets
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tag-lists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tag lists
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tag lists">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#from-a-csv-to-packages" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From a CSV to packages
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#creating-lists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating lists
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#working-with-a-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Working with a list
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#resolving" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resolving
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#from-the-command-line" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From the command line
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../local-data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The t3api command
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../errors-and-logging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Errors and logging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migrating from 1.x
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/client/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T3Client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/auth/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    connect() and auth
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/writes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/reports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tag-lists/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tag lists
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/local/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/errors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Errors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/spec/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#reports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reports
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reports">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#downloading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Downloading
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#report-urls-for-spreadsheets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Report URLs for spreadsheets
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tag-lists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tag lists
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tag lists">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#from-a-csv-to-packages" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From a CSV to packages
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#creating-lists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating lists
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#working-with-a-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Working with a list
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#resolving" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resolving
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#from-the-command-line" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From the command line
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="reports-and-tag-lists">Reports and tag lists<a class="headerlink" href="#reports-and-tag-lists" title="Permanent link">&para;</a></h1>
+<p>Both are built on the T3 server, so they do work that would otherwise take
+many requests and some local code.</p>
+<h2 id="reports">Reports<a class="headerlink" href="#reports" title="Permanent link">&para;</a></h2>
+<p>A report endpoint builds a whole collection into one CSV, XLSX or JSON file on
+the server. When you want a spreadsheet, it's usually quicker than
+<code>collect()</code> plus <code>to_csv()</code>. There are 83 report endpoints today:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>t3api<span class="w"> </span>endpoints<span class="w"> </span>--kind<span class="w"> </span>report
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>t3api<span class="w"> </span>endpoints<span class="w"> </span>package<span class="w"> </span>--kind<span class="w"> </span>report
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">client</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">list</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">"report"</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="downloading">Downloading<a class="headerlink" href="#downloading" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">t3api_utils</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t3</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="k">with</span> <span class="n">t3</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">client</span><span class="o">.</span><span class="n">report</span><span class="p">(</span><span class="s2">"ITEMS_REPORT"</span><span class="p">,</span> <span class="n">licenses</span><span class="o">=</span><span class="p">[</span><span class="s2">"LIC-00001"</span><span class="p">],</span> <span class="n">to</span><span class="o">=</span><span class="s2">"items.xlsx"</span><span class="p">)</span>
+</code></pre></div>
+<p>With <code>to=</code>, the report streams straight to the file (written to a temporary
+file first, then renamed, so a failed download never leaves half a file) and
+<code>report()</code> returns the path.</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>endpoint</code></td>
+<td>A report's endpoint ID (<code>ITEMS_REPORT</code>, <code>ACTIVE_PACKAGES_REPORT</code>, ...) or path.</td>
+</tr>
+<tr>
+<td><code>licenses</code></td>
+<td>One license or a list of up to 20. Defaults to the client's default license. More than 20 raises <code>ValueError</code>.</td>
+</tr>
+<tr>
+<td><code>format</code></td>
+<td><code>"csv"</code>, <code>"xlsx"</code>, <code>"json"</code> or <code>"googleSheets"</code>. Defaults to the extension of <code>to</code> (<code>.csv</code>, <code>.xlsx</code>, <code>.json</code>), else <code>"csv"</code>.</td>
+</tr>
+<tr>
+<td><code>to</code></td>
+<td>File to write.</td>
+</tr>
+<tr>
+<td><code>columns</code></td>
+<td>Columns to include, in order, as a list or comma-separated string. Each report has its own default set. An unknown name fails with a 400 that lists the valid ones.</td>
+</tr>
+<tr>
+<td><code>filter</code>, <code>filter_logic</code>, <code>sort</code></td>
+<td>As in <a href="../collections/#arguments"><code>collect()</code></a>.</td>
+</tr>
+<tr>
+<td><code>row_limit</code></td>
+<td>Return only the first this-many rows.</td>
+</tr>
+<tr>
+<td><code>delivery</code>, <code>email</code></td>
+<td><code>delivery="email"</code> with <code>email=</code> asks the server to email the report instead.</td>
+</tr>
+<tr>
+<td><code>params</code></td>
+<td>Any other query parameters, by their spec names.</td>
+</tr>
+</tbody>
+</table>
+<p>What comes back:</p>
+<table>
+<thead>
+<tr>
+<th>Call</th>
+<th>Returns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>to="..."</code></td>
+<td>The <code>Path</code> written</td>
+</tr>
+<tr>
+<td>no <code>to</code>, <code>format="csv"</code> or <code>"xlsx"</code></td>
+<td><code>bytes</code></td>
+</tr>
+<tr>
+<td>no <code>to</code>, <code>format="json"</code></td>
+<td>Parsed JSON: an envelope with <code>data</code>, <code>filters</code>, <code>sort</code> and so on</td>
+</tr>
+<tr>
+<td><code>format="googleSheets"</code></td>
+<td>The URL of a new Google Sheet. <code>email=</code> shares it with that address.</td>
+</tr>
+<tr>
+<td><code>delivery="email"</code></td>
+<td>The server's delivery receipt; the report arrives by email</td>
+</tr>
+</tbody>
+</table>
+<p>Report downloads get a 5 minute timeout instead of the usual 30 seconds.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Several licenses, chosen columns, filtered and sorted, to CSV</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">client</span><span class="o">.</span><span class="n">report</span><span class="p">(</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="s2">"ACTIVE_PACKAGES_REPORT"</span><span class="p">,</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="n">licenses</span><span class="o">=</span><span class="p">[</span><span class="s2">"LIC-00001"</span><span class="p">,</span> <span class="s2">"LIC-00002"</span><span class="p">],</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">to</span><span class="o">=</span><span class="s2">"packages.csv"</span><span class="p">,</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"label"</span><span class="p">,</span> <span class="s2">"quantity"</span><span class="p">,</span> <span class="s2">"unitOfMeasureAbbreviation"</span><span class="p">,</span> <span class="s2">"locationName"</span><span class="p">],</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="nb">filter</span><span class="o">=</span><span class="p">[</span><span class="s2">"isOnHold__eq:false"</span><span class="p">],</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="n">sort</span><span class="o">=</span><span class="s2">"label:asc"</span><span class="p">,</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="p">)</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="c1"># Straight into memory</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="n">csv_bytes</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">report</span><span class="p">(</span><span class="s2">"ITEMS_REPORT"</span><span class="p">,</span> <span class="n">licenses</span><span class="o">=</span><span class="s2">"LIC-00001"</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">"csv"</span><span class="p">)</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="c1"># Emailed instead of downloaded</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="n">client</span><span class="o">.</span><span class="n">report</span><span class="p">(</span><span class="s2">"ITEMS_REPORT"</span><span class="p">,</span> <span class="n">licenses</span><span class="o">=</span><span class="s2">"LIC-00001"</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">"xlsx"</span><span class="p">,</span>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>              <span class="n">delivery</span><span class="o">=</span><span class="s2">"email"</span><span class="p">,</span> <span class="n">email</span><span class="o">=</span><span class="s2">"me@example.com"</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Row caps.</strong> A report returns at most 50,000 rows, and a super report
+(<code>.../super/report</code>) at most 5,000. A collection larger than the cap is
+rejected rather than silently cut short. Narrow it with <code>filter</code>, or pass
+<code>row_limit</code> to ask for the first rows on purpose.</p>
+<p><strong>Saved reports and schedules</strong> (<code>/v2/saved-reports</code>) have no helper yet. Reach
+them with <code>client.request()</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">client</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="s2">"GET"</span><span class="p">,</span> <span class="s2">"/v2/saved-reports"</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="report-urls-for-spreadsheets">Report URLs for spreadsheets<a class="headerlink" href="#report-urls-for-spreadsheets" title="Permanent link">&para;</a></h3>
+<p><code>client.report_url()</code> builds a report URL with your secret key in it, for Excel
+or Google Sheets to pull directly. It takes the same arguments as <code>report()</code>,
+except <code>to</code>, <code>delivery</code> and <code>email</code>, and <code>format</code> defaults to <code>"csv"</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">url</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">report_url</span><span class="p">(</span><span class="s2">"ACTIVE_PACKAGES_REPORT"</span><span class="p">,</span> <span class="n">licenses</span><span class="o">=</span><span class="p">[</span><span class="s2">"LIC-00001"</span><span class="p">])</span>
+</code></pre></div>
+<p>Paste the URL into Google Sheets as <code>=IMPORTDATA("&lt;url&gt;")</code>, or into Excel with
+<strong>Data → From Web</strong>. The spreadsheet refreshes from T3 whenever it reloads.</p>
+<div class="admonition warning">
+<p class="admonition-title">The URL is a credential</p>
+<p>Anyone who has the URL can use your secret key, for anything the key can
+do. Every call logs a warning to remind you.</p>
+<p>Rotating a key keeps the same key value, so it does not cut off a leaked
+URL. <strong>Deleting the key</strong> (<code>t3api keys revoke KEY</code>) is the only way.
+Consider a separate key just for spreadsheet URLs, so you can revoke it
+without breaking your scripts.</p>
+</div>
+<p><code>report_url()</code> sends no request. It needs a secret key; with a JWT it raises
+<code>T3Error</code>, because a JWT in a URL would stop working within 24 hours.</p>
+<p>From the command line: <code>t3api report ACTIVE_PACKAGES_REPORT -l LIC-00001 --url</code>.</p>
+<h2 id="tag-lists">Tag lists<a class="headerlink" href="#tag-lists" title="Permanent link">&para;</a></h2>
+<p>A tag list is a list of <strong>handles</strong> kept on the T3 server, usually Metrc tag
+labels. T3 resolves the list to the objects those handles stand for. It's the
+quickest way from a column of scanned labels to full package records, and the
+list can be shared with everyone on the license.</p>
+<p><code>client.tag_lists</code> wraps <code>/v2/tag-lists</code>.</p>
+<h3 id="from-a-csv-to-packages">From a CSV to packages<a class="headerlink" href="#from-a-csv-to-packages" title="Permanent link">&para;</a></h3>
+<div class="highlight"><span class="filename">labels.csv</span><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>label
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>1A4000000000000000000001
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>1A4000000000000000000002
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>1A4000000000000000000003
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">with</span> <span class="n">t3</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="n">tl</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">tag_lists</span><span class="o">.</span><span class="n">from_csv</span><span class="p">(</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>        <span class="s2">"labels.csv"</span><span class="p">,</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>        <span class="n">column</span><span class="o">=</span><span class="s2">"label"</span><span class="p">,</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>        <span class="n">license</span><span class="o">=</span><span class="s2">"LIC-00001"</span><span class="p">,</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>        <span class="n">endpoint</span><span class="o">=</span><span class="s2">"METRC_ACTIVE_PACKAGES"</span><span class="p">,</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>        <span class="n">name</span><span class="o">=</span><span class="s2">"Room A"</span><span class="p">,</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    <span class="p">)</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="n">packages</span> <span class="o">=</span> <span class="n">tl</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>    <span class="n">t3</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">packages</span><span class="p">,</span> <span class="s2">"room-a-packages.csv"</span><span class="p">)</span>
+</code></pre></div>
+<p><code>endpoint</code> is the collection the list resolves against by default. <code>name</code>
+defaults to the file name. A TSV file works the same way.</p>
+<h3 id="creating-lists">Creating lists<a class="headerlink" href="#creating-lists" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Creates a list from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>create(name, license=None, endpoint=None, visibility="USER", handles=None, metadata=None)</code></td>
+<td>A list of handles (strings) or entry dicts</td>
+</tr>
+<tr>
+<td><code>from_csv(path, column, *, name=None, license=None, endpoint=None, visibility="USER")</code></td>
+<td>One column of a CSV or TSV file</td>
+</tr>
+<tr>
+<td><code>from_rows(rows, field, *, name, license=None, endpoint=None, visibility="USER")</code></td>
+<td>One field of each row, e.g. from <code>collect()</code>. Dotted paths such as <code>item.name</code> work.</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><code>license</code> defaults to the client's default license.</li>
+<li><code>visibility="USER"</code> keeps the list to yourself. <code>"LICENSE"</code> lets anyone on
+  the same Metrc hostname with access to the license read the list and add,
+  remove and scan entries. Only the creator can rename or archive it.</li>
+<li>Handles are trimmed, blanks are dropped, and repeats are skipped. Matching
+  ignores case and surrounding whitespace, and so does the repeat check.</li>
+<li>An entry can be a dict with more than a handle, such as
+  <code>{"handle": "1A4000000000000000000001", "name": "Vault shelf 3"}</code>.</li>
+<li>Each request carries at most 5,000 entries, so larger lists are sent in
+  chunks. A list can grow past 5,000, but the server only resolves lists of up
+  to 5,000 entries, so <code>create()</code> warns when a list is bigger. Split it to use
+  <code>resolve()</code>.</li>
+</ul>
+<p>Each of these returns a <code>TagList</code>.</p>
+<h3 id="working-with-a-list">Working with a list<a class="headerlink" href="#working-with-a-list" title="Permanent link">&para;</a></h3>
+<p>A <code>TagList</code> has the list's fields and the <code>client.tag_lists</code> methods bound to
+its ID:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">tl</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">tl</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">tl</span><span class="o">.</span><span class="n">license</span><span class="p">,</span> <span class="n">tl</span><span class="o">.</span><span class="n">endpoint</span>     <span class="c1"># common fields</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">tl</span><span class="p">[</span><span class="s2">"entryCount"</span><span class="p">]</span>                             <span class="c1"># any field, from tl.data</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="n">tl</span><span class="o">.</span><span class="n">add</span><span class="p">([</span><span class="s2">"1A4000000000000000000004"</span><span class="p">])</span>         <span class="c1"># {"created": 1, "updated": 0}</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="n">tl</span><span class="o">.</span><span class="n">remove</span><span class="p">([</span><span class="s2">"1A4000000000000000000001"</span><span class="p">])</span>      <span class="c1"># counts, plus handlesNotFound</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="n">tl</span><span class="o">.</span><span class="n">scan</span><span class="p">([</span><span class="s2">"1A4000000000000000000002"</span><span class="p">])</span>        <span class="c1"># mark as scanned</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="n">tl</span><span class="o">.</span><span class="n">entries</span><span class="p">()</span>                                 <span class="c1"># every entry</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="n">tl</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"Room A (done)"</span><span class="p">)</span>              <span class="c1"># change fields, e.g. archived=True</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="n">tl</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>                                 <span class="c1"># reload from the server</span>
+</code></pre></div>
+<p>To find an existing list:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">lists</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">tag_lists</span><span class="o">.</span><span class="n">list</span><span class="p">(</span><span class="n">license</span><span class="o">=</span><span class="s2">"LIC-00001"</span><span class="p">)</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">tl</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">tag_lists</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">lists</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"id"</span><span class="p">])</span>
+</code></pre></div>
+<p><code>list()</code> also takes <code>visibility=</code>, <code>endpoint=</code> and <code>archived=</code>.</p>
+<h3 id="resolving">Resolving<a class="headerlink" href="#resolving" title="Permanent link">&para;</a></h3>
+<p><code>resolve()</code> returns the objects the list's handles stand for, in the order the
+entries were added, paged like a collection:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">packages</span> <span class="o">=</span> <span class="n">tl</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">superpackages</span> <span class="o">=</span> <span class="n">tl</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="s2">"METRC_ACTIVE_SUPERPACKAGES"</span><span class="p">)</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="n">slim</span> <span class="o">=</span> <span class="n">tl</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">mask</span><span class="o">=</span><span class="p">[</span><span class="s2">"label"</span><span class="p">,</span> <span class="s2">"item.name"</span><span class="p">,</span> <span class="s2">"quantity"</span><span class="p">])</span>
+</code></pre></div>
+<p>Each collection matches on one field, decided by the server: <code>label</code> for
+packages, plants and tags; <code>packageLabel</code> for transferred packages;
+<code>manifestNumber</code> for transfers; <code>name</code> for items, harvests, plant batches and
+strains. A list can be resolved against any of the collections T3 supports for
+tag lists, not just its default. <code>include=</code> attaches related data, and is only
+accepted with a <code>/super</code> collection.</p>
+<p><strong>All or nothing.</strong> If any handle matches no object, or more than one, the
+server rejects the whole resolve with a 422, and <code>resolve()</code> raises
+<code>TagListResolveError</code>. Its <code>errors</code> holds one dict per problem handle, with
+<code>handle</code>, <code>reason</code> (<code>NOT_FOUND</code> or <code>AMBIGUOUS</code>) and <code>matchCount</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>    <span class="n">packages</span> <span class="o">=</span> <span class="n">tl</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="k">except</span> <span class="n">t3</span><span class="o">.</span><span class="n">TagListResolveError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>    <span class="k">for</span> <span class="n">problem</span> <span class="ow">in</span> <span class="n">exc</span><span class="o">.</span><span class="n">errors</span><span class="p">:</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">problem</span><span class="p">[</span><span class="s1">'handle'</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">problem</span><span class="p">[</span><span class="s1">'reason'</span><span class="p">]</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">problem</span><span class="p">[</span><span class="s1">'matchCount'</span><span class="p">]</span><span class="si">}</span><span class="s2"> matches)"</span><span class="p">)</span>
+</code></pre></div>
+<p>Fix the CSV, <code>tl.remove()</code> the bad handles, or resolve against a different
+collection (for example inactive packages) and try again.</p>
+<p><strong>When tag lists don't fit</strong>, for example matching on a field the server
+doesn't match on, or on several columns at once, load the collection and use
+<a href="../local-data/#filtering-against-a-csv"><code>t3.filter_rows()</code></a> instead.</p>
+<p><strong>COA extraction</strong> has no helper yet. Call the route directly:
+<code>client.post("/v2/tag-lists/{tag_list_id}/coa-extraction", tag_list_id=tl.id, json={...})</code>,
+with the body the <a href="https://api.trackandtrace.tools/v2/docs">T3 API docs</a> describe.</p>
+<h3 id="from-the-command-line">From the command line<a class="headerlink" href="#from-the-command-line" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>t3api<span class="w"> </span>tag-lists<span class="w"> </span>create<span class="w"> </span>labels.csv<span class="w"> </span>--column<span class="w"> </span>label<span class="w"> </span>--endpoint<span class="w"> </span>METRC_ACTIVE_PACKAGES<span class="w"> </span>--name<span class="w"> </span><span class="s2">"Room A"</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>t3api<span class="w"> </span>tag-lists<span class="w"> </span>list<span class="w"> </span>-l<span class="w"> </span>LIC-00001
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>t3api<span class="w"> </span>tag-lists<span class="w"> </span>resolve<span class="w"> </span>&lt;list-id&gt;<span class="w"> </span>-o<span class="w"> </span>room-a.csv
+</code></pre></div>
+<p><code>create</code> prints the new list's ID on stdout, so a shell script can capture it.
+If <code>resolve</code> fails, it prints a table of the handles that didn't resolve.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../writes/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Writes">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Writes
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../local-data/" class="md-footer__link md-footer__link--next" aria-label="Next: Local data">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Local data
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      GPL-3.0-only · Track & Trace Tools
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["content.code.copy", "content.tabs.link", "navigation.sections", "navigation.top", "navigation.footer", "search.highlight", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+    
+  </body>
+</html>

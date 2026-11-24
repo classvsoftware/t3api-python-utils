@@ -1,0 +1,1788 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Secret-key auth, collection loading, reports and tag lists for the T3 API">
+      
+      
+      
+        <link rel="canonical" href="https://classvsoftware.github.io/t3api-python-utils/getting-started/">
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../guide/authentication/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
+    
+    
+      
+        <title>Getting started - t3api-utils</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="purple">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#getting-started" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="t3api-utils" class="md-header__button md-logo" aria-label="t3api-utils" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            t3api-utils
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Getting started
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="purple"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="purple"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/classvsoftware/t3api-python-utils" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    classvsoftware/t3api-python-utils
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="t3api-utils" class="md-nav__button md-logo" aria-label="t3api-utils" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    t3api-utils
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/classvsoftware/t3api-python-utils" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    classvsoftware/t3api-python-utils
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-run-scripts-with-uv" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Run scripts with uv
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-log-in-and-save-a-secret-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Log in and save a secret key
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-connect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Connect
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-licenses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Licenses
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-load-a-collection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Load a collection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-find-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Find endpoints
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-inspect-rows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Inspect rows
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-filter-against-a-csv-and-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Filter against a CSV and export
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-write-to-metrc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Write to Metrc
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-write-many-rows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Write many rows
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-download-a-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Download a report
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-tag-lists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. Tag lists
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-see-the-http-traffic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. See the HTTP traffic
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-use-the-command-line" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14. Use the command line
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authentication
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/endpoints-and-spec/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Endpoints and the spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/collections/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Collections
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/writes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/reports-and-tag-lists/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reports and tag lists
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/local-data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The t3api command
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/errors-and-logging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Errors and logging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migrating from 1.x
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/client/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T3Client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/auth/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    connect() and auth
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/writes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/reports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/tag-lists/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tag lists
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/local/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/errors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Errors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/spec/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-run-scripts-with-uv" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Run scripts with uv
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-log-in-and-save-a-secret-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Log in and save a secret key
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-connect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Connect
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-licenses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Licenses
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-load-a-collection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Load a collection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-find-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Find endpoints
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-inspect-rows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Inspect rows
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-filter-against-a-csv-and-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Filter against a CSV and export
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-write-to-metrc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Write to Metrc
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-write-many-rows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Write many rows
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-download-a-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Download a report
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-tag-lists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. Tag lists
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-see-the-http-traffic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. See the HTTP traffic
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-use-the-command-line" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14. Use the command line
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="getting-started">Getting started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h1>
+<p>This page walks through the whole library in the order you'd use it: log in,
+connect, pick a license, load data, look at it, write it back, and use the
+server's reports and tag lists. Each step links to a guide page with the
+details.</p>
+<p>The examples use <code>LIC-00001</code> as the license number. Use one of yours.</p>
+<h2 id="1-run-scripts-with-uv">1. Run scripts with uv<a class="headerlink" href="#1-run-scripts-with-uv" title="Permanent link">&para;</a></h2>
+<p><a href="https://docs.astral.sh/uv/">uv</a> can install a script's dependencies for you.
+Put this header at the top of the file:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="ch">#!/usr/bin/env python3</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="c1"># /// script</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># requires-python = "&gt;=3.12"</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># dependencies = ["t3api-utils[tui]&gt;=2.0"]</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># ///</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="kn">import</span><span class="w"> </span><span class="nn">t3api_utils</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t3</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">client</span> <span class="o">=</span> <span class="n">t3</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="nb">print</span><span class="p">(</span><span class="n">client</span><span class="o">.</span><span class="n">whoami</span><span class="p">()[</span><span class="s2">"username"</span><span class="p">])</span>
+</code></pre></div>
+<p>and run it with:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>run<span class="w"> </span>my_script.py
+</code></pre></div>
+<p>uv builds a throwaway environment with <code>t3api-utils</code> in it. The <code>[tui]</code> extra
+is only needed for the inspector in step 7; drop it otherwise. If you work in a
+uv project instead, <code>uv add t3api-utils</code> and run scripts with <code>uv run</code> as
+usual.</p>
+<h2 id="2-log-in-and-save-a-secret-key">2. Log in and save a secret key<a class="headerlink" href="#2-log-in-and-save-a-secret-key" title="Permanent link">&para;</a></h2>
+<p>The T3 API accepts two kinds of credential:</p>
+<table>
+<thead>
+<tr>
+<th>Credential</th>
+<th>Lasts</th>
+<th>Use it for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Secret key</strong></td>
+<td>Until you delete it, or until the Metrc login behind it changes</td>
+<td>Everything. This is the default.</td>
+</tr>
+<tr>
+<td>JWT</td>
+<td>24 hours</td>
+<td>A quick session when you don't want a key</td>
+</tr>
+</tbody>
+</table>
+<p>A secret key is made from your Metrc login once. After that T3 signs in to
+Metrc for you, so scripts never need your password. Create one with:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>t3api<span class="w"> </span>login
+</code></pre></div>
+<p>(<code>uv run t3api login</code> inside a uv project, or
+<code>uvx --from t3api-utils t3api login</code> with nothing installed.)</p>
+<p>It asks:</p>
+<ol>
+<li><strong>Do you already have a T3 secret key?</strong> If you do, paste it and you're done.</li>
+<li><strong>Metrc hostname, username and password.</strong> Type a state abbreviation such as
+   <code>CA</code>, or a hostname such as <code>ca.metrc.com</code>. States that need an email or a
+   one-time password are asked for them.</li>
+<li><strong>Create a secret key so you don't have to log in again?</strong> Say yes. In
+   states with a one-time password, you'll be asked for your <strong>OTP seed</strong>: the
+   base32 secret behind your authenticator app, not a 6-digit code. T3 needs
+   the seed because it signs in to Metrc for you later.</li>
+<li><strong>Pick a default license for this profile?</strong> Optional, but it saves passing
+   <code>license=</code> everywhere.</li>
+</ol>
+<p>The key goes into your OS keyring (macOS Keychain, Windows Credential Manager,
+or Secret Service on Linux) under a profile named <code>default</code>. Your Metrc
+password is not stored.</p>
+<p>If you decline the secret key, <code>t3api login</code> saves a JWT instead. It expires
+after 24 hours, and the next <code>connect()</code> in a terminal asks you to log in again
+and offers the key again.</p>
+<p>You can also create a key in the browser at
+<a href="https://api.trackandtrace.tools/v2/pages/secret-key">https://api.trackandtrace.tools/v2/pages/secret-key</a> and paste it in step 1.</p>
+<p>More in <a href="../guide/authentication/">Authentication</a>.</p>
+<h2 id="3-connect">3. Connect<a class="headerlink" href="#3-connect" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">t3api_utils</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t3</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">client</span> <span class="o">=</span> <span class="n">t3</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+</code></pre></div>
+<p><code>connect()</code> looks for a credential in this order and stops at the first one it
+finds:</p>
+<ol>
+<li><code>connect(secret_key=...)</code> or <code>connect(jwt=...)</code></li>
+<li>The <code>T3_SECRET_KEY</code> or <code>T3_JWT</code> environment variable</li>
+<li>The saved profile</li>
+<li>The login flow from step 2, but only if a person is there to answer (a
+   terminal or Jupyter). Otherwise it raises <code>AuthRequired</code> with setup
+   instructions, so scheduled jobs fail fast instead of hanging.</li>
+</ol>
+<p>It then checks the credential with one <code>GET /v2/auth/whoami</code> call.</p>
+<p>Use the client as a context manager so its connections close when the script
+is done:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">with</span> <span class="n">t3</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="o">...</span>
+</code></pre></div>
+<p>Several Metrc logins? Save each to its own profile and pick one by name:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>t3api<span class="w"> </span>login<span class="w"> </span>--profile<span class="w"> </span>mi-prod
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">client</span> <span class="o">=</span> <span class="n">t3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">profile</span><span class="o">=</span><span class="s2">"mi-prod"</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="4-licenses">4. Licenses<a class="headerlink" href="#4-licenses" title="Permanent link">&para;</a></h2>
+<p>Most endpoints need a license number.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">for</span> <span class="n">lic</span> <span class="ow">in</span> <span class="n">client</span><span class="o">.</span><span class="n">licenses</span><span class="p">():</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">lic</span><span class="p">[</span><span class="s2">"licenseNumber"</span><span class="p">],</span> <span class="n">lic</span><span class="p">[</span><span class="s2">"licenseName"</span><span class="p">])</span>
+</code></pre></div>
+<p>In a terminal, <code>client.pick_license()</code> shows them as a numbered table and
+returns the number you choose. A common pattern is to use the profile's default
+license when there is one, and ask otherwise:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">lic</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">license</span> <span class="ow">or</span> <span class="n">client</span><span class="o">.</span><span class="n">pick_license</span><span class="p">()</span>
+</code></pre></div>
+<p><code>client.license</code> is the default license: <code>connect(license=...)</code>, then
+<code>T3_LICENSE</code>, then the profile's. Set the profile's with
+<code>t3api license pick</code> or <code>t3api license set LIC-00001</code>. When there is a default,
+calls that need a license use it, and you can leave <code>license=</code> out.</p>
+<h2 id="5-load-a-collection">5. Load a collection<a class="headerlink" href="#5-load-a-collection" title="Permanent link">&para;</a></h2>
+<p><code>collect()</code> loads every page of a collection, fetching pages in parallel:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">packages</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">collect</span><span class="p">(</span><span class="s2">"METRC_ACTIVE_PACKAGES"</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">)</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">packages</span><span class="p">),</span> <span class="n">packages</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"label"</span><span class="p">])</span>
+</code></pre></div>
+<p>Each row is a plain dict, exactly as the API returns it. Every row carries its
+own <code>licenseNumber</code>.</p>
+<p>Let the server do the narrowing. Filters use <code>field__operator:value</code>, sorting
+uses <code>field:asc</code> or <code>field:desc</code>, and <code>mask</code> returns only the fields you name:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">flower</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">collect</span><span class="p">(</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="s2">"METRC_ACTIVE_ITEMS"</span><span class="p">,</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>    <span class="nb">filter</span><span class="o">=</span><span class="p">[</span><span class="s2">"name__contains:flower"</span><span class="p">],</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    <span class="n">sort</span><span class="o">=</span><span class="s2">"name:asc"</span><span class="p">,</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    <span class="n">mask</span><span class="o">=</span><span class="p">[</span><span class="s2">"id"</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">,</span> <span class="s2">"productCategoryName"</span><span class="p">],</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="p">)</span>
+</code></pre></div>
+<p><code>license</code> also takes a list, which loads each license in turn and joins the
+results:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">packages</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">collect</span><span class="p">(</span><span class="s2">"METRC_ACTIVE_PACKAGES"</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="p">[</span><span class="s2">"LIC-00001"</span><span class="p">,</span> <span class="s2">"LIC-00002"</span><span class="p">])</span>
+</code></pre></div>
+<p>For collections too big to hold in memory, <code>iter_rows()</code> takes the same
+arguments and yields rows one page at a time:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">client</span><span class="o">.</span><span class="n">iter_rows</span><span class="p">(</span><span class="s2">"METRC_ACTIVE_PACKAGES"</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">):</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>    <span class="o">...</span>
+</code></pre></div>
+<p>One object by its Metrc ID:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">item</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"METRC_ACTIVE_ITEMS"</span><span class="p">,</span> <span class="n">object_id</span><span class="o">=</span><span class="mi">12345</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">)</span>
+</code></pre></div>
+<p>More in <a href="../guide/collections/">Collections</a>.</p>
+<h2 id="6-find-endpoints">6. Find endpoints<a class="headerlink" href="#6-find-endpoints" title="Permanent link">&para;</a></h2>
+<p><code>METRC_ACTIVE_ITEMS</code> is a T3 endpoint ID. Any path from the spec works too:
+<code>client.collect("/v2/items", license=lic)</code> is the same call. To find one,
+search from the command line:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>t3api<span class="w"> </span>endpoints<span class="w"> </span>harvest<span class="w"> </span>--kind<span class="w"> </span>collection
+</code></pre></div>
+<p>or from Python:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="k">for</span> <span class="n">ep</span> <span class="ow">in</span> <span class="n">client</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"harvest"</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"collection"</span><span class="p">):</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">ep</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">ep</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">ep</span><span class="o">.</span><span class="n">summary</span><span class="p">)</span>
+</code></pre></div>
+<p>In a terminal, <code>client.pick_endpoint()</code> shows a searchable table of
+collections. The library reads the T3 OpenAPI spec at runtime, so endpoints T3
+adds later work without upgrading. More in
+<a href="../guide/endpoints-and-spec/">Endpoints and the spec</a>.</p>
+<h2 id="7-inspect-rows">7. Inspect rows<a class="headerlink" href="#7-inspect-rows" title="Permanent link">&para;</a></h2>
+<p>With the <code>[tui]</code> extra installed, browse rows in a full-screen terminal viewer:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="n">t3</span><span class="o">.</span><span class="n">inspect</span><span class="p">(</span><span class="n">packages</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Active packages"</span><span class="p">)</span>
+</code></pre></div>
+<p>Use <span class="keys"><kbd class="key-arrow-left">Left</kbd></span> and <span class="keys"><kbd class="key-arrow-right">Right</kbd></span> to move between rows, <span class="keys"><kbd class="key-slash">/</kbd></span> to search every
+nested value, <span class="keys"><kbd class="key-question">?</kbd></span> for help and <span class="keys"><kbd class="key-q">Q</kbd></span> or <span class="keys"><kbd class="key-escape">Esc</kbd></span> to quit. The same
+viewer opens files from the command line: <code>t3api inspect packages.csv</code>.</p>
+<h2 id="8-filter-against-a-csv-and-export">8. Filter against a CSV and export<a class="headerlink" href="#8-filter-against-a-csv-and-export" title="Permanent link">&para;</a></h2>
+<p><code>filter_rows()</code> keeps the rows that match a CSV file. The CSV's header names
+the columns to compare:</p>
+<div class="highlight"><span class="filename">wanted.csv</span><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>label
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>1A4000000000000000000001
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>1A4000000000000000000002
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="n">wanted</span> <span class="o">=</span> <span class="n">t3</span><span class="o">.</span><span class="n">filter_rows</span><span class="p">(</span><span class="n">packages</span><span class="p">,</span> <span class="s2">"wanted.csv"</span><span class="p">,</span> <span class="n">on_unmatched</span><span class="o">=</span><span class="s2">"warn"</span><span class="p">)</span>
+</code></pre></div>
+<p>Lines in the CSV that match no row are logged as a warning
+(<code>on_unmatched="error"</code> raises instead). Dotted columns such as <code>item.name</code>
+reach into nested fields.</p>
+<p>Export to CSV or JSON:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="n">t3</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">wanted</span><span class="p">,</span> <span class="s2">"wanted-packages.csv"</span><span class="p">)</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="n">t3</span><span class="o">.</span><span class="n">to_json</span><span class="p">(</span><span class="n">wanted</span><span class="p">,</span> <span class="s2">"wanted-packages.json"</span><span class="p">)</span>
+</code></pre></div>
+<p>CSV files are written as UTF-8 with a byte-order mark so Excel opens them
+correctly. Nested objects become dotted columns (<code>item.name</code>) and lists are
+written as JSON text. Leave the path out and the file is named after the data
+model, license and time. More in <a href="../guide/local-data/">Local data</a>.</p>
+<h2 id="9-write-to-metrc">9. Write to Metrc<a class="headerlink" href="#9-write-to-metrc" title="Permanent link">&para;</a></h2>
+<p>Writes that reach Metrc are a <strong>dry run unless you pass <code>submit=True</code></strong>. A dry
+run sends the request to T3, which validates it and stops before Metrc:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">"/v2/items/discontinue"</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">"id"</span><span class="p">:</span> <span class="mi">12345</span><span class="p">})</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">dry_run</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>   <span class="c1"># True Dry run</span>
+</code></pre></div>
+<p>When the dry run passes, send it for real:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">"/v2/items/discontinue"</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">"id"</span><span class="p">:</span> <span class="mi">12345</span><span class="p">},</span> <span class="n">submit</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">dry_run</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>   <span class="c1"># False Success</span>
+</code></pre></div>
+<p>A validation failure raises <code>t3.ValidationError</code> with the server's explanation
+in <code>.detail</code>.</p>
+<p>A few T3 routes, such as tag lists and secret keys, act immediately and have
+no dry run. Passing <code>submit=</code> to one of them raises <code>ValueError</code>, so you can't
+mistake one for the other. More in <a href="../guide/writes/">Writes</a>.</p>
+<h2 id="10-write-many-rows">10. Write many rows<a class="headerlink" href="#10-write-many-rows" title="Permanent link">&para;</a></h2>
+<p><code>bulk()</code> validates every row with a dry run first, and only then submits:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="n">items</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">collect</span><span class="p">(</span><span class="s2">"METRC_ACTIVE_ITEMS"</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span> <span class="nb">filter</span><span class="o">=</span><span class="p">[</span><span class="s2">"name__contains:sample"</span><span class="p">])</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">bulk</span><span class="p">(</span>
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>    <span class="s2">"/v2/items/discontinue"</span><span class="p">,</span>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>    <span class="n">rows</span><span class="o">=</span><span class="p">[{</span><span class="s2">"id"</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]}</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">],</span>
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>    <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span>
+<a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a>    <span class="n">submit</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a>    <span class="n">log_to</span><span class="o">=</span><span class="s2">"discontinue-results.csv"</span><span class="p">,</span>
+<a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a><span class="p">)</span>
+<a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">summary</span><span class="p">())</span>
+</code></pre></div>
+<p>If any row fails validation, nothing is submitted. In a terminal you're shown
+the failures and asked whether to send just the valid rows; in a script,
+<code>on_error="skip"</code> does that without asking. Leave out <code>submit=True</code> to only
+validate. <code>log_to</code> writes one line per row with its status and message.</p>
+<h2 id="11-download-a-report">11. Download a report<a class="headerlink" href="#11-download-a-report" title="Permanent link">&para;</a></h2>
+<p>T3 builds reports on the server. They're faster than loading a collection when
+all you want is a spreadsheet:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="n">client</span><span class="o">.</span><span class="n">report</span><span class="p">(</span><span class="s2">"ITEMS_REPORT"</span><span class="p">,</span> <span class="n">licenses</span><span class="o">=</span><span class="p">[</span><span class="n">lic</span><span class="p">],</span> <span class="n">to</span><span class="o">=</span><span class="s2">"items.xlsx"</span><span class="p">)</span>
+</code></pre></div>
+<p>The format follows the file extension (<code>.csv</code>, <code>.xlsx</code> or <code>.json</code>), or pass
+<code>format=</code>. Choose columns, filter and sort the same way as <code>collect()</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="n">client</span><span class="o">.</span><span class="n">report</span><span class="p">(</span>
+<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>    <span class="s2">"ACTIVE_PACKAGES_REPORT"</span><span class="p">,</span>
+<a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>    <span class="n">licenses</span><span class="o">=</span><span class="p">[</span><span class="s2">"LIC-00001"</span><span class="p">,</span> <span class="s2">"LIC-00002"</span><span class="p">],</span>
+<a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>    <span class="n">to</span><span class="o">=</span><span class="s2">"packages.csv"</span><span class="p">,</span>
+<a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>    <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"label"</span><span class="p">,</span> <span class="s2">"quantity"</span><span class="p">,</span> <span class="s2">"unitOfMeasureAbbreviation"</span><span class="p">,</span> <span class="s2">"locationName"</span><span class="p">],</span>
+<a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>    <span class="nb">filter</span><span class="o">=</span><span class="p">[</span><span class="s2">"isOnHold__eq:false"</span><span class="p">],</span>
+<a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a>    <span class="n">sort</span><span class="o">=</span><span class="s2">"label:asc"</span><span class="p">,</span>
+<a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a><span class="p">)</span>
+</code></pre></div>
+<p>List every report with <code>t3api endpoints --kind report</code>. More in
+<a href="../guide/reports-and-tag-lists/#reports">Reports and tag lists</a>.</p>
+<h2 id="12-tag-lists">12. Tag lists<a class="headerlink" href="#12-tag-lists" title="Permanent link">&para;</a></h2>
+<p>A tag list is a list of handles (usually package tag labels) kept on the
+server. T3 resolves it to the objects those handles stand for. It's the
+quickest way to go from a column of scanned labels to full package records:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="n">tl</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">tag_lists</span><span class="o">.</span><span class="n">from_csv</span><span class="p">(</span>
+<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>    <span class="s2">"labels.csv"</span><span class="p">,</span>
+<a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>    <span class="n">column</span><span class="o">=</span><span class="s2">"label"</span><span class="p">,</span>
+<a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>    <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span>
+<a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>    <span class="n">endpoint</span><span class="o">=</span><span class="s2">"METRC_ACTIVE_PACKAGES"</span><span class="p">,</span>
+<a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">"Room A"</span><span class="p">,</span>
+<a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a><span class="p">)</span>
+<a id="__codelineno-25-8" name="__codelineno-25-8" href="#__codelineno-25-8"></a><span class="n">packages</span> <span class="o">=</span> <span class="n">tl</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+</code></pre></div>
+<p>Resolving is all or nothing. If any label matches no package, or more than one,
+<code>resolve()</code> raises <code>t3.TagListResolveError</code> listing each problem handle:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>    <span class="n">packages</span> <span class="o">=</span> <span class="n">tl</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="k">except</span> <span class="n">t3</span><span class="o">.</span><span class="n">TagListResolveError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+<a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a>    <span class="k">for</span> <span class="n">problem</span> <span class="ow">in</span> <span class="n">exc</span><span class="o">.</span><span class="n">errors</span><span class="p">:</span>
+<a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>        <span class="nb">print</span><span class="p">(</span><span class="n">problem</span><span class="p">[</span><span class="s2">"handle"</span><span class="p">],</span> <span class="n">problem</span><span class="p">[</span><span class="s2">"reason"</span><span class="p">])</span>
+</code></pre></div>
+<p>More in <a href="../guide/reports-and-tag-lists/#tag-lists">Reports and tag lists</a>.</p>
+<h2 id="13-see-the-http-traffic">13. See the HTTP traffic<a class="headerlink" href="#13-see-the-http-traffic" title="Permanent link">&para;</a></h2>
+<p>To see every request and response, set <code>T3_LOG_HTTP</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="nv">T3_LOG_HTTP</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>uv<span class="w"> </span>run<span class="w"> </span>my_script.py
+<a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="nv">T3_LOG_HTTP</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">T3_LOG_FILE</span><span class="o">=</span>t3_http.log<span class="w"> </span>uv<span class="w"> </span>run<span class="w"> </span>my_script.py
+</code></pre></div>
+<p>Secret keys, tokens, passwords and OTP values are masked in the log. More in
+<a href="../guide/errors-and-logging/">Errors and logging</a>.</p>
+<h2 id="14-use-the-command-line">14. Use the command line<a class="headerlink" href="#14-use-the-command-line" title="Permanent link">&para;</a></h2>
+<p>Much of the above works without writing Python:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>t3api<span class="w"> </span>whoami
+<a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>t3api<span class="w"> </span>pull<span class="w"> </span>METRC_ACTIVE_PACKAGES<span class="w"> </span>-l<span class="w"> </span>LIC-00001<span class="w"> </span>-o<span class="w"> </span>packages.csv
+<a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>t3api<span class="w"> </span>pull<span class="w"> </span>METRC_ACTIVE_ITEMS<span class="w"> </span>--filter<span class="w"> </span>name__contains:flower<span class="w"> </span>--inspect
+<a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a>t3api<span class="w"> </span>report<span class="w"> </span>ITEMS_REPORT<span class="w"> </span>-l<span class="w"> </span>LIC-00001<span class="w"> </span>-o<span class="w"> </span>items.xlsx
+<a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a>t3api<span class="w"> </span>tag-lists<span class="w"> </span>create<span class="w"> </span>labels.csv<span class="w"> </span>--column<span class="w"> </span>label<span class="w"> </span>--endpoint<span class="w"> </span>METRC_ACTIVE_PACKAGES
+<a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a>t3api<span class="w"> </span>tag-lists<span class="w"> </span>resolve<span class="w"> </span>&lt;list-id&gt;<span class="w"> </span>-o<span class="w"> </span>room-a.csv
+</code></pre></div>
+<p>Every command is listed in <a href="../guide/cli/">The t3api command</a>.</p>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>What you see</th>
+<th>What to do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AuthRequired: No T3 credential found</code></td>
+<td>Run <code>t3api login</code> in a terminal, or set <code>T3_SECRET_KEY</code>.</td>
+</tr>
+<tr>
+<td><code>AuthError</code> with a secret key</td>
+<td>The key was deleted, or your Metrc password, email or OTP changed. Run <code>t3api keys rotate</code>.</td>
+</tr>
+<tr>
+<td><code>AuthError</code> with a JWT</td>
+<td>It expired (JWTs last 24 hours). Run <code>t3api login</code> and accept the secret key.</td>
+</tr>
+<tr>
+<td><code>SpecError: ... needs: license=</code></td>
+<td>Pass <code>license=</code>, or set a default with <code>t3api license pick</code>.</td>
+</tr>
+<tr>
+<td><code>UnknownEndpoint</code></td>
+<td>Check the spelling against <code>t3api endpoints</code>. If T3 added it recently, run <code>t3api spec refresh</code>.</td>
+</tr>
+<tr>
+<td><code>NotInteractive</code></td>
+<td>A picker or prompt ran without a terminal. Pass the value in code instead.</td>
+</tr>
+<tr>
+<td><code>ImportError</code> mentioning Textual</td>
+<td>Install the extra: <code>pip install "t3api-utils[tui]"</code>.</td>
+</tr>
+<tr>
+<td>No rows, or fewer than expected</td>
+<td>Check the license and filters, then rerun with <code>T3_LOG_HTTP=1</code> to see what the API sent back.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="next-steps">Next steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ul>
+<li>The Guide pages cover each topic in depth.</li>
+<li><a href="https://github.com/classvsoftware/t3-api-examples">Example scripts</a></li>
+<li><a href="https://api.trackandtrace.tools/v2/docs">T3 API docs</a> and the
+  <a href="https://www.trackandtrace.tools/wiki">T3 wiki</a></li>
+<li>Coming from 1.x? See <a href="../migration/">Migrating from 1.x</a>.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href=".." class="md-footer__link md-footer__link--prev" aria-label="Previous: Home">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Home
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../guide/authentication/" class="md-footer__link md-footer__link--next" aria-label="Next: Authentication">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Authentication
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      GPL-3.0-only · Track & Trace Tools
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["content.code.copy", "content.tabs.link", "navigation.sections", "navigation.top", "navigation.footer", "search.highlight", "search.suggest", "toc.follow"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+    
+  </body>
+</html>
