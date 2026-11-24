@@ -217,3 +217,73 @@ def test_write_on_a_read_only_endpoint_raises(client: T3Client, router: Router) 
     with pytest.raises(SpecError):
         client.post("/v2/auth/whoami", json={})
     assert router.calls == []
+
+
+# --------------------------------------------------------------------------- body shape and dynamic validation
+
+CHANGE_LOCATIONS = "/v2/packages/change-locations"
+
+
+def test_object_sent_to_an_array_route_warns(
+    client: T3Client, router: Router, caplog: pytest.LogCaptureFixture
+) -> None:
+    router.add("POST", CHANGE_LOCATIONS, status=500, json={"detail": "An unexpected error occurred."})
+    with pytest.raises(ServerError):
+        client.post(CHANGE_LOCATIONS, license="LIC-1", json={"id": 1, "locationId": 2})
+    assert "POST /v2/packages/change-locations takes a list of objects, even for one object" in caplog.text
+    assert "json=[body]" in caplog.text
+
+
+def test_list_sent_to_an_object_route_warns(
+    client: T3Client, router: Router, caplog: pytest.LogCaptureFixture
+) -> None:
+    router.add("POST", DISCONTINUE, json={"message": "Dry run"})
+    client.post(DISCONTINUE, license="LIC-1", json=[{"id": 1}])
+    assert "POST /v2/items/discontinue takes one object, not a list." in caplog.text
+
+
+def test_matching_body_shapes_do_not_warn(
+    client: T3Client, router: Router, caplog: pytest.LogCaptureFixture
+) -> None:
+    router.add("POST", CHANGE_LOCATIONS, json={"message": "Dry run"})
+    router.add("POST", DISCONTINUE, json={"message": "Dry run"})
+    client.post(CHANGE_LOCATIONS, license="LIC-1", json=[{"id": 1, "locationId": 2}])
+    client.post(DISCONTINUE, license="LIC-1", json={"id": 1})
+    assert "takes" not in caplog.text
+
+
+def test_routes_without_a_json_body_schema_do_not_warn(
+    client: T3Client, router: Router, caplog: pytest.LogCaptureFixture
+) -> None:
+    router.add("POST", "/v2/auth/logout", json={})
+    client.post("/v2/auth/logout", json={"anything": True})
+    assert "takes" not in caplog.text
+
+
+def test_dynamic_validation_is_sent(client: T3Client, router: Router) -> None:
+    router.add("POST", CHANGE_LOCATIONS, json={"message": "Dry run"})
+    result = client.post(CHANGE_LOCATIONS, license="LIC-1", json=[{"id": 1}], dynamic=True)
+    assert result.dry_run is True
+    assert router.calls[0].url.params["applyDynamicValidation"] == "true"
+    assert "submit" not in router.calls[0].url.params
+
+
+@pytest.mark.parametrize(
+    ("method", "path"),
+    [
+        ("put", "/v2/saved-reports/{public_id}/schedule"),
+        ("patch", "/v2/saved-reports/{public_id}"),
+        ("delete", "/v2/saved-reports/{public_id}"),
+    ],
+)
+def test_dynamic_on_other_methods(client: T3Client, router: Router, method: str, path: str) -> None:
+    write = getattr(client, method)
+    with pytest.raises(ValueError, match="doesn't offer dynamic validation"):
+        write(path, public_id="x", json={}, dynamic=True)
+    assert router.calls == []
+
+
+def test_dynamic_on_a_route_without_it_raises(client: T3Client, router: Router) -> None:
+    with pytest.raises(ValueError, match=r"POST /v2/tag-lists doesn't offer dynamic validation"):
+        client.post("/v2/tag-lists", json={"name": "x"}, dynamic=True)
+    assert router.calls == []

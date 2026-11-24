@@ -372,3 +372,16 @@ def test_report_url_checks_arguments(client: T3Client) -> None:
         client.report_url("ITEMS_REPORT")
     with pytest.raises(SpecError):
         client.report_url("METRC_ACTIVE_ITEMS", licenses="LIC-1")
+
+
+def test_report_in_the_sandbox_checks_its_licenses(router: Router, csv_report: Router, caplog: pytest.LogCaptureFixture) -> None:
+    router.add("POST", "/v2/auth/sandbox", json={"accessToken": "sandbox-jwt"})
+    router.add("GET", "/v2/auth/whoami", json={"hostname": "sandbox-me.metrc.com"})
+    router.add("GET", "/v2/licenses", json=[{"licenseNumber": "SF-SBX-1-101"}])
+    with make_client(router) as c:
+        c.enter_sandbox()
+        c.license = "SF-SBX-1-101"
+        c.report("ITEMS_REPORT")
+        assert "isn't one of" not in caplog.text
+        c.report("ITEMS_REPORT", licenses=["SF-SBX-1-101", "AR1769"])
+    assert "AR1769 isn't one of this sandbox session's licenses (SF-SBX-1-101)" in caplog.text

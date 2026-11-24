@@ -36,7 +36,8 @@ from t3api_utils.errors import (
     ValidationError,
 )
 from t3api_utils.local import filter_rows, read_rows, to_csv, to_json
-from t3api_utils.pickers import pick_file
+from t3api_utils.pickers import choose, pick_file
+from t3api_utils.prompts import ask, confirm
 from t3api_utils.spec.registry import Endpoint
 from t3api_utils.tag_lists import TagList
 from t3api_utils.writes import BulkResult, RowResult, WriteResult
@@ -85,6 +86,9 @@ __all__ = [
     "ValidationError",
     "WriteResult",
     "__version__",
+    "ask",
+    "choose",
+    "confirm",
     "connect",
     "filter_rows",
     "inspect",

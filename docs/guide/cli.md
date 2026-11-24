@@ -31,7 +31,18 @@ How to run it:
 - **Exit codes.** 0 on success, 1 on an error (with a red ✗ message), 130 when
   cancelled with Ctrl-C.
 - **Global options**, before the command: `--verbose` / `-v` shows the
-  library's progress logs, and `--version` prints the version.
+  library's progress logs, `--version` prints the version, and `--sandbox`
+  uses the [Metrc sandbox](authentication.md#sandbox).
+- **Sandbox.** `t3api --sandbox COMMAND` (or `T3_SANDBOX=1`) runs `whoami`,
+  `pull`, `report` and the `tag-lists` commands against the Metrc sandbox.
+  The profile's default license is ignored there, so pass `-l` with a sandbox
+  license (or pick one when asked). `login`, `logout`, `keys` and `license`
+  manage the credential and the profile, and always use the real account.
+
+  ```bash
+  t3api --sandbox whoami
+  t3api --sandbox pull METRC_ACTIVE_PLANTBATCHES -l SF-SBX-1-101 -o batches.csv
+  ```
 
 ## Logging in
 
@@ -70,7 +81,9 @@ t3api whoami [--profile P]
 ```
 
 Shows the profile, credential type, API host and default license, plus the
-username, Metrc hostname and subscription details T3 reports.
+username, Metrc hostname and subscription details T3 reports. With
+`t3api --sandbox whoami` it adds a `sandbox` row and shows the sandbox's
+hostname.
 
 ## Profiles
 

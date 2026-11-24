@@ -43,10 +43,23 @@ class Param:
     def is_array(self) -> bool:
         return self.schema.get("type") == "array"
 
+    @property
+    def choices(self) -> tuple[str, ...]:
+        """The values the spec allows (its ``enum``, or its items' for an array), else ``()``."""
+        schema = self.schema.get("items") if self.is_array else self.schema
+        enum = schema.get("enum") if isinstance(schema, Mapping) else None
+        return tuple(str(v) for v in enum) if isinstance(enum, list) else ()
+
 
 @dataclass(frozen=True)
 class Endpoint:
-    """One operation (method + path) in the spec."""
+    """One operation (method + path) in the spec.
+
+    Attributes:
+        body_type: The JSON schema ``type`` of the JSON request body
+            (``"array"`` or ``"object"``), or ``None`` when the route takes no
+            JSON body.
+    """
 
     id: str | None
     method: str
@@ -59,6 +72,12 @@ class Endpoint:
     has_body: bool = False
     response_types: tuple[str, ...] = ()
     public: bool = False
+    body_type: str | None = None
+
+    @property
+    def body_is_array(self) -> bool:
+        """True when the JSON body is a list. Most Metrc write routes take one, even for one object."""
+        return self.body_type == "array"
 
     def param(self, name: str) -> Param | None:
         for p in self.params:
@@ -126,6 +145,15 @@ def _is_paginated(schema: Any, resolver: _Resolver) -> bool:
         if isinstance(part, Mapping) and part.get("$ref") == PAGINATION_REF:
             return True
     return False
+
+
+def _body_type(body: Mapping[str, Any], resolver: _Resolver) -> str | None:
+    for ctype, media in (body.get("content") or {}).items():
+        if "json" in ctype and isinstance(media, Mapping):
+            schema = resolver.deref(media.get("schema") or {})
+            kind = schema.get("type") if isinstance(schema, Mapping) else None
+            return str(kind) if isinstance(kind, str) else None
+    return None
 
 
 def _response_types(op: Mapping[str, Any], resolver: _Resolver) -> tuple[str, ...]:
@@ -236,6 +264,7 @@ class Registry:
                         body_required=bool(body.get("required", False)) if body else False,
                         response_types=_response_types(op, self._resolver),
                         public=security == [],
+                        body_type=_body_type(body, self._resolver) if body else None,
                     )
                 )
         return endpoints

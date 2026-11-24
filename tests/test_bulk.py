@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 import json
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -13,8 +13,10 @@ import httpx2
 import pytest
 
 from t3api_utils import _console
+from t3api_utils.auth.credentials import SecretKeyAuth
 from t3api_utils.client import T3Client
-from t3api_utils.errors import AuthError, SpecError, ValidationError
+from t3api_utils.errors import AuthError, NotInteractive, SpecError, ValidationError
+from t3api_utils.spec.registry import Param
 from t3api_utils.writes import BulkResult, RowResult
 from tests.conftest import Router
 
@@ -117,7 +119,7 @@ def test_invalid_rows_without_submit_return_results(
     assert isinstance(bad.error, ValidationError)
     assert api.submits == []
     assert "1 of 3 rows failed validation" in caplog.text
-    assert "POST /v2/items/discontinue: 1 invalid, 2 valid" in caplog.text
+    assert "POST /v2/items/discontinue: 2 passed validation, 1 failed validation" in caplog.text
 
 
 def test_invalid_row_message_falls_back_to_error_text(client: T3Client, api: FakeDiscontinue) -> None:
@@ -368,7 +370,7 @@ def test_bulk_result_helpers() -> None:
     assert len(result) == 4
     assert [r.index for r in result] == [0, 1, 2, 3]
     assert result.counts() == {"submitted": 2, "failed": 1, "not_sent": 1}
-    assert result.summary() == "POST /v2/x: 1 failed, 1 not sent, 2 submitted"
+    assert result.summary() == "POST /v2/x: 2 submitted, 1 failed, 1 not sent"
     assert [r.index for r in result.by_status("submitted")] == [0, 3]
     assert [r.index for r in result.failed] == [1]
     assert result.invalid == []
@@ -381,3 +383,256 @@ def test_bulk_result_ok_when_clean() -> None:
     result = BulkResult(endpoint="POST /v2/x", rows=[RowResult(index=0, row={}, status="valid")])
     assert result.ok is True
     assert result.counts() == {"valid": 1}
+
+
+# --------------------------------------------------------------------------- array bodies and batches
+
+CHANGE_LOCATIONS = "/v2/packages/change-locations"
+
+
+@dataclass
+class FakeArrayRoute:
+    """POST /v2/packages/change-locations: takes a list; rejects a request holding a bad id."""
+
+    invalid: set[int] = field(default_factory=set)
+    fail_on_submit: set[int] = field(default_factory=set)
+    bodies: list[tuple[bool, Any]] = field(default_factory=list)
+
+    def __call__(self, request: httpx2.Request) -> httpx2.Response:
+        body = json.loads(request.content)
+        submit = request.url.params.get("submit") == "true"
+        self.bodies.append((submit, body))
+        if not isinstance(body, list):
+            return httpx2.Response(500, json={"detail": "An unexpected error occurred."})
+        ids = {row["id"] for row in body}
+        if ids & self.invalid or (submit and ids & self.fail_on_submit):
+            return httpx2.Response(400, json={"detail": f"bad ids in {sorted(ids)}"})
+        return httpx2.Response(200, json={"message": "Success" if submit else "Dry run"})
+
+    def sent(self, submit: bool) -> list[Any]:
+        return [body for flag, body in self.bodies if flag is submit]
+
+
+@pytest.fixture
+def array_api(router: Router) -> FakeArrayRoute:
+    fake = FakeArrayRoute()
+    router.add("POST", CHANGE_LOCATIONS, handler=fake)
+    return fake
+
+
+def test_array_route_wraps_each_row_in_a_list(client: T3Client, array_api: FakeArrayRoute) -> None:
+    result = client.bulk(CHANGE_LOCATIONS, rows(1, 2), license="LIC-1", submit=True)
+    assert statuses(result) == ["submitted", "submitted"]
+    assert array_api.sent(False) == [[{"id": 1}], [{"id": 2}]]
+    assert array_api.sent(True) == [[{"id": 1}], [{"id": 2}]]
+
+
+def test_object_route_still_sends_one_object(client: T3Client, router: Router, api: FakeDiscontinue) -> None:
+    client.bulk(DISCONTINUE, rows(1), license="LIC-1")
+    assert json.loads(router.calls[0].content) == {"id": 1}
+
+
+def test_batch_size_sends_several_rows_per_request(client: T3Client, array_api: FakeArrayRoute) -> None:
+    result = client.bulk(CHANGE_LOCATIONS, rows(1, 2, 3, 4, 5), license="LIC-1", submit=True, batch_size=2)
+    assert statuses(result) == ["submitted"] * 5
+    assert array_api.sent(False) == [rows(1, 2), rows(3, 4), rows(5)]
+    assert array_api.sent(True) == [rows(1, 2), rows(3, 4), rows(5)]
+    assert {r.message for r in result} == {"Success"}
+
+
+def test_a_failed_batch_marks_every_row_in_it(client: T3Client, array_api: FakeArrayRoute) -> None:
+    array_api.invalid = {3}
+    result = client.bulk(CHANGE_LOCATIONS, rows(1, 2, 3, 4), license="LIC-1", batch_size=2)
+    assert statuses(result) == ["valid", "valid", "invalid", "invalid"]
+    assert result.rows[2].message == result.rows[3].message == "bad ids in [3, 4]"
+    assert result.rows[2].error is result.rows[3].error
+
+
+def test_valid_rows_are_rebatched_for_submit(
+    client: T3Client, array_api: FakeArrayRoute, caplog: pytest.LogCaptureFixture
+) -> None:
+    array_api.invalid = {2}
+    array_api.fail_on_submit = {4}
+    result = client.bulk(
+        CHANGE_LOCATIONS, rows(1, 2, 3, 4, 5, 6, 7), license="LIC-1", submit=True, on_error="skip", batch_size=2
+    )
+    # Validation: [1,2] invalid, [3,4] [5,6] [7] valid. Submit: [3,4] fails, [5,6] [7] go through.
+    assert array_api.sent(True) == [rows(3, 4), rows(5, 6), rows(7)]
+    assert statuses(result) == ["invalid", "invalid", "failed", "failed", "submitted", "submitted", "submitted"]
+
+
+def test_a_failed_batch_with_stop_names_its_rows(
+    client: T3Client, array_api: FakeArrayRoute, caplog: pytest.LogCaptureFixture
+) -> None:
+    array_api.fail_on_submit = {1}
+    result = client.bulk(CHANGE_LOCATIONS, rows(1, 2, 3), license="LIC-1", submit=True, batch_size=2)
+    assert statuses(result) == ["failed", "failed", "not_sent"]
+    assert "Rows 0-1 failed; not sending the rest." in caplog.text
+
+
+def test_batch_size_on_an_object_route_raises(client: T3Client, router: Router) -> None:
+    with pytest.raises(ValueError, match="takes one object per request, so batch_size must be 1"):
+        client.bulk(DISCONTINUE, rows(1, 2), license="LIC-1", batch_size=2)
+    assert router.calls == []
+
+
+def test_batch_size_below_one_raises(client: T3Client, router: Router) -> None:
+    with pytest.raises(ValueError, match="batch_size must be at least 1"):
+        client.bulk(CHANGE_LOCATIONS, rows(1), license="LIC-1", batch_size=0)
+    assert router.calls == []
+
+
+def test_dynamic_validation_is_sent_on_every_request(client: T3Client, router: Router, array_api: FakeArrayRoute) -> None:
+    client.bulk(CHANGE_LOCATIONS, rows(1), license="LIC-1", submit=True, dynamic=True)
+    assert [r.url.params.get("applyDynamicValidation") for r in router.calls] == ["true", "true"]
+
+
+def test_dynamic_on_a_route_without_it_raises_before_sending(client: T3Client, router: Router) -> None:
+    with pytest.raises(ValueError, match="doesn't offer dynamic validation"):
+        client.bulk("/v2/tag-lists", [{"name": "x"}], confirm=True, dynamic=True)
+    assert router.calls == []
+
+
+# --------------------------------------------------------------------------- submit="ask"
+
+
+@dataclass
+class Asked:
+    answer: bool = True
+    questions: list[tuple[str, bool]] = field(default_factory=list)
+
+    def __call__(self, text: str, *, default: bool = True) -> bool:
+        self.questions.append((text, default))
+        return self.answer
+
+
+@pytest.fixture
+def asked(monkeypatch: pytest.MonkeyPatch) -> Asked:
+    """A terminal whose user answers ``asked.answer``."""
+    fake = Asked()
+    monkeypatch.setattr(_console, "is_interactive", lambda: True)
+    monkeypatch.setattr(_console, "confirm", fake)
+    monkeypatch.setenv("COLUMNS", "200")
+    return fake
+
+
+def test_submit_must_be_a_bool_or_ask(client: T3Client, router: Router) -> None:
+    with pytest.raises(ValueError, match='submit must be True, False or "ask"'):
+        client.bulk(DISCONTINUE, rows(1), license="LIC-1", submit="yes")  # type: ignore[arg-type]
+    assert router.calls == []
+
+
+def test_ask_without_a_terminal_raises_before_sending(client: T3Client, router: Router) -> None:
+    with pytest.raises(NotInteractive, match='submit="ask" needs a terminal.*submit=True'):
+        client.bulk(DISCONTINUE, rows(1), license="LIC-1", submit="ask")
+    assert router.calls == []
+
+
+def test_ask_shows_a_summary_and_submits_on_yes(
+    client: T3Client, api: FakeDiscontinue, asked: Asked, capsys: pytest.CaptureFixture[str]
+) -> None:
+    result = client.bulk(DISCONTINUE, rows(1, 2), license="LIC-1", submit="ask")
+    assert asked.questions == [("Submit 2 row(s) to Metrc for LIC-1?", False)]
+    assert statuses(result) == ["submitted", "submitted"]
+    assert api.dry_runs == [1, 2] and api.submits == [1, 2]
+    err = capsys.readouterr().err
+    assert "── POST /v2/items/discontinue ──" in err
+    assert "License: LIC-1" in err
+    assert "Rows: 2 passed validation" in err
+    assert "not whether the records it names exist" in err
+    assert "Sandbox" not in err
+
+
+def test_ask_answered_no_submits_nothing(client: T3Client, api: FakeDiscontinue, asked: Asked) -> None:
+    asked.answer = False
+    result = client.bulk(DISCONTINUE, rows(1, 2), license="LIC-1", submit="ask")
+    assert statuses(result) == ["valid", "valid"]
+    assert result.submitted is False
+    assert api.submits == []
+
+
+def test_ask_with_invalid_rows_shows_them_and_offers_the_rest(
+    client: T3Client, api: FakeDiscontinue, asked: Asked, capsys: pytest.CaptureFixture[str]
+) -> None:
+    api.invalid = {2}
+    result = client.bulk(DISCONTINUE, rows(1, 2, 3), license="LIC-1", submit="ask")
+    assert asked.questions == [("Submit the 2 valid row(s) to Metrc for LIC-1?", False)]
+    assert statuses(result) == ["submitted", "invalid", "submitted"]
+    err = capsys.readouterr().err
+    assert "1 row(s) failed validation" in err
+    assert "Item 2 can't be discontinued" in err
+    assert "Rows: 2 passed validation, 1 failed validation" in err
+
+
+def test_ask_on_skip_still_asks(client: T3Client, api: FakeDiscontinue, asked: Asked) -> None:
+    api.invalid = {2}
+    asked.answer = False
+    client.bulk(DISCONTINUE, rows(1, 2), license="LIC-1", submit="ask", on_error="skip")
+    assert len(asked.questions) == 1
+    assert api.submits == []
+
+
+def test_ask_with_every_row_invalid_shows_them_without_asking(
+    client: T3Client, api: FakeDiscontinue, asked: Asked, capsys: pytest.CaptureFixture[str]
+) -> None:
+    api.invalid = {1, 2}
+    result = client.bulk(DISCONTINUE, rows(1, 2), license="LIC-1", submit="ask")
+    assert asked.questions == []
+    assert statuses(result) == ["invalid", "invalid"]
+    assert "2 row(s) failed validation" in capsys.readouterr().err
+
+
+def test_ask_with_no_rows_asks_nothing(client: T3Client, router: Router, asked: Asked) -> None:
+    result = client.bulk(DISCONTINUE, [], license="LIC-1", submit="ask")
+    assert asked.questions == [] and router.calls == [] and len(result) == 0
+
+
+def test_ask_names_the_sandbox(
+    client: T3Client, router: Router, api: FakeDiscontinue, asked: Asked, capsys: pytest.CaptureFixture[str]
+) -> None:
+    router.add("POST", "/v2/auth/sandbox", json={"accessToken": "sandbox-jwt"})
+    router.add("GET", "/v2/auth/whoami", json={"hostname": "sandbox-me.metrc.com"})
+    router.add("GET", "/v2/licenses", json=[{"licenseNumber": "SF-SBX-1-101"}])
+    client.enter_sandbox()
+    client.bulk(DISCONTINUE, rows(1), license="SF-SBX-1-101", submit="ask")
+    assert asked.questions == [("Submit 1 row(s) to the Metrc sandbox for SF-SBX-1-101?", False)]
+    assert "Sandbox: yes (sandbox-me.metrc.com)" in capsys.readouterr().err
+
+
+def test_ask_without_a_license_leaves_it_out(client: T3Client, router: Router, asked: Asked) -> None:
+    # /v2/tag-lists/{id}/scan takes no license; with no dry run it asks before sending.
+    router.add("POST", "/v2/tag-lists/{tag_list_id}/scan", json={"scanned": 1})
+    asked.answer = True
+    result = client.bulk("/v2/tag-lists/{tag_list_id}/scan", [{"handles": ["A"]}], tag_list_id="tl", submit="ask")
+    assert asked.questions == [("Send 1 row(s) to POST /v2/tag-lists/{tag_list_id}/scan?", False)]
+    assert statuses(result) == ["submitted"]
+
+
+def test_ask_on_an_immediate_route_answered_no(
+    client: T3Client, router: Router, asked: Asked, capsys: pytest.CaptureFixture[str]
+) -> None:
+    asked.answer = False
+    result = client.bulk("/v2/tag-lists", [{"name": "x"}], submit="ask")
+    assert router.calls == []
+    assert statuses(result) == ["not_sent"]
+    assert "takes effect immediately" in capsys.readouterr().err
+
+
+def test_ask_on_an_immediate_route_with_no_rows(client: T3Client, router: Router, asked: Asked) -> None:
+    client.bulk("/v2/tag-lists", [], submit="ask")
+    assert asked.questions == [] and router.calls == []
+
+
+def test_ask_lists_several_default_licenses(router: Router, asked: Asked) -> None:
+    # A route whose licenseNumber is an array gets the default license as a list.
+    c = T3Client(auth=SecretKeyAuth("k"), transport=router.transport, spec="bundled", rate_limit=None)
+    ep = c.spec.endpoint(DISCONTINUE)
+    array_license = Param("licenseNumber", "query", True, schema={"type": "array"})
+    patched = replace(ep, params=tuple(p for p in ep.params if p.name != "licenseNumber") + (array_license,))
+    c.spec.endpoint = lambda *a, **k: patched  # type: ignore[method-assign]
+    c.license = "LIC-A"
+    router.add("POST", DISCONTINUE, json={"message": "Dry run"})
+    asked.answer = False
+    c.bulk(DISCONTINUE, rows(1), submit="ask")
+    assert asked.questions == [("Submit 1 row(s) to Metrc for LIC-A?", False)]
+    c.close()

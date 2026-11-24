@@ -404,11 +404,14 @@ def test_sandbox_switches_to_sandbox_jwt(api: Router) -> None:
     assert SECRET_KEY_HEADER not in api.calls[1].headers
 
 
-def test_sandbox_without_validation(api: Router) -> None:
+def test_sandbox_calls_whoami_once_even_without_validation(api: Router) -> None:
     api.add("POST", SANDBOX, json={"accessToken": "sandbox.jwt.token"})
-    client = go(api, secret_key="sk-real", sandbox=True, validate=False)
-    assert [r.url.path for r in api.calls] == [SANDBOX]
-    assert client.credential_kind == "jwt"
+    for validate in (True, False):
+        api.calls.clear()
+        client = go(api, secret_key="sk-real", sandbox=True, validate=validate)
+        assert [r.url.path for r in api.calls] == [SANDBOX, WHOAMI]
+        assert client.credential_kind == "jwt"
+        assert client.sandbox is True
 
 
 def test_sandbox_failure_closes_client(api: Router, made: list[tuple[T3Client, dict[str, Any]]]) -> None:
@@ -509,3 +512,67 @@ def test_named_profile_that_does_not_exist_says_so(api: Router) -> None:
         go(api, profile="typo")
     assert str(info.value).startswith("There is no saved profile named 'typo'.\n")
     assert str(info.value).endswith(SETUP_HELP)
+
+
+# --------------------------------------------------------------------------- sandbox licenses and T3_SANDBOX
+
+
+@pytest.fixture
+def sandbox_api(api: Router) -> Router:
+    api.add("POST", SANDBOX, json={"accessToken": "sandbox.jwt.token"})
+    api.add("GET", WHOAMI, json={"hostname": "sandbox-me.metrc.com"})
+    return api
+
+
+@pytest.mark.parametrize("value", ["1", "true", "YES", "on"])
+def test_t3_sandbox_turns_the_sandbox_on(sandbox_api: Router, monkeypatch: pytest.MonkeyPatch, value: str) -> None:
+    monkeypatch.setenv("T3_SANDBOX", value)
+    client = go(sandbox_api, secret_key="sk-real")
+    assert client.sandbox is True
+    assert sandbox_api.requests("POST", SANDBOX)
+
+
+@pytest.mark.parametrize("value", ["", "0", "no"])
+def test_t3_sandbox_off_values(sandbox_api: Router, monkeypatch: pytest.MonkeyPatch, value: str) -> None:
+    monkeypatch.setenv("T3_SANDBOX", value)
+    assert go(sandbox_api, secret_key="sk-real").sandbox is False
+    assert sandbox_api.requests("POST", SANDBOX) == []
+
+
+def test_sandbox_false_wins_over_t3_sandbox(sandbox_api: Router, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("T3_SANDBOX", "1")
+    assert go(sandbox_api, secret_key="sk-real", sandbox=False).sandbox is False
+
+
+def test_sandbox_ignores_t3_license(
+    sandbox_api: Router, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.setenv("T3_LICENSE", "AR1769")
+    with caplog.at_level("INFO", logger="t3api_utils"):
+        client = go(sandbox_api, secret_key="sk-real", sandbox=True)
+    assert client.license is None
+    assert "Not using default license AR1769 in the sandbox" in caplog.text
+    assert "Using the Metrc sandbox (sandbox-me.metrc.com)." in caplog.text
+
+
+def test_sandbox_ignores_the_profile_license(sandbox_api: Router, store: Store) -> None:
+    save(store, "default", secret="sk-profile", license="AR1769")
+    client = go(sandbox_api, sandbox=True)
+    assert client.license is None
+
+
+def test_sandbox_keeps_an_explicit_license(
+    sandbox_api: Router, monkeypatch: pytest.MonkeyPatch, made: list[tuple[T3Client, dict[str, Any]]]
+) -> None:
+    monkeypatch.setenv("T3_LICENSE", "AR1769")
+    client = go(sandbox_api, secret_key="sk-real", sandbox=True, license="SF-SBX-1-101")
+    assert client.license == "SF-SBX-1-101"
+    assert made[0][1]["license"] == "SF-SBX-1-101"
+
+
+def test_sandbox_without_any_default_license_logs_nothing_about_it(
+    sandbox_api: Router, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level("INFO", logger="t3api_utils"):
+        go(sandbox_api, secret_key="sk-real", sandbox=True)
+    assert "Not using default license" not in caplog.text

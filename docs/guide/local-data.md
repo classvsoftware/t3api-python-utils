@@ -96,6 +96,14 @@ Both return the `Path` they wrote, and create missing folders.
 folder, named from the first row's data model and license plus the time, for
 example `MetrcPackage__LIC-00001__2026-11-23T14-05-09.csv`.
 
+**A folder as the path.** Pass a folder that exists, or a path ending in `/`,
+and the file gets the default name inside it. The folder is created if needed:
+
+```python
+t3.to_csv(rows, "output/")      # output/MetrcPackage__LIC-00001__2026-11-23T14-05-09.csv
+t3.to_json(rows, "output/", lines=True)
+```
+
 ## Reading files back
 
 `t3.read_rows()` reads JSON, JSON Lines, CSV or TSV into a list of dicts:

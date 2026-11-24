@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 import logging
 import re
 from datetime import datetime
@@ -371,3 +372,47 @@ def test_read_rows_json_with_bom_and_unknown_extension(tmp_path: Path) -> None:
 def test_read_rows_round_trip_json(tmp_path: Path) -> None:
     assert read_rows(to_json(ROWS, tmp_path / "r.json")) == ROWS
     assert read_rows(to_json(ROWS, tmp_path / "r.jsonl", lines=True)) == ROWS
+
+
+# --------------------------------------------------------------------------- folders as paths
+
+ITEM_ROWS = [{"dataModel": "ITEM", "licenseNumber": "LIC-9", "id": 1}]
+
+
+def test_to_csv_into_an_existing_folder(tmp_path: Path) -> None:
+    folder = tmp_path / "output"
+    folder.mkdir()
+    for path in (folder, str(folder)):
+        target = to_csv(ITEM_ROWS, path)
+        assert target.parent == folder
+        assert target.name.startswith("ITEM__LIC-9__") and target.suffix == ".csv"
+        assert read_csv(target) == [{"dataModel": "ITEM", "licenseNumber": "LIC-9", "id": "1"}]
+
+
+def test_to_csv_trailing_slash_creates_the_folder(isolated: Path) -> None:
+    target = to_csv(ITEM_ROWS, "output/")
+    assert target.parent == Path("output")
+    assert target.name.startswith("ITEM__LIC-9__")
+    assert (isolated / "work" / target).is_file()
+
+
+def test_to_csv_os_separator_counts_as_a_folder(isolated: Path) -> None:
+    target = to_csv(ITEM_ROWS, "exports" + os.sep)
+    assert target.parent == Path("exports")
+
+
+def test_to_json_into_a_folder(tmp_path: Path) -> None:
+    folder = tmp_path / "out"
+    folder.mkdir()
+    plain = to_json(ITEM_ROWS, folder)
+    lines = to_json(ITEM_ROWS, f"{folder}/nested/", lines=True)
+    mapping = to_json({"dataModel": "WHOAMI"}, folder)
+    assert plain.parent == folder and plain.suffix == ".json"
+    assert lines.parent == folder / "nested" and lines.suffix == ".jsonl"
+    assert mapping.name.startswith("WHOAMI__")
+    assert json.loads(plain.read_text(encoding="utf-8")) == ITEM_ROWS
+
+
+def test_a_file_path_without_a_slash_is_still_a_file(tmp_path: Path) -> None:
+    target = to_csv(ITEM_ROWS, tmp_path / "new-name")
+    assert target == tmp_path / "new-name" and target.is_file()

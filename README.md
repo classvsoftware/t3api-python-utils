@@ -47,8 +47,8 @@ A few more things it does:
 # Writes are a dry run unless submit=True
 client.post("/v2/items/discontinue", license="LIC-00001", json={"id": 12345}, submit=True)
 
-# Validate every row, then submit
-client.bulk("/v2/items/discontinue", rows=[{"id": i["id"]} for i in items], license="LIC-00001", submit=True)
+# Validate every row, show the results, and ask before submitting
+client.bulk("/v2/items/discontinue", rows=[{"id": i["id"]} for i in items], license="LIC-00001", submit="ask")
 
 # Server-side report straight to a file
 client.report("ITEMS_REPORT", licenses=["LIC-00001"], to="items.xlsx")

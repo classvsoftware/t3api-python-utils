@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import json
 import logging
+import os
 from collections.abc import Iterable, Mapping, Sequence
 from datetime import datetime
 from pathlib import Path
@@ -23,6 +24,7 @@ PRIORITY_FIELDS = (
     "name",
 )
 OnUnmatched = Literal["warn", "error", "skip"]
+_SEPARATORS = (os.sep, os.altsep or os.sep)
 
 
 def get_path(row: Mapping[str, Any], path: str) -> Any:
@@ -175,6 +177,16 @@ def default_path(rows: Sequence[Mapping[str, Any]], extension: str) -> Path:
     return Path("__".join(safe) + f".{extension}")
 
 
+def _target(path: str | Path | None, rows: Sequence[Mapping[str, Any]], extension: str) -> Path:
+    """``path``; or the default file name, in ``path`` when it's a folder."""
+    if path is None:
+        return default_path(rows, extension)
+    text = os.fspath(path)
+    if text.endswith(_SEPARATORS) or Path(text).is_dir():
+        return Path(text) / default_path(rows, extension)
+    return Path(text)
+
+
 def to_csv(
     rows: Sequence[Mapping[str, Any]],
     path: str | Path | None = None,
@@ -187,12 +199,17 @@ def to_csv(
     Nested objects become dotted columns (``item.name``); lists are written as
     JSON text. ``columns`` picks and orders columns; ``strip_empty`` drops
     columns that are empty in every row.
+
+    Without ``path``, the file is ``<dataModel>__<license>__<timestamp>.csv``
+    in the current folder. A ``path`` that is an existing folder, or ends with
+    ``/``, gets that default name inside it (``to_csv(rows, "output/")``).
+    Missing folders are created.
     """
     flat = [flatten(r) for r in rows]
     fields = list(columns) if columns else ordered_columns(flat)
     if strip_empty:
         fields = [f for f in fields if any(r.get(f) not in (None, "") for r in flat)]
-    target = Path(path) if path is not None else default_path(rows, "csv")
+    target = _target(path, rows, "csv")
     target.parent.mkdir(parents=True, exist_ok=True)
     with target.open("w", newline="", encoding="utf-8-sig") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields, extrasaction="ignore")
@@ -207,10 +224,14 @@ def to_json(
     *,
     lines: bool = False,
 ) -> Path:
-    """Write rows as indented JSON, or one object per line with ``lines=True``."""
+    """Write rows as indented JSON, or one object per line with ``lines=True``.
+
+    ``path`` works as in :func:`to_csv`: leave it out, or pass a folder, for a
+    ``<dataModel>__<license>__<timestamp>.json`` (or ``.jsonl``) file name.
+    """
     data = list(rows) if not isinstance(rows, Mapping) else rows
     sample = data if isinstance(data, list) else [data]
-    target = Path(path) if path is not None else default_path(sample, "jsonl" if lines else "json")
+    target = _target(path, sample, "jsonl" if lines else "json")
     target.parent.mkdir(parents=True, exist_ok=True)
     with target.open("w", encoding="utf-8") as handle:
         if lines:

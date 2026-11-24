@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import logging
-import os
-import tempfile
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -12,7 +10,7 @@ from urllib.parse import urlencode
 
 from t3api_utils import _api
 from t3api_utils._http import REPORT_TIMEOUT
-from t3api_utils.errors import T3Error, error_from_response
+from t3api_utils.errors import T3Error
 
 if TYPE_CHECKING:
     from t3api_utils.client import LicenseArg, T3Client
@@ -28,12 +26,14 @@ def _licenses(client: T3Client, licenses: LicenseArg) -> list[str]:
     if licenses is None:
         if not client.license:
             raise ValueError("Pass licenses=[...] (or set a default license on the profile).")
-        return [client.license]
-    values = [licenses] if isinstance(licenses, str) else list(licenses)
+        values = [client.license]
+    else:
+        values = [licenses] if isinstance(licenses, str) else list(licenses)
     if not values:
         raise ValueError("licenses= is empty.")
     if len(values) > MAX_LICENSES:
         raise ValueError(f"A report covers at most {MAX_LICENSES} licenses; got {len(values)}.")
+    client._check_license(values)
     return values
 
 
@@ -132,25 +132,10 @@ def report(
         return url or body
     if to is None:
         return client._call("GET", ep.path, params=query, timeout=REPORT_TIMEOUT)
-    return _download(client, ep.path, query, Path(to))
-
-
-def _download(client: T3Client, path: str, query: dict[str, Any], target: Path) -> Path:
-    target.parent.mkdir(parents=True, exist_ok=True)
-    with client.http.stream("GET", path, params=query, timeout=REPORT_TIMEOUT) as response:
-        if response.is_error:
-            response.read()
-            raise error_from_response(response, credential_kind=client.credential_kind)
-        fd, tmp = tempfile.mkstemp(dir=target.parent, prefix=f".{target.name}.", suffix=".part")
-        try:
-            with os.fdopen(fd, "wb") as handle:
-                for chunk in response.iter_bytes():
-                    handle.write(chunk)
-            os.replace(tmp, target)
-        except BaseException:
-            Path(tmp).unlink(missing_ok=True)
-            raise
-    return target
+    return _api.download(
+        client.http, ep.path, Path(to), credential_kind=client.credential_kind,
+        params=query, timeout=REPORT_TIMEOUT,
+    )  # fmt: skip
 
 
 def report_url(

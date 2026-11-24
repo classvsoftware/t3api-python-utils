@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any
 
+import httpx2
 import pytest
 
 from t3api_utils import _console
@@ -24,7 +26,7 @@ from t3api_utils.errors import (
     ValidationError,
 )
 from t3api_utils.spec.registry import Endpoint, Registry
-from tests.conftest import Router
+from tests.conftest import Router, paginated
 
 MINIMAL_SPEC: dict[str, Any] = {
     "openapi": "3.1.0",
@@ -458,3 +460,173 @@ def test_enter_sandbox_with_unexpected_body_raises_t3error(client: T3Client, rou
     with pytest.raises(T3Error, match="no 'accessToken'"):
         client.enter_sandbox()
     assert client.credential_kind == "secret_key"
+
+
+# --------------------------------------------------------------------------- include= on get()
+
+
+def test_get_object_with_include(lic_client: T3Client, router: Router) -> None:
+    router.add("GET", "/v2/packages/active/super/{object_id}", json={"id": 7})
+    assert lic_client.get("METRC_ACTIVE_SUPERPACKAGES", object_id=7, include=["history", "labResults"]) == {"id": 7}
+    assert router.calls[0].url.params.get_list("include") == ["history", "labResults"]
+
+
+# --------------------------------------------------------------------------- download()
+
+MANIFEST = "/v2/transfers/manifest"
+
+
+def test_download_streams_a_file_to_disk(lic_client: T3Client, router: Router, tmp_path: Path) -> None:
+    router.add("GET", MANIFEST, content=b"%PDF-1.7 manifest", headers={"content-type": "application/pdf"})
+    target = tmp_path / "manifests" / "0001.pdf"
+    path = lic_client.download(MANIFEST, target, params={"manifestNumber": "0001"})
+    assert path == target
+    assert target.read_bytes() == b"%PDF-1.7 manifest"
+    assert [p.name for p in target.parent.iterdir()] == ["0001.pdf"]
+    request = router.calls[0]
+    assert request.url.params["licenseNumber"] == "LIC-1"
+    assert request.url.params["manifestNumber"] == "0001"
+
+
+def test_download_fills_path_parameters_and_accepts_a_string(client: T3Client, router: Router) -> None:
+    router.add("GET", "/v2/coa/{public_id}.pdf", content=b"%PDF coa")
+    path = client.download("/v2/coa/{public_id}.pdf", "coa.pdf", public_id="abc 1")
+    assert path.read_bytes() == b"%PDF coa"
+    assert router.calls[0].url.raw_path == b"/v2/coa/abc%201.pdf"
+
+
+def test_download_error_leaves_no_file(lic_client: T3Client, router: Router, tmp_path: Path) -> None:
+    router.add("GET", MANIFEST, status=404, json={"detail": "no such manifest"})
+    folder = tmp_path / "out"
+    with pytest.raises(NotFound, match="no such manifest"):
+        lic_client.download(MANIFEST, folder / "missing.pdf", params={"manifestNumber": "9"})
+    assert list(folder.iterdir()) == []
+
+
+def test_download_interrupted_leaves_no_partial_file(
+    lic_client: T3Client, router: Router, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    router.add("GET", MANIFEST, content=b"%PDF")
+
+    def broken_replace(src: str, dst: str) -> None:
+        raise OSError("disk full")
+
+    monkeypatch.setattr("t3api_utils._api.os.replace", broken_replace)
+    folder = tmp_path / "out"
+    with pytest.raises(OSError, match="disk full"):
+        lic_client.download(MANIFEST, folder / "m.pdf", params={"manifestNumber": "1"})
+    assert list(folder.iterdir()) == []
+
+
+def test_download_passes_a_timeout(lic_client: T3Client, router: Router, tmp_path: Path) -> None:
+    seen: list[Any] = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        seen.append(request.extensions["timeout"])
+        return httpx2.Response(200, content=b"x")
+
+    router.add("GET", MANIFEST, handler=handler)
+    lic_client.download(MANIFEST, tmp_path / "a.pdf", params={"manifestNumber": "1"})
+    lic_client.download(MANIFEST, tmp_path / "b.pdf", params={"manifestNumber": "1"}, timeout=120)
+    assert seen[0]["read"] != 120
+    assert seen[1]["read"] == 120
+
+
+def test_download_rejects_endpoints_that_are_not_files(lic_client: T3Client, router: Router) -> None:
+    with pytest.raises(SpecError, match="file"):
+        lic_client.download("METRC_ACTIVE_ITEMS", "items.json")
+    assert router.calls == []
+
+
+def test_download_checks_required_parameters(lic_client: T3Client, router: Router) -> None:
+    with pytest.raises(SpecError, match="manifestNumber"):
+        lic_client.download(MANIFEST, "m.pdf")
+    assert router.calls == []
+
+
+# --------------------------------------------------------------------------- sandbox
+
+SANDBOX_LICENSES = [{"licenseNumber": "SF-SBX-1-101"}, {"licenseNumber": "SF-SBX-2-101"}]
+
+
+@pytest.fixture
+def sandbox_api(router: Router) -> Router:
+    router.add("POST", "/v2/auth/sandbox", json={"accessToken": "sandbox-jwt"})
+    router.add("GET", "/v2/auth/whoami", json={"hostname": "sandbox-me.metrc.com"})
+    router.add("GET", "/v2/licenses", json=SANDBOX_LICENSES)
+    router.add("GET", "/v2/items", handler=paginated([]))
+    return router
+
+
+def test_enter_sandbox_clears_the_default_license_and_logs(
+    sandbox_api: Router, caplog: pytest.LogCaptureFixture
+) -> None:
+    with make_client(sandbox_api, license="AR1769") as c, caplog.at_level(logging.INFO, logger="t3api_utils"):
+        before = c.sandbox
+        c.enter_sandbox()
+        assert (before, c.sandbox) == (False, True)
+        assert c.license is None
+        assert c.hostname == "sandbox-me.metrc.com"
+        assert repr(c).endswith("credential=jwt sandbox>")
+    assert "Using the Metrc sandbox (sandbox-me.metrc.com)." in caplog.text
+    assert len(sandbox_api.requests("GET", "/v2/auth/whoami")) == 1
+
+
+def test_enter_sandbox_with_no_hostname(router: Router, caplog: pytest.LogCaptureFixture) -> None:
+    router.add("POST", "/v2/auth/sandbox", json={"accessToken": "sandbox-jwt"})
+    router.add("GET", "/v2/auth/whoami", json=["not", "a", "dict"])
+    with make_client(router) as c, caplog.at_level(logging.INFO, logger="t3api_utils"):
+        c.enter_sandbox()
+        assert c.hostname is None
+    assert "Using the Metrc sandbox (unknown host)." in caplog.text
+
+
+def test_hostname_calls_whoami_once(client: T3Client, router: Router) -> None:
+    router.add("GET", "/v2/auth/whoami", json={"hostname": "ca.metrc.com"})
+    assert client.hostname == "ca.metrc.com"
+    assert client.hostname == "ca.metrc.com"
+    assert len(router.calls) == 1
+
+
+def test_sandbox_warns_once_about_a_license_it_does_not_have(
+    sandbox_api: Router, caplog: pytest.LogCaptureFixture
+) -> None:
+    with make_client(sandbox_api) as c:
+        c.enter_sandbox()
+        c.collect("METRC_ACTIVE_ITEMS", license="AR1769", progress=False)
+        c.collect("METRC_ACTIVE_ITEMS", license=["AR1769", "SF-SBX-1-101"], progress=False)
+    warnings = [r.getMessage() for r in caplog.records if "isn't one of this sandbox" in r.getMessage()]
+    assert warnings == [
+        "AR1769 isn't one of this sandbox session's licenses (SF-SBX-1-101, SF-SBX-2-101). The sandbox "
+        "answers requests for other licenses with no rows instead of an error."
+    ]
+    assert len(sandbox_api.requests("GET", "/v2/licenses")) == 1
+
+
+def test_sandbox_checks_licenses_on_writes(sandbox_api: Router, caplog: pytest.LogCaptureFixture) -> None:
+    sandbox_api.add("POST", "/v2/items/discontinue", json={"message": "Dry run"})
+    with make_client(sandbox_api) as c:
+        c.enter_sandbox()
+        c.post("/v2/items/discontinue", license="SF-SBX-1-101", json={"id": 1})
+        assert "isn't one of" not in caplog.text
+        c.post("/v2/items/discontinue", license="LIC-PROD", json={"id": 1})
+    assert "LIC-PROD isn't one of this sandbox session's licenses" in caplog.text
+
+
+def test_sandbox_license_check_skipped_when_licenses_fail(
+    sandbox_api: Router, caplog: pytest.LogCaptureFixture
+) -> None:
+    sandbox_api.add("GET", "/v2/licenses", status=403, json={"detail": "nope"})
+    with make_client(sandbox_api) as c, caplog.at_level(logging.DEBUG, logger="t3api_utils"):
+        c.enter_sandbox()
+        c.collect("METRC_ACTIVE_ITEMS", license="AR1769", progress=False)
+        c.collect("METRC_ACTIVE_ITEMS", license="AR1769", progress=False)
+    assert "Couldn't list the sandbox licenses to check AR1769" in caplog.text
+    assert "isn't one of" not in caplog.text
+    assert len(sandbox_api.requests("GET", "/v2/licenses")) == 1
+
+
+def test_no_license_check_outside_the_sandbox(lic_client: T3Client, router: Router) -> None:
+    router.add("GET", "/v2/items", handler=paginated([]))
+    lic_client.collect("METRC_ACTIVE_ITEMS", license="ANYTHING", progress=False)
+    assert router.requests("GET", "/v2/licenses") == []

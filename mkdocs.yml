@@ -74,6 +74,7 @@ nav:
       - Writes: guide/writes.md
       - Reports and tag lists: guide/reports-and-tag-lists.md
       - Local data: guide/local-data.md
+      - Prompts and pickers: guide/prompts.md
       - The t3api command: guide/cli.md
       - Errors and logging: guide/errors-and-logging.md
   - Migrating from 1.x: migration.md
@@ -84,6 +85,7 @@ nav:
       - Reports: reference/reports.md
       - Tag lists: reference/tag-lists.md
       - Local data: reference/local.md
+      - Prompts: reference/prompts.md
       - Errors: reference/errors.md
       - Spec: reference/spec.md
 

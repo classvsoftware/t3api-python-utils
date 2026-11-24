@@ -6,7 +6,7 @@ Ctrl-C raises ``KeyboardInterrupt`` to the caller.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any, TypeVar
 
@@ -23,18 +23,38 @@ def choose(
     title: str,
     items: Sequence[T],
     columns: Sequence[str],
-    render: Any,
+    render: Callable[[T], Sequence[str]],
     *,
-    filterable: bool = False,
+    filterable: bool | None = None,
 ) -> T:
     """Show ``items`` as a numbered table and return the chosen one.
 
-    ``render(item)`` returns one string per column after the number. With
-    ``filterable=True``, typing text instead of a number narrows the list.
+    ```python
+    package = t3.choose(
+        "Source package",
+        packages,
+        columns=["Label", "Item", "Quantity"],
+        render=lambda p: [p["label"], p["item"]["name"], str(p["quantity"])],
+    )
+    ```
+
+    Args:
+        title: The table's title.
+        items: What to choose from. It must not be empty.
+        columns: Column headings, after the ``#`` column.
+        render: Returns one string per column for an item.
+        filterable: Let typing text instead of a number narrow the list.
+            Defaults to on for more than 10 items.
+
+    Raises:
+        NotInteractive: there's no terminal to ask in.
+        ValueError: ``items`` is empty.
     """
     if not items:
         raise ValueError(f"{title}: nothing to choose from.")
     _console.require_interactive(title)
+    if filterable is None:
+        filterable = len(items) > 10
     shown: list[T] = list(items)
     while True:
         table = _console.table(title)

@@ -66,9 +66,10 @@ except t3.AuthError as exc:
 
 | Exception | When |
 |---|---|
-| `ValueError` | Misuse that the library can spot locally: `submit=` on a route with no dry run, more than 20 licenses on a report, an empty license list, a bad `on_error` or `on_unmatched` value, an unknown column in `filter_rows()`. |
+| `ValueError` | Misuse that the library can spot locally: `submit=` on a route with no dry run, `dynamic=True` on a route without dynamic validation, more than 20 licenses on a report, an empty license list, a bad `submit`, `on_error`, `batch_size` or `on_unmatched` value, an unknown column in `filter_rows()`, an empty list given to `t3.choose()`. |
 | `TypeError` | A path parameter the endpoint doesn't have. Query parameters go in `params=`. |
 | `ImportError` | `t3.inspect()` without the `[tui]` extra. The message names the install command. |
+| `NotInteractive` | A picker, prompt or `bulk(submit="ask")` with no terminal to ask in. See [Prompts and pickers](prompts.md#without-a-terminal). |
 | `KeyboardInterrupt` | Ctrl-C at a picker or prompt. The library never calls `sys.exit()`; it's up to your script. |
 | `httpx2` transport errors | The network failed for good after retries (DNS, connection refused, timeouts). |
 
@@ -130,8 +131,8 @@ logging.basicConfig(level=logging.INFO)
 
 | Level | Examples |
 |---|---|
-| WARNING | Retries; a query parameter the spec doesn't list; rows that failed validation in `bulk()`; a stale spec cache; no OS keyring; every `report_url()` call. |
-| INFO | Dry-run notices (`dry run: pass submit=True to send ... to Metrc`); duplicate rows dropped by `collect()`; the `bulk()` summary; falling back to the bundled spec. |
+| WARNING | Retries; a query parameter, or an `include` value, the spec doesn't list; a JSON body whose shape (list or object) doesn't match the route's; a license that isn't one of the sandbox session's; rows that failed validation in `bulk()`; a stale spec cache; no OS keyring; every `report_url()` call. |
+| INFO | Dry-run notices (`dry run: pass submit=True to send ... to Metrc`); entering the sandbox (`Using the Metrc sandbox (sandbox-me.metrc.com).`) and the default license it ignores; duplicate rows dropped by `collect()`; the `bulk()` summary; falling back to the bundled spec. |
 
 The `t3api` command sets up its own Rich log output; `-v` shows INFO messages.
 

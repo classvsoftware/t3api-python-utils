@@ -1,5 +1,76 @@
 # Changelog
 
+## 2.0.1
+
+Fixes and additions from porting the T3 example scripts to 2.0. Use this
+release instead of 2.0.0.
+
+### Fixed
+
+- **`bulk()` on list routes.** Most Metrc write routes (68 of 85) take a JSON
+  list, even for one object, and answer a bare object with an unexplained
+  HTTP 500. `bulk()` sent every row as an object, so on those routes every row
+  came back `invalid`. It now wraps each row in a list where the spec says the
+  body is one. You still pass one dict per object.
+- **Production licenses in the sandbox.** `connect(sandbox=True)` kept
+  `T3_LICENSE` or the profile's license, and the sandbox answers a request
+  for a license it doesn't have with an empty 200, so scripts quietly found
+  nothing. In the sandbox those defaults are now ignored (an explicit
+  `connect(license=...)` still counts), `enter_sandbox()` clears
+  `client.license`, and a call naming a license the sandbox session doesn't
+  have logs a warning.
+- **Dry-run wording.** A dry run is static validation: format, required fields
+  and types, not whether the records a request names exist. The docs,
+  docstrings and `BulkResult.summary()` now say so. `summary()` reads
+  `12 passed validation, 1 failed validation` rather than `12 valid, 1 invalid`
+  (the row statuses themselves are unchanged), and lists statuses in pipeline
+  order: passed validation, failed validation, submitted, failed, not sent.
+
+### Added
+
+- **`bulk(submit="ask")`** validates every row, shows the route, license,
+  counts and any failures (and says "sandbox" in the sandbox), then asks
+  whether to submit, default no. Without a terminal it raises `NotInteractive`
+  before sending anything. A script can map its flag in one line:
+  `submit=True if args.yes else "ask"`. On routes with no dry run it asks
+  instead of needing `confirm=True`.
+- **`bulk(batch_size=N)`** sends up to N rows per request on list routes. A
+  failed request marks every row in it. The default stays 1.
+- **`dynamic=True`** on `post()`, `put()`, `patch()`, `delete()` and `bulk()`
+  sends `applyDynamicValidation=true`, for the routes that offer it.
+- **A warning when a `json=` body's shape doesn't match the route**: an object
+  sent to a list route, or a list to an object route.
+- **`t3.confirm()`, `t3.ask()` and `t3.choose()`**, public prompts that match
+  the library's pickers and raise `NotInteractive` without a terminal.
+  `confirm()` defaults to no. `ask(parse=float)` asks again until `parse`
+  succeeds. `choose()` (the existing picker, now exported) turns filtering on
+  for more than 10 items unless `filterable=` says otherwise. New guide page:
+  Prompts and pickers.
+- **Sandbox:** the `T3_SANDBOX` environment variable (`1`, `true`, `yes` or
+  `on`), a global `t3api --sandbox` option for the data commands,
+  `client.sandbox`, `client.hostname` (the Metrc hostname, from `whoami`), and
+  an INFO log line on entering the sandbox. `t3api whoami` shows a `sandbox`
+  row there.
+- **`client.download(endpoint, to, ...)`** streams a `file` endpoint (manifest
+  and COA PDFs, item photos) to disk through a temporary file that's renamed
+  when complete, so a failed download never leaves a partial file.
+- **`include=`** on `collect()`, `iter_rows()` and `get()` for super
+  endpoints, sent as a repeated parameter (the server rejects a comma-joined
+  one). Values the spec doesn't list are warned about.
+- **`to_csv()` and `to_json()` accept a folder**: an existing folder, or a
+  path ending in `/`, gets the default `<dataModel>__<license>__<time>` file
+  name inside it.
+- `Endpoint.body_type` / `Endpoint.body_is_array` and `Param.choices` in the
+  spec registry.
+- Docs: array bodies, uploads with `files=`, downloads, super collections and
+  `include`, and the difference between `bulk(confirm=True)` and
+  `submit="ask"`.
+
+### Changed
+
+- `connect(sandbox=True)` now calls `whoami` once even with `validate=False`,
+  to log the sandbox hostname.
+
 ## 2.0.0
 
 A hard-break rewrite. No 1.x import path still works, and there is no

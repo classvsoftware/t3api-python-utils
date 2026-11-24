@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+import tempfile
+from pathlib import Path
 from typing import Any
 
 import httpx2
@@ -50,3 +53,33 @@ def call(
     **kwargs: Any,
 ) -> Any:
     return parse(send(http, method, url, credential_kind=credential_kind, **kwargs))
+
+
+def download(
+    http: httpx2.Client,
+    url: str,
+    target: Path,
+    *,
+    credential_kind: str | None = None,
+    **kwargs: Any,
+) -> Path:
+    """Stream a GET response to ``target``.
+
+    The body goes to a temporary file next to ``target`` that is renamed only
+    once the download finishes, so a failure never leaves a half-written file.
+    """
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with http.stream("GET", url, **kwargs) as response:
+        if response.is_error:
+            response.read()
+            raise error_from_response(response, credential_kind=credential_kind)
+        fd, tmp = tempfile.mkstemp(dir=target.parent, prefix=f".{target.name}.", suffix=".part")
+        try:
+            with os.fdopen(fd, "wb") as handle:
+                for chunk in response.iter_bytes():
+                    handle.write(chunk)
+            os.replace(tmp, target)
+        except BaseException:
+            Path(tmp).unlink(missing_ok=True)
+            raise
+    return target

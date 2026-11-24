@@ -611,3 +611,80 @@ def test_keys_revoke_managed_key_is_refused(api: Router) -> None:
     assert result.exit_code == 1
     assert "Managed keys can't be deleted" in result.stderr
     assert _secret_keys()["a"] == "sk-shared-0042"
+
+
+# --------------------------------------------------------------------------- --sandbox
+
+
+def sandbox_routes(api: Router) -> None:
+    api.add("POST", "/v2/auth/sandbox", json={"accessToken": "sandbox.jwt.token"})
+    api.add("GET", "/v2/auth/whoami", json={"username": "jane", "hostname": "sandbox-me.metrc.com"})
+    api.add("GET", "/v2/auth/secretkey", json=[])
+    api.add("POST", "/v2/auth/logout", json={})
+    api.add("GET", "/v2/licenses", json=[{"licenseNumber": "LIC-1", "licenseName": "Only"}])
+
+
+def test_whoami_with_sandbox_shows_it(api: Router) -> None:
+    sandbox_routes(api)
+    save_profile("default", license="AR1769")
+    result = invoke("--sandbox", "whoami")
+    assert result.exit_code == 0
+    lines = result.stdout.splitlines()
+    assert any("sandbox" in line and "yes" in line for line in lines)
+    assert "sandbox-me.metrc.com" in result.stdout
+    assert not any("default license" in line and "AR1769" in line for line in lines)
+    whoami = api.requests("GET", "/v2/auth/whoami")[-1]
+    assert whoami.headers["Authorization"] == "Bearer sandbox.jwt.token"
+
+
+def test_t3_sandbox_applies_to_data_commands(api: Router, monkeypatch: pytest.MonkeyPatch) -> None:
+    sandbox_routes(api)
+    save_profile("default")
+    monkeypatch.setenv("T3_SANDBOX", "1")
+    result = invoke("whoami")
+    assert result.exit_code == 0
+    assert api.requests("POST", "/v2/auth/sandbox")
+
+
+def test_whoami_without_sandbox_has_no_sandbox_row(api: Router) -> None:
+    sandbox_routes(api)
+    save_profile("default")
+    result = invoke("whoami")
+    assert result.exit_code == 0
+    assert not any(line.split("│")[1:2] == [" sandbox "] for line in result.stdout.splitlines())
+    assert api.requests("POST", "/v2/auth/sandbox") == []
+
+
+@pytest.mark.parametrize(
+    "args",
+    [["--sandbox", "keys", "list"], ["--sandbox", "logout", "--everywhere"], ["--sandbox", "license", "pick"]],
+)
+def test_credential_commands_never_use_the_sandbox(
+    api: Router, monkeypatch: pytest.MonkeyPatch, args: list[str]
+) -> None:
+    sandbox_routes(api)
+    save_profile("default")
+    monkeypatch.setenv("T3_SANDBOX", "1")
+    result = invoke(*args)
+    assert result.exit_code == 0
+    assert api.requests("POST", "/v2/auth/sandbox") == []
+    assert all(r.headers.get("X-T3-API-Key") == "sk-default-0001" for r in api.calls)
+
+
+def test_keys_revoke_never_uses_the_sandbox(api: Router, monkeypatch: pytest.MonkeyPatch) -> None:
+    sandbox_routes(api)
+    api.add("DELETE", "/v2/auth/secretkey/{key}", json={})
+    save_profile("default")
+    monkeypatch.setenv("T3_SANDBOX", "1")
+    result = invoke("keys", "revoke", "sk-old-key", "--yes")
+    assert result.exit_code == 0
+    assert api.requests("POST", "/v2/auth/sandbox") == []
+
+
+def test_the_sandbox_flag_does_not_stick_between_runs(api: Router) -> None:
+    sandbox_routes(api)
+    save_profile("default")
+    assert invoke("--sandbox", "whoami").exit_code == 0
+    api.calls.clear()
+    assert invoke("whoami").exit_code == 0
+    assert api.requests("POST", "/v2/auth/sandbox") == []

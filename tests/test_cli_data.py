@@ -586,3 +586,17 @@ def test_spec_refresh_failure(api: Router) -> None:
     result = invoke("spec", "refresh")
     assert result.exit_code == 1
     assert "Couldn't fetch the T3 spec from https://api.trackandtrace.tools" in result.stderr
+
+
+def test_pull_in_the_sandbox(api: Router) -> None:
+    api.add("POST", "/v2/auth/sandbox", json={"accessToken": "sandbox.jwt.token"})
+    api.add("GET", "/v2/auth/whoami", json={"hostname": "sandbox-me.metrc.com"})
+    api.add("GET", "/v2/licenses", json=[{"licenseNumber": "SF-SBX-1-101"}])
+    api.add("GET", "/v2/items", handler=paginated(ITEMS))
+    save_profile("default", license="AR1769")
+    result = invoke("--sandbox", "pull", "METRC_ACTIVE_ITEMS", "-l", "SF-SBX-1-101", "-o", "items.csv")
+    assert result.exit_code == 0, result.stderr
+    for request in api.requests("GET", "/v2/items"):
+        assert request.url.params["licenseNumber"] == "SF-SBX-1-101"
+        assert request.headers["Authorization"] == "Bearer sandbox.jwt.token"
+    assert Path("items.csv").is_file()

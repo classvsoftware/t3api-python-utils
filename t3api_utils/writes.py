@@ -3,7 +3,8 @@
 How a write behaves depends on the route's kind in the spec:
 
 * ``metrc_write`` routes take ``submit``. Without ``submit=True`` they are a
-  dry run: the server validates and nothing reaches Metrc.
+  dry run: T3 checks the request statically (format, required fields and
+  types, not whether the records it names exist) and nothing reaches Metrc.
 * ``immediate_write`` routes (auth, tag lists, label layouts, saved reports,
   support tickets) take effect at once and have no dry run.
 """
@@ -16,20 +17,26 @@ import logging
 from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, get_args
 
 import httpx2
+from rich.markup import escape
 
 from t3api_utils import _console
-from t3api_utils.errors import APIError, AuthError
+from t3api_utils.errors import APIError, AuthError, NotInteractive
 
 if TYPE_CHECKING:
     from t3api_utils.client import T3Client
+    from t3api_utils.spec.registry import Endpoint
 
 logger = logging.getLogger("t3api_utils")
 
 OnError = Literal["stop", "skip"]
 RowStatus = Literal["valid", "invalid", "submitted", "failed", "not_sent"]
+_STATUS_LABELS = {"valid": "passed validation", "invalid": "failed validation", "not_sent": "not sent"}
+STATIC_VALIDATION = (
+    "A dry run checks format, required fields and types, not whether the records it names exist."
+)
 
 
 @dataclass
@@ -37,7 +44,9 @@ class WriteResult:
     """What a write returned.
 
     Attributes:
-        dry_run: True if the server only validated the request.
+        dry_run: True if T3 only checked the request: format, required fields
+            and types, not whether the records it names exist. Nothing reached
+            Metrc.
         message: The server's ``message``: ``"Dry run"`` or ``"Success"`` for Metrc writes.
         data: The parsed response body.
         response: The ``httpx2.Response``.
@@ -51,7 +60,11 @@ class WriteResult:
 
 @dataclass
 class RowResult:
-    """One row of a bulk write."""
+    """One row of a bulk write.
+
+    ``status`` is ``valid`` (passed the dry run's static checks, not
+    submitted), ``invalid``, ``submitted``, ``failed`` or ``not_sent``.
+    """
 
     index: int
     row: Mapping[str, Any]
@@ -81,7 +94,7 @@ class BulkResult:
 
     @property
     def invalid(self) -> list[RowResult]:
-        """Rows that failed the dry run."""
+        """Rows that failed validation (the dry run)."""
         return self.by_status("invalid")
 
     @property
@@ -102,9 +115,17 @@ class BulkResult:
         return counts
 
     def summary(self) -> str:
-        """One line, e.g. ``POST /v2/items/discontinue: 3 submitted, 1 invalid``."""
-        parts = [f"{n} {status.replace('_', ' ')}" for status, n in sorted(self.counts().items())]
-        return f"{self.endpoint}: " + (", ".join(parts) if parts else "no rows")
+        """One line, e.g. ``POST /v2/items/discontinue: 1 failed validation, 3 submitted``."""
+        return f"{self.endpoint}: {self._counts_text()}"
+
+    def _counts_text(self) -> str:
+        counts = self.counts()
+        parts = [
+            f"{counts[status]} {_STATUS_LABELS.get(status, status)}"
+            for status in get_args(RowStatus)
+            if status in counts
+        ]
+        return ", ".join(parts) if parts else "no rows"
 
     def to_csv(self, path: str | Path) -> Path:
         """Write one line per row: index, status, message, and the row as JSON."""
@@ -138,6 +159,46 @@ def _show_invalid(result: BulkResult, limit: int = 20) -> None:
         _console.info(f"…and {len(result.invalid) - limit} more.")
 
 
+def _batches(items: list[RowResult], size: int) -> list[list[RowResult]]:
+    return [items[i : i + size] for i in range(0, len(items), size)]
+
+
+def _rows_label(batch: list[RowResult]) -> str:
+    if len(batch) == 1:
+        return f"Row {batch[0].index}"
+    return f"Rows {batch[0].index}-{batch[-1].index}"
+
+
+def _ask_to_submit(
+    client: T3Client,
+    ep: Endpoint,
+    license: str | None,
+    result: BulkResult,
+    rows: list[RowResult],
+) -> bool:
+    """Show what's about to be sent and ask, default no."""
+    lic = client._license_for(ep, license)
+    lic_text = ", ".join(lic) if isinstance(lic, list) else lic
+    _console.console.print(f"[bold bright_magenta]── {escape(ep.label())} ──[/bold bright_magenta]")
+    if lic_text:
+        _console.console.print(f"[magenta]License:[/magenta] {escape(lic_text)}")
+    if client.sandbox:
+        _console.console.print(f"[magenta]Sandbox:[/magenta] yes ({escape(client.hostname or 'unknown host')})")
+    where = "the Metrc sandbox" if client.sandbox else "Metrc"
+    suffix = f" for {lic_text}" if lic_text else ""
+    if ep.kind == "immediate_write":
+        _console.warning("This route takes effect immediately. It has no dry run, so nothing was checked.")
+        return _console.confirm(f"Send {len(rows)} row(s) to {ep.method} {ep.path}{suffix}?", default=False)
+    _console.console.print(f"[magenta]Rows:[/magenta] {escape(result._counts_text())}")
+    _console.info(STATIC_VALIDATION)
+    if result.invalid:
+        _show_invalid(result)
+        question = f"Submit the {len(rows)} valid row(s) to {where}{suffix}?"
+    else:
+        question = f"Submit {len(rows)} row(s) to {where}{suffix}?"
+    return _console.confirm(question, default=False)
+
+
 def bulk(
     client: T3Client,
     endpoint: str,
@@ -145,31 +206,80 @@ def bulk(
     *,
     license: str | None = None,
     method: str | None = None,
-    submit: bool = False,
+    submit: bool | Literal["ask"] = False,
     confirm: bool = False,
     on_error: OnError = "stop",
     log_to: str | Path | None = None,
     progress: bool | None = None,
     path_params: Mapping[str, Any] | None = None,
+    dynamic: bool = False,
+    batch_size: int = 1,
 ) -> BulkResult:
-    """Send many writes safely, one row per request.
+    """Send many writes safely: validate every row, then submit.
 
     For Metrc write routes:
 
-    1. Every row is sent as a dry run and its result recorded.
-    2. If any row failed, stop and return the results. In a terminal, show the
-       failures and ask whether to submit only the valid rows.
-       ``on_error="skip"`` does that without asking.
-    3. With ``submit=True``, send each valid row with ``submit=true``, in order.
-       With ``on_error="stop"``, the first failed submit stops the rest.
+    1. Every row is sent as a dry run and its result recorded. A dry run
+       checks format, required fields and types, not whether the records a
+       row names exist, so ``valid`` means "passed validation", not "Metrc
+       will accept it".
+    2. ``submit=False`` stops here. ``submit="ask"`` shows a summary (and any
+       failures) and asks whether to submit, default no. ``submit=True``
+       carries on without asking unless some rows failed; then, in a
+       terminal, it shows the failures and asks whether to submit only the
+       valid rows. ``on_error="skip"`` submits them without asking.
+    3. Each valid row is sent with ``submit=true``, in order. With
+       ``on_error="stop"``, the first failed submit stops the rest.
 
-    Routes with no dry run (``immediate_write``) skip validation, so they need
-    ``confirm=True``.
+    Each row is one object. On routes whose body is a list (most Metrc
+    writes), rows are wrapped in a list for you.
 
-    ``log_to`` writes the results to a CSV file.
+    Routes with no dry run (``immediate_write``) can't be validated first, so
+    they need ``confirm=True`` ("I know this takes effect at once"), or
+    ``submit="ask"`` to ask a person before sending.
+
+    Args:
+        client: The client to send with.
+        endpoint: The write route's path (or endpoint ID).
+        rows: One mapping per object to write.
+        license: Fills ``licenseNumber``. Defaults to the client's license
+            when the route requires one.
+        method: Picks the operation when a path has several write methods.
+        submit: ``False`` validates only, ``True`` submits the valid rows,
+            ``"ask"`` asks first. ``"ask"`` raises
+            :class:`~t3api_utils.errors.NotInteractive` without a terminal,
+            before sending anything, so a scheduled job can't hang or quietly
+            submit nothing.
+        confirm: Required for routes with no dry run, unless ``submit="ask"``.
+        on_error: ``"stop"`` (the default) or ``"skip"``, as described above.
+        log_to: Write the results to this CSV file.
+        progress: Show progress bars. Defaults to on when stderr is a terminal.
+        path_params: Values for the route's path parameters.
+        dynamic: Also ask T3 for the route's dynamic checks
+            (``applyDynamicValidation``). What they cover depends on the route.
+        batch_size: Rows per request, on routes whose body is a list. A
+            request that fails marks every row in it with the same error, so
+            the default of 1 keeps each row's error separate.
+
+    Raises:
+        ValueError: a bad ``submit``, ``on_error`` or ``batch_size``; an
+            immediate route without ``confirm=True``; ``batch_size`` above 1 on
+            a route that takes one object; ``dynamic=True`` on a route without
+            dynamic validation.
+        NotInteractive: ``submit="ask"`` without a terminal.
+        AuthError: the credential was rejected. It stops the run whatever
+            ``on_error`` says.
     """
     if on_error not in ("stop", "skip"):
         raise ValueError('on_error must be "stop" or "skip".')
+    if not isinstance(submit, bool) and submit != "ask":
+        raise ValueError('submit must be True, False or "ask".')
+    if batch_size < 1:
+        raise ValueError("batch_size must be at least 1.")
+    if submit == "ask" and not _console.is_interactive():
+        raise NotInteractive(
+            'submit="ask" needs a terminal to ask in. Pass submit=True to submit without asking.'
+        )
     path_params = dict(path_params or {})
     items = [RowResult(index=i, row=row) for i, row in enumerate(rows)]
     ep = client.spec.endpoint(
@@ -178,61 +288,80 @@ def bulk(
         kind=("metrc_write", "immediate_write"),
         path_params=path_params.keys(),
     )
+    if batch_size > 1 and not ep.body_is_array:
+        raise ValueError(f"{ep.label()} takes one object per request, so batch_size must be 1.")
     result = BulkResult(endpoint=ep.label(), rows=items)
     show = _console.stderr_is_terminal() if progress is None else progress
+    target = endpoint if endpoint.startswith("/") else ep.path
 
-    def send(item: RowResult, submit_flag: bool | None) -> None:
+    def send(batch: list[RowResult], submit_flag: bool | None) -> None:
+        body: Any = [dict(i.row) for i in batch] if ep.body_is_array else dict(batch[0].row)
         write = client._write(
             ep.method,
-            ep.path if not endpoint.startswith("/") else endpoint,
+            target,
             license=license,
             params=None,
-            json=dict(item.row),
+            json=body,
             files=None,
             data=None,
             submit=submit_flag,
             timeout=None,
             path_params=path_params,
+            dynamic=dynamic,
         )
-        item.data = write.data
-        item.message = write.message
+        for item in batch:
+            item.data = write.data
+            item.message = write.message
 
     if ep.kind == "immediate_write":
-        if not confirm:
+        if submit == "ask":
+            if not items or not _ask_to_submit(client, ep, license, result, items):
+                return _finish(result, log_to)
+        elif not confirm:
             raise ValueError(
                 f"{ep.label()} takes effect immediately and has no dry run, so bulk() can't "
-                "validate rows first. Pass confirm=True to send them anyway."
+                'validate rows first. Pass confirm=True to send them anyway, or submit="ask" '
+                "to ask first."
             )
-        _submit(result, items, send, None, on_error, show)
+        _submit(result, items, send, None, on_error, show, batch_size)
         return _finish(result, log_to)
 
     with _console.progress_bar("Validating", len(items), show and bool(items)) as advance:
-        for item in items:
+        for batch in _batches(items, batch_size):
             try:
-                send(item, None)
-                item.status = "valid"
+                send(batch, None)
             except AuthError:
                 raise
             except APIError as exc:
-                item.status = "invalid"
-                item.message = exc.detail or str(exc)
-                item.error = exc
-            advance(1)
+                for item in batch:
+                    item.status = "invalid"
+                    item.message = exc.detail or str(exc)
+                    item.error = exc
+            else:
+                for item in batch:
+                    item.status = "valid"
+            advance(len(batch))
 
     valid = [i for i in items if i.status == "valid"]
     if result.invalid:
         logger.warning("%d of %d rows failed validation.", len(result.invalid), len(items))
-        if not submit:
+    if not submit:
+        return _finish(result, log_to)
+    if submit == "ask":
+        if not valid:
+            if result.invalid:
+                _show_invalid(result)
             return _finish(result, log_to)
-        if on_error == "stop":
-            if not valid or not _console.is_interactive():
-                return _finish(result, log_to)
-            _show_invalid(result)
-            if not _console.confirm(f"Submit only the {len(valid)} valid row(s)?", default=False):
-                return _finish(result, log_to)
+        if not _ask_to_submit(client, ep, license, result, valid):
+            return _finish(result, log_to)
+    elif result.invalid and on_error == "stop":
+        if not valid or not _console.is_interactive():
+            return _finish(result, log_to)
+        _show_invalid(result)
+        if not _console.confirm(f"Submit only the {len(valid)} valid row(s)?", default=False):
+            return _finish(result, log_to)
 
-    if submit:
-        _submit(result, valid, send, True, on_error, show)
+    _submit(result, valid, send, True, on_error, show, batch_size)
     return _finish(result, log_to)
 
 
@@ -243,27 +372,32 @@ def _submit(
     submit_flag: bool | None,
     on_error: OnError,
     show: bool,
+    batch_size: int,
 ) -> None:
     result.submitted = True
     stopped = False
     with _console.progress_bar("Submitting", len(items), show and bool(items)) as advance:
-        for item in items:
+        for batch in _batches(items, batch_size):
             if stopped:
-                item.status = "not_sent"
+                for item in batch:
+                    item.status = "not_sent"
                 continue
             try:
-                send(item, submit_flag)
-                item.status = "submitted"
+                send(batch, submit_flag)
             except AuthError:
                 raise
             except APIError as exc:
-                item.status = "failed"
-                item.message = exc.detail or str(exc)
-                item.error = exc
+                for item in batch:
+                    item.status = "failed"
+                    item.message = exc.detail or str(exc)
+                    item.error = exc
                 if on_error == "stop":
                     stopped = True
-                    logger.warning("Row %d failed; not sending the rest.", item.index)
-            advance(1)
+                    logger.warning("%s failed; not sending the rest.", _rows_label(batch))
+            else:
+                for item in batch:
+                    item.status = "submitted"
+            advance(len(batch))
 
 
 def _finish(result: BulkResult, log_to: str | Path | None) -> BulkResult:

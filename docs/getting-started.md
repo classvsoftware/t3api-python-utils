@@ -257,7 +257,8 @@ model, license and time. More in [Local data](guide/local-data.md).
 ## 9. Write to Metrc
 
 Writes that reach Metrc are a **dry run unless you pass `submit=True`**. A dry
-run sends the request to T3, which validates it and stops before Metrc:
+run sends the request to T3, which checks its format, required fields and types
+and stops before Metrc. It doesn't check that the records you name exist:
 
 ```python
 result = client.post("/v2/items/discontinue", license=lic, json={"id": 12345})
@@ -273,6 +274,10 @@ print(result.dry_run, result.message)   # False Success
 
 A validation failure raises `t3.ValidationError` with the server's explanation
 in `.detail`.
+
+Most Metrc write routes take a list of objects, even for one, so their `json=`
+is `[{...}]`. `/v2/items/discontinue` is one of the few that take a single
+object.
 
 A few T3 routes, such as tag lists and secret keys, act immediately and have
 no dry run. Passing `submit=` to one of them raises `ValueError`, so you can't
@@ -297,7 +302,9 @@ print(result.summary())
 If any row fails validation, nothing is submitted. In a terminal you're shown
 the failures and asked whether to send just the valid rows; in a script,
 `on_error="skip"` does that without asking. Leave out `submit=True` to only
-validate. `log_to` writes one line per row with its status and message.
+validate, or pass `submit="ask"` to see the results and be asked before
+anything is submitted. `log_to` writes one line per row with its status and
+message.
 
 ## 11. Download a report
 

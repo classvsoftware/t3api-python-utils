@@ -50,13 +50,14 @@ so pin `t3api-utils<2` if you need to keep a 1.x script running unchanged.
 | `*_with_validation` variants | `connect(validate=True)`, the default |
 | API-key auth, `API_KEY`, `API_STATE_CODE` | Removed. Use a secret key. |
 | `?secretKey=` query transport | Header only for requests; [`client.report_url()`](guide/reports-and-tag-lists.md#report-urls-for-spreadsheets) for spreadsheet URLs |
-| `.t3.env`, `ConfigManager`, 37 `EnvKeys` | Profiles and keyring, plus [8 env vars](guide/authentication.md#environment-variables) |
+| `.t3.env`, `ConfigManager`, 37 `EnvKeys` | Profiles and keyring, plus [9 env vars](guide/authentication.md#environment-variables) |
 | `T3APIClient` (async) and its sync wrappers | `T3Client` (sync) |
 | `send_api_request[_async]`, 8 `request_*` helpers | `client.request()`, `client.get()` / `post()` / ..., `client.http` |
 | `get_collection[_async]`, `load_all_data_*`, `parallel_load_*`, `load_collection` | [`client.collect()`](guide/collections.md), `client.iter_rows()` |
 | `RateLimiter` | Internal; `connect(rate_limit=..., concurrency=...)` |
 | `pick_collection`, `get_collection_endpoints` | `client.pick_endpoint()`, [`client.spec`](guide/endpoints-and-spec.md), `t3api endpoints` |
 | `pick_license`, `pick_file` | `client.pick_license()`, `t3.pick_file()` |
+| `questionary` prompts in example scripts | [`t3.confirm()`, `t3.ask()`, `t3.choose()`](guide/prompts.md) |
 | `interactive_collection_handler`, `main/handlers.py` | `t3api pull`, `t3.inspect()` |
 | `inspect_collection` | `t3.inspect()` (needs `[tui]`) |
 | `match_collection_from_csv` | [`client.tag_lists`](guide/reports-and-tag-lists.md#tag-lists), [`t3.filter_rows()`](guide/local-data.md#filtering-against-a-csv) |

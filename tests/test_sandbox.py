@@ -94,3 +94,32 @@ def test_tag_list_round_trip(sandbox: t3.T3Client, license_number: str) -> None:
         assert [r["label"] for r in resolved] == labels
     finally:
         tag_list.update(archived=True)
+
+
+def test_sandbox_state(sandbox: t3.T3Client) -> None:
+    assert sandbox.sandbox is True
+    assert sandbox.license is None
+    assert (sandbox.hostname or "").startswith("sandbox-")
+
+
+def test_bulk_dry_run_on_an_array_route(sandbox: t3.T3Client, license_number: str) -> None:
+    strain = {
+        "name": "t3api-utils smoke test",
+        "cbdLevel": 1,
+        "thcLevel": 1,
+        "indicaPercentage": 50.0,
+        "sativaPercentage": 50.0,
+        "testingStatus": "None",
+    }
+    result = sandbox.bulk("/v2/strains/create", [strain, strain], license=license_number, batch_size=2)
+    assert [r.status for r in result] == ["valid", "valid"], result.summary()
+
+
+def test_include_on_a_super_collection(sandbox: t3.T3Client, license_number: str) -> None:
+    rows = list(
+        islice(
+            sandbox.iter_rows("METRC_ACTIVE_SUPERITEMS", license=license_number, include=["notes", "history"], page_size=5),
+            5,
+        )
+    )
+    assert all(isinstance(r, dict) for r in rows)

@@ -66,9 +66,12 @@ Each `Endpoint` has:
 | `tags` | `("Items",)` |
 | `summary` | `"List of active items"` |
 | `params` | the operation's parameters, each with `name`, `location`, `required`, `description` and `schema` |
+| `body_type` | `"array"` or `"object"` for routes with a JSON body, else `None`. `body_is_array` is `True` for the [list routes](writes.md#array-bodies). |
 
 `ep.param("licenseNumber")` returns one parameter, and `ep.label()` gives a
-readable `GET /v2/items (METRC_ACTIVE_ITEMS)`.
+readable `GET /v2/items (METRC_ACTIVE_ITEMS)`. A parameter's `choices` are the
+values the spec allows, such as a super collection's `include` values, or `()`
+when it doesn't list any.
 
 In a terminal, `client.pick_endpoint()` shows a numbered table of collections
 that you can narrow by typing. `client.pick_endpoint(kind=None)` shows every
@@ -92,7 +95,7 @@ structure. The rules are checked top to bottom:
 | `report` | Can respond with CSV or XLSX | 83 | `report()`, `report_url()` |
 | `metrc_write` | Non-GET that takes the `submit` parameter | 85 | `post()` / `put()` / `patch()` / `delete()`, `bulk()` |
 | `immediate_write` | Non-GET without `submit` | 28 | the same, without `submit=` |
-| `file` | GET returning a PDF or an image | 5 | `get()`, which returns `bytes` |
+| `file` | GET returning a PDF or an image | 5 | `download()` to a file, or `get()`, which returns `bytes` |
 | `object` | GET with an `{object_id}` path parameter | 144 | `get(..., object_id=...)` |
 | `other` | Everything else, e.g. `/v2/licenses`, `/v2/auth/whoami` | 124 | `get()` / `request()` |
 
@@ -125,6 +128,7 @@ The common collection parameters have Python names:
 | `filter_logic` | `filterLogic` |
 | `sort` | `sort` |
 | `mask` (string or list) | `collectionMask`, comma-joined |
+| `include` (string or list) | one `include=` per item |
 | `page_size` | `pageSize` |
 
 `page`, `submit` and `secretKey` are managed by the library; don't pass them in

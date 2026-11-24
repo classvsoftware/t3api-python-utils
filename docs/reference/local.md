@@ -15,4 +15,4 @@ All of these are importable from the top-level package (`t3.filter_rows`,
 
 ::: t3api_utils.inspect
 
-::: t3api_utils.pickers.pick_file
+`t3.pick_file()` is on the [Prompts](prompts.md) page.

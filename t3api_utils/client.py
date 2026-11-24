@@ -19,7 +19,7 @@ from t3api_utils._http import DEFAULT_HOST, DEFAULT_TIMEOUT, build_client
 from t3api_utils.auth.credentials import BearerAuth, CredentialKind, SecretKeyAuth, credential_kind
 from t3api_utils.auth.secret_keys import SecretKeys
 from t3api_utils.auth.states import fetch_states
-from t3api_utils.errors import SpecError
+from t3api_utils.errors import APIError, SpecError
 from t3api_utils.spec.loader import SpecMode, load_spec
 from t3api_utils.spec.registry import Endpoint, Kind, Registry
 from t3api_utils.writes import BulkResult, OnError, WriteResult, _message
@@ -40,6 +40,7 @@ COLLECTION_PARAM_NAMES = {
     "sort": "sort",
     "collectionMask": "mask",
     "pageSize": "page_size",
+    "include": "include",
 }
 
 
@@ -75,6 +76,10 @@ class T3Client:
         self._spec_mode: SpecMode = spec
         self._registry: Registry | None = None
         self._spec_lock = threading.Lock()
+        self._sandbox = False
+        self._whoami: dict[str, Any] | None = None
+        self._session_licenses: frozenset[str] | None = None
+        self._warned_licenses: set[str] = set()
         self.http: httpx2.Client = build_client(
             base_url=self.base_url,
             auth=auth,
@@ -107,12 +112,28 @@ class T3Client:
 
     def __repr__(self) -> str:
         profile = f" profile={self.profile.name!r}" if self.profile else ""
-        return f"<T3Client {self.base_url} credential={self.credential_kind}{profile}>"
+        sandbox = " sandbox" if self._sandbox else ""
+        return f"<T3Client {self.base_url} credential={self.credential_kind}{profile}{sandbox}>"
 
     @property
     def credential_kind(self) -> CredentialKind | None:
         """``"secret_key"``, ``"jwt"`` or ``None``."""
         return credential_kind(self.http.auth)
+
+    @property
+    def sandbox(self) -> bool:
+        """True once the client uses a Metrc sandbox credential (:meth:`enter_sandbox`)."""
+        return self._sandbox
+
+    @property
+    def hostname(self) -> str | None:
+        """The Metrc hostname behind the credential, such as ``sandbox-me.metrc.com``.
+
+        It comes from :meth:`whoami`, which is called the first time it's needed.
+        """
+        who = self._whoami if self._whoami is not None else self.whoami()
+        value = who.get("hostname")
+        return str(value) if value else None
 
     # ------------------------------------------------------------------ namespaces
 
@@ -197,6 +218,63 @@ class T3Client:
             return [self.license] if param.is_array else self.license
         return None
 
+    def _check_license(self, license: Any) -> None:
+        """In the sandbox, warn once about each license the session doesn't have.
+
+        The sandbox answers a request for another license (a production one,
+        say) with an empty 200 rather than an error, so nothing else would
+        catch it.
+        """
+        if not self._sandbox or license is None:
+            return
+        values = [str(v) for v in license] if isinstance(license, (list, tuple)) else [str(license)]
+        if self._session_licenses is None:
+            try:
+                numbers = {str(lic.get("licenseNumber")) for lic in self.licenses()}
+            except APIError as exc:
+                logger.debug("Couldn't list the sandbox licenses to check %s: %s", ", ".join(values), exc)
+                numbers = set()
+            self._session_licenses = frozenset(numbers)
+        known = self._session_licenses
+        for value in values:
+            if known and value not in known and value not in self._warned_licenses:
+                self._warned_licenses.add(value)
+                logger.warning(
+                    "%s isn't one of this sandbox session's licenses (%s). The sandbox answers "
+                    "requests for other licenses with no rows instead of an error.",
+                    value,
+                    ", ".join(sorted(known)),
+                )
+
+    @staticmethod
+    def _include(ep: Endpoint, include: str | Sequence[str]) -> list[str]:
+        """``include=`` as a list (sent repeated), with values the spec doesn't list warned about."""
+        raw = include.split(",") if isinstance(include, str) else include
+        values = [str(v).strip() for v in raw if str(v).strip()]
+        param = ep.param("include")
+        allowed = param.choices if param is not None else ()
+        unknown = [v for v in values if allowed and v not in allowed]
+        if unknown:
+            logger.warning(
+                "%s doesn't list include value(s) %s in the spec (it lists %s); sending anyway.",
+                ep.label(),
+                ", ".join(unknown),
+                ", ".join(allowed),
+            )
+        return values
+
+    @staticmethod
+    def _check_body(ep: Endpoint, json: Any) -> None:
+        """Warn when a JSON body's top-level type doesn't match the spec's."""
+        if ep.body_is_array and isinstance(json, Mapping):
+            logger.warning(
+                "%s takes a list of objects, even for one object: send json=[body]. The server "
+                "answers a single object with a 500.",
+                ep.label(),
+            )
+        elif ep.body_type == "object" and isinstance(json, (list, tuple)):
+            logger.warning("%s takes one object, not a list.", ep.label())
+
     def _prepare(
         self,
         method: str,
@@ -208,6 +286,8 @@ class T3Client:
         submit: bool | None,
         path_params: Mapping[str, Any],
         kind: Kind | Iterable[Kind] | None = None,
+        include: str | Sequence[str] | None = None,
+        dynamic: bool = False,
     ) -> tuple[Endpoint, str, dict[str, Any]]:
         concrete = endpoint.startswith("/") and "{" not in endpoint
         ep = self._resolve(endpoint, method=method, kind=kind, path_params=path_params.keys())
@@ -216,6 +296,16 @@ class T3Client:
         lic = self._license_for(ep, license)
         if lic is not None:
             query["licenseNumber"] = lic
+            self._check_license(lic)
+        if include:
+            query["include"] = self._include(ep, include)
+        if dynamic:
+            if ep.param("applyDynamicValidation") is None:
+                raise ValueError(
+                    f"{ep.label()} doesn't offer dynamic validation (the spec lists no "
+                    "applyDynamicValidation parameter for it)."
+                )
+            query["applyDynamicValidation"] = "true"
         if submit is not None:
             if ep.kind == "metrc_write":
                 if submit:
@@ -250,6 +340,8 @@ class T3Client:
         submit: bool | None = None,
         timeout: float | None = None,
         path_params: Mapping[str, Any],
+        include: str | Sequence[str] | None = None,
+        dynamic: bool = False,
     ) -> tuple[Endpoint, httpx2.Response]:
         has_body = json is not None or files is not None or data is not None
         ep, url, query = self._prepare(
@@ -260,9 +352,12 @@ class T3Client:
             has_body=has_body,
             submit=submit,
             path_params=path_params,
+            include=include,
+            dynamic=dynamic,
         )
         kwargs: dict[str, Any] = {"params": query}
         if json is not None:
+            self._check_body(ep, json)
             kwargs["json"] = json
         if files is not None:
             kwargs["files"] = files
@@ -316,13 +411,49 @@ class T3Client:
         *,
         license: Any = None,
         params: Mapping[str, Any] | None = None,
+        include: str | Sequence[str] | None = None,
         timeout: float | None = None,
         **path_params: Any,
     ) -> Any:
-        """GET an endpoint. ``object_id=`` picks the single-object route."""
-        return self.request(
-            "GET", endpoint, license=license, params=params, timeout=timeout, **path_params
-        )
+        """GET an endpoint. ``object_id=`` picks the single-object route.
+
+        ``include=`` attaches related data on super endpoints, as in :meth:`collect`.
+        """
+        _, response = self._execute(
+            "GET", endpoint, license=license, params=params, timeout=timeout,
+            path_params=path_params, include=include,
+        )  # fmt: skip
+        return _api.parse(response)
+
+    def download(
+        self,
+        endpoint: str,
+        to: str | Path,
+        *,
+        license: Any = None,
+        params: Mapping[str, Any] | None = None,
+        timeout: float | None = None,
+        **path_params: Any,
+    ) -> Path:
+        """Save a ``file`` endpoint (a manifest or COA PDF, an item photo) to ``to``.
+
+        The response is streamed to a temporary file next to ``to`` and renamed
+        when it's complete, so a failed download never leaves a partial file.
+        Parent folders are created. Returns the path.
+
+        ```python
+        client.download("/v2/transfers/manifest", "manifests/0001234567.pdf",
+                        license="LIC-00001", params={"manifestNumber": "0001234567"})
+        ```
+        """
+        _, url, query = self._prepare(
+            "GET", endpoint, license=license, params=params, has_body=False, submit=None,
+            path_params=path_params, kind="file",
+        )  # fmt: skip
+        kwargs: dict[str, Any] = {"params": query}
+        if timeout is not None:
+            kwargs["timeout"] = timeout
+        return _api.download(self.http, url, Path(to), credential_kind=self.credential_kind, **kwargs)
 
     def _write(
         self,
@@ -337,6 +468,7 @@ class T3Client:
         submit: bool | None,
         timeout: float | None,
         path_params: Mapping[str, Any],
+        dynamic: bool = False,
     ) -> WriteResult:
         ep, response = self._execute(
             method,
@@ -349,6 +481,7 @@ class T3Client:
             submit=submit,
             timeout=timeout,
             path_params=path_params,
+            dynamic=dynamic,
         )
         body = _api.parse(response)
         dry_run = ep.kind == "metrc_write" and not submit
@@ -366,13 +499,19 @@ class T3Client:
         files: Any = None,
         data: Any = None,
         submit: bool | None = None,
+        dynamic: bool = False,
         timeout: float | None = None,
         **path_params: Any,
     ) -> WriteResult:
-        """POST. Routes that write to Metrc are a dry run unless ``submit=True``."""
+        """POST. Routes that write to Metrc are a dry run unless ``submit=True``.
+
+        Most Metrc write routes take a list, even for one object (``json=[body]``).
+        ``dynamic=True`` asks T3 to run the route's dynamic checks as well
+        (``applyDynamicValidation``). See the writes guide.
+        """
         return self._write(
             "POST", endpoint, license=license, params=params, json=json, files=files, data=data,
-            submit=submit, timeout=timeout, path_params=path_params,
+            submit=submit, timeout=timeout, path_params=path_params, dynamic=dynamic,
         )  # fmt: skip
 
     def put(
@@ -385,13 +524,19 @@ class T3Client:
         files: Any = None,
         data: Any = None,
         submit: bool | None = None,
+        dynamic: bool = False,
         timeout: float | None = None,
         **path_params: Any,
     ) -> WriteResult:
-        """PUT. Routes that write to Metrc are a dry run unless ``submit=True``."""
+        """PUT. Routes that write to Metrc are a dry run unless ``submit=True``.
+
+        Most Metrc write routes take a list, even for one object (``json=[body]``).
+        ``dynamic=True`` asks T3 to run the route's dynamic checks as well
+        (``applyDynamicValidation``). See the writes guide.
+        """
         return self._write(
             "PUT", endpoint, license=license, params=params, json=json, files=files, data=data,
-            submit=submit, timeout=timeout, path_params=path_params,
+            submit=submit, timeout=timeout, path_params=path_params, dynamic=dynamic,
         )  # fmt: skip
 
     def patch(
@@ -404,13 +549,19 @@ class T3Client:
         files: Any = None,
         data: Any = None,
         submit: bool | None = None,
+        dynamic: bool = False,
         timeout: float | None = None,
         **path_params: Any,
     ) -> WriteResult:
-        """PATCH. Routes that write to Metrc are a dry run unless ``submit=True``."""
+        """PATCH. Routes that write to Metrc are a dry run unless ``submit=True``.
+
+        Most Metrc write routes take a list, even for one object (``json=[body]``).
+        ``dynamic=True`` asks T3 to run the route's dynamic checks as well
+        (``applyDynamicValidation``). See the writes guide.
+        """
         return self._write(
             "PATCH", endpoint, license=license, params=params, json=json, files=files, data=data,
-            submit=submit, timeout=timeout, path_params=path_params,
+            submit=submit, timeout=timeout, path_params=path_params, dynamic=dynamic,
         )  # fmt: skip
 
     def delete(
@@ -421,13 +572,14 @@ class T3Client:
         params: Mapping[str, Any] | None = None,
         json: Any = None,
         submit: bool | None = None,
+        dynamic: bool = False,
         timeout: float | None = None,
         **path_params: Any,
     ) -> WriteResult:
         """DELETE. Routes that write to Metrc are a dry run unless ``submit=True``."""
         return self._write(
             "DELETE", endpoint, license=license, params=params, json=json, files=None, data=None,
-            submit=submit, timeout=timeout, path_params=path_params,
+            submit=submit, timeout=timeout, path_params=path_params, dynamic=dynamic,
         )  # fmt: skip
 
     # ------------------------------------------------------------------ collections
@@ -454,6 +606,7 @@ class T3Client:
         page_size: int | None,
         params: Mapping[str, Any] | None,
         path_params: Mapping[str, Any],
+        include: str | Sequence[str] | None = None,
     ) -> tuple[Endpoint, list[tuple[str, dict[str, Any]]]]:
         ep = self._resolve(endpoint, method="GET", kind="collection", path_params=path_params.keys())
         base: dict[str, Any] = dict(params or {})
@@ -465,6 +618,8 @@ class T3Client:
             base["sort"] = sort
         if mask:
             base["collectionMask"] = mask if isinstance(mask, str) else ",".join(mask)
+        if include:
+            base["include"] = self._include(ep, include)
         if page_size is not None and ep.param("pageSize") is not None:
             base["pageSize"] = page_size
         url = self._fill_path(ep, endpoint, path_params)
@@ -477,6 +632,7 @@ class T3Client:
             query = dict(base)
             if lic is not None:
                 query["licenseNumber"] = lic
+                self._check_license(lic)
             self.spec.check_params(
                 ep, query, path_values, has_body=False, python_names=COLLECTION_PARAM_NAMES
             )
@@ -492,6 +648,7 @@ class T3Client:
         filter_logic: Literal["and", "or"] | None = None,
         sort: str | None = None,
         mask: str | Sequence[str] | None = None,
+        include: str | Sequence[str] | None = None,
         page_size: int | None = 100,
         progress: bool | None = None,
         params: Mapping[str, Any] | None = None,
@@ -507,6 +664,10 @@ class T3Client:
             filter_logic: ``"and"`` (default on the server) or ``"or"``.
             sort: ``field:asc`` or ``field:desc``.
             mask: Fields to return (``collectionMask``).
+            include: Related data to attach, on super collections
+                (``/v2/packages/active/super`` and so on): a list such as
+                ``["labResults", "history"]``. Each value is sent as its own
+                ``include`` parameter. Values the spec doesn't list are warned about.
             page_size: Rows per page.
             progress: Show a progress bar. Defaults to on when stderr is a terminal.
             params: Any other query parameters, by their spec names.
@@ -516,6 +677,7 @@ class T3Client:
         ep, plans = self._collection_plan(
             endpoint, license=license, filter=filter, filter_logic=filter_logic, sort=sort,
             mask=mask, page_size=page_size, params=params, path_params=path_params,
+            include=include,
         )  # fmt: skip
         rows: list[dict[str, Any]] = []
         for url, query in plans:
@@ -534,6 +696,7 @@ class T3Client:
         filter_logic: Literal["and", "or"] | None = None,
         sort: str | None = None,
         mask: str | Sequence[str] | None = None,
+        include: str | Sequence[str] | None = None,
         page_size: int | None = 100,
         params: Mapping[str, Any] | None = None,
         **path_params: Any,
@@ -542,6 +705,7 @@ class T3Client:
         _, plans = self._collection_plan(
             endpoint, license=license, filter=filter, filter_logic=filter_logic, sort=sort,
             mask=mask, page_size=page_size, params=params, path_params=path_params,
+            include=include,
         )  # fmt: skip
         for url, query in plans:
             yield from self._iter_pages(url, query)
@@ -636,11 +800,13 @@ class T3Client:
         *,
         license: str | None = None,
         method: str | None = None,
-        submit: bool = False,
+        submit: bool | Literal["ask"] = False,
         confirm: bool = False,
         on_error: OnError = "stop",
         log_to: str | Path | None = None,
         progress: bool | None = None,
+        dynamic: bool = False,
+        batch_size: int = 1,
         **path_params: Any,
     ) -> BulkResult:
         """Validate every row with a dry run, then submit (see :func:`t3api_utils.writes.bulk`)."""
@@ -649,6 +815,7 @@ class T3Client:
         return bulk(
             self, endpoint, rows, license=license, method=method, submit=submit, confirm=confirm,
             on_error=on_error, log_to=log_to, progress=progress, path_params=path_params,
+            dynamic=dynamic, batch_size=batch_size,
         )  # fmt: skip
 
     def report(
@@ -702,7 +869,8 @@ class T3Client:
     def whoami(self) -> dict[str, Any]:
         """The authenticated user (``GET /v2/auth/whoami``)."""
         data = self._call("GET", "/v2/auth/whoami")
-        return data if isinstance(data, dict) else {}
+        self._whoami = data if isinstance(data, dict) else {}
+        return self._whoami
 
     def licenses(self) -> list[dict[str, Any]]:
         """Licenses this credential can use (``GET /v2/licenses``)."""
@@ -714,9 +882,20 @@ class T3Client:
         return fetch_states(self.http, self.base_url) or []
 
     def enter_sandbox(self) -> None:
-        """Swap the credential for a Metrc sandbox JWT (``POST /v2/auth/sandbox``)."""
+        """Swap the credential for a Metrc sandbox JWT (``POST /v2/auth/sandbox``).
+
+        It also clears :attr:`license`: the sandbox has its own licenses, and
+        it answers a request for a production license with no rows rather
+        than an error. Then it calls :meth:`whoami` and logs the sandbox
+        hostname at INFO.
+        """
         data = self._call("POST", "/v2/auth/sandbox")
         self.http.auth = BearerAuth(_api.require_field(data, "accessToken", "POST /v2/auth/sandbox"))
+        self._sandbox = True
+        self.license = None
+        self._session_licenses = None
+        self._warned_licenses.clear()
+        logger.info("Using the Metrc sandbox (%s).", self.whoami().get("hostname") or "unknown host")
 
     def pick_license(self) -> str:
         """Pick one of this credential's licenses in a terminal; returns the license number."""

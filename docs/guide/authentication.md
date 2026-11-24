@@ -104,12 +104,15 @@ then `https://api.trackandtrace.tools`.
 available as `client.license`, and it's used only by calls whose endpoint
 requires a `licenseNumber`. A license passed to a call always wins.
 
+In the [sandbox](#sandbox), only `connect(license=...)` counts: `T3_LICENSE`
+and the profile's license are production licenses.
+
 ### Other connect() options
 
 | Option | Default | What it does |
 |---|---|---|
 | `validate` | `True` | Check the credential with `/v2/auth/whoami`. |
-| `sandbox` | `False` | Swap the credential for a Metrc sandbox JWT. See [Sandbox](#sandbox). |
+| `sandbox` | `T3_SANDBOX`, then `False` | Swap the credential for a Metrc sandbox JWT. See [Sandbox](#sandbox). |
 | `spec` | `T3_SPEC`, then `"auto"` | `"bundled"` pins the spec shipped with the package. See [Endpoints and the spec](endpoints-and-spec.md#where-the-spec-comes-from). |
 | `rate_limit` | `10.0` | Requests per second across all threads. `None` turns it off. |
 | `concurrency` | `10` | Threads used to fetch collection pages. |
@@ -164,15 +167,16 @@ The first profile you create becomes the default.
 
 ## Environment variables
 
-These are the only environment variables 2.0 reads. There's no `.t3.env`
-file.
+These are the only environment variables the library reads. There's no
+`.t3.env` file.
 
 | Variable | What it does |
 |---|---|
 | `T3_SECRET_KEY` | Secret key to use. Wins over any saved profile. |
 | `T3_JWT` | JWT to use, if `T3_SECRET_KEY` isn't set. |
 | `T3_PROFILE` | Profile to use instead of the default. `t3api` commands that take `--profile` read it too. |
-| `T3_LICENSE` | Default license number. |
+| `T3_LICENSE` | Default license number. Ignored in the sandbox. |
+| `T3_SANDBOX` | `1`, `true`, `yes` or `on` makes `connect()` and the `t3api` data commands use the [Metrc sandbox](#sandbox). |
 | `T3_API_HOST` | T3 API base URL, e.g. a staging host. |
 | `T3_SPEC` | `bundled` pins the spec shipped with the package. |
 | `T3_LOG_HTTP` | `1`, `true`, `yes` or `on` logs every request and response at DEBUG. |
@@ -254,13 +258,36 @@ production:
 
 ```python
 with t3.connect(sandbox=True) as client:
-    lic = client.licenses()[0]["licenseNumber"]
+    lic = client.pick_license()        # the sandbox's own licenses
     client.post("/v2/items/discontinue", license=lic, json={"id": 12345}, submit=True)
 ```
 
+To point an existing script or scheduled job at the sandbox without editing
+it, set `T3_SANDBOX=1`. The `t3api` command takes `--sandbox` before the
+command name (`t3api --sandbox pull ...`); see [the CLI guide](cli.md#conventions).
+
+**Licenses.** The sandbox has its own licenses (such as `SF-SBX-1-101`), and it
+answers a request for any other license with an empty result, not an error. A
+production license would quietly return nothing. So in the sandbox:
+
+- `T3_LICENSE` and the profile's default license are ignored, and
+  `client.license` is `None` unless you passed `connect(license=...)`. The
+  common `license or client.license or client.pick_license()` pattern then
+  asks you to pick a sandbox license.
+- The first time a call names a license, the client lists the session's
+  licenses (one request, cached) and logs a warning for any license that isn't
+  one of them.
+
+**Telling where you are.** `client.sandbox` is `True` in the sandbox, and
+`client.hostname` is the Metrc hostname behind the credential, such as
+`sandbox-me.metrc.com` (from `whoami`). Entering the sandbox logs
+`Using the Metrc sandbox (sandbox-me.metrc.com).` at INFO, and
+`bulk(submit="ask")` says "sandbox" when it asks.
+
 The client's credential is a JWT from then on (`client.credential_kind ==
 "jwt"`), so `report_url()`, which needs a secret key, isn't available. An
-existing client can switch with `client.enter_sandbox()`.
+existing client can switch with `client.enter_sandbox()`, which also clears
+`client.license`.
 
 ## Using a credential directly
 

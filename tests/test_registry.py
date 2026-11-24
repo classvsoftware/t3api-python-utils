@@ -701,3 +701,70 @@ def test_check_params_bundled(bundled: Registry) -> None:
     discontinue = bundled.endpoint("/v2/items/discontinue")
     with pytest.raises(SpecError, match="request body"):
         bundled.check_params(discontinue, {"licenseNumber": "L"}, {}, has_body=False)
+
+
+# --------------------------------------------------------------------------- request body shape
+
+
+@pytest.mark.parametrize(
+    ("path", "method", "body_type"),
+    [
+        ("/v2/packages/change-locations", "POST", "array"),
+        ("/v2/packages/adjust", "POST", "array"),
+        ("/v2/items/create", "POST", "array"),
+        ("/v2/strains/create", "POST", "array"),
+        ("/v2/items/discontinue", "POST", "object"),
+        ("/v2/transfers/void", "POST", "object"),
+        ("/v2/tag-lists", "POST", "object"),
+        ("/v2/items/images/file", "POST", None),  # multipart
+        ("/v2/auth/logout", "POST", None),  # no body
+        ("/v2/items", "GET", None),
+    ],
+)
+def test_bundled_body_types(bundled: Registry, path: str, method: str, body_type: str | None) -> None:
+    ep = bundled.endpoint(path, method=method)
+    assert ep.body_type == body_type
+    assert ep.body_is_array is (body_type == "array")
+
+
+def write_op(content: dict[str, Any]) -> dict[str, Any]:
+    return {"post": {"requestBody": {"content": content}, "responses": {"200": {"description": "ok"}}}}
+
+
+def test_body_type_follows_refs_and_skips_non_json_content() -> None:
+    reg = registry(
+        {"/v2/x": write_op({"text/plain": {}, "application/json": {"schema": {"$ref": "#/components/schemas/Rows"}}})},
+        components={"schemas": {"Rows": {"type": "array", "items": {"type": "object"}}}},
+    )
+    assert only(reg).body_type == "array"
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        {"application/json": {"schema": {"oneOf": [{"type": "object"}, {"type": "array"}]}}},
+        {"application/json": {}},
+        {"application/json": "not a media object"},
+        {"application/json": {"schema": {"$ref": "#/components/schemas/Missing"}}},
+        {"multipart/form-data": {"schema": {"type": "object"}}},
+    ],
+)
+def test_body_type_is_none_when_unclear(content: dict[str, Any]) -> None:
+    assert only(registry({"/v2/x": write_op(content)})).body_type is None
+
+
+def test_param_choices() -> None:
+    array_enum = Param("include", "query", schema={"type": "array", "items": {"type": "string", "enum": ["a", "b"]}})
+    plain_enum = Param("kind", "query", schema={"type": "string", "enum": ["x", 1]})
+    array_no_enum = Param("ids", "query", schema={"type": "array", "items": {"type": "string"}})
+    array_no_items = Param("ids", "query", schema={"type": "array"})
+    plain = Param("name", "query", schema={"type": "string"})
+    assert array_enum.choices == ("a", "b")
+    assert plain_enum.choices == ("x", "1")
+    assert array_no_enum.choices == array_no_items.choices == plain.choices == ()
+
+
+def test_bundled_super_collection_includes(bundled: Registry) -> None:
+    param = bundled.endpoint("METRC_ACTIVE_SUPERITEMS", kind="collection").param("include")
+    assert param is not None
+    assert {"notes", "history", "ingredients", "images"} <= set(param.choices)

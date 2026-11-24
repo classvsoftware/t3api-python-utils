@@ -137,6 +137,38 @@ package = client.get("METRC_ACTIVE_PACKAGES", object_id=67890, license="LIC-0000
 
 `object_id` is the record's Metrc `id`.
 
+## Super collections and include=
+
+Super collections (`/v2/packages/active/super`, `/v2/items/super`,
+`/v2/processingjobs/active/super` and others, with IDs like
+`METRC_ACTIVE_SUPERPACKAGES`) attach related data to each row. Pick what to
+attach with `include=`, a list:
+
+```python
+packages = client.collect(
+    "METRC_ACTIVE_SUPERPACKAGES",
+    license="LIC-00001",
+    include=["labResults", "sourceHarvests"],
+)
+item = client.get("METRC_ACTIVE_SUPERITEMS", object_id=12345, license="LIC-00001", include=["history"])
+```
+
+`collect()`, `iter_rows()` and `get()` take it. Each value is sent as its own
+`include` parameter, which is what the server needs: a comma-joined
+`include=labResults,sourceHarvests` gets a 400. A comma-separated string is
+split for you.
+
+Each collection allows its own values. For packages they're `labResults`,
+`labResultBatches`, `sourceHarvests`, `history` and `coaResults`; for items,
+`notes`, `history`, `ingredients` and `images`. To see them for any endpoint:
+
+```python
+client.spec.endpoint("METRC_ACTIVE_SUPERPACKAGES", kind="collection").param("include").choices
+```
+
+A value the spec doesn't list logs a warning and is sent anyway, in case your
+copy of the spec is behind the server.
+
 ## Licenses and the default license
 
 `license=` can be left out when the client has a default license

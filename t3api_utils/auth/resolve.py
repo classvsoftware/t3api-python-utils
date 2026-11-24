@@ -7,6 +7,7 @@ in a terminal), else :class:`~t3api_utils.errors.AuthRequired`.
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any, Literal
 
@@ -19,6 +20,8 @@ from t3api_utils.auth.login import StartAt, run_login
 from t3api_utils.auth.store import Profile, Store
 from t3api_utils.client import T3Client
 from t3api_utils.errors import AuthRequired
+
+logger = logging.getLogger("t3api_utils")
 
 SETUP_HELP = (
     "No T3 credential found. Do one of these:\n"
@@ -43,7 +46,7 @@ def connect(
     license: str | None = None,
     interactive: bool | None = None,
     validate: bool = True,
-    sandbox: bool = False,
+    sandbox: bool | None = None,
     spec: Literal["auto", "bundled"] | None = None,
     rate_limit: float | None = 10.0,
     concurrency: int = 10,
@@ -63,11 +66,15 @@ def connect(
         api_host: T3 API base URL. Defaults to ``T3_API_HOST``, then the
             profile's, then ``https://api.trackandtrace.tools``.
         license: Default license for calls that need one. Defaults to
-            ``T3_LICENSE``, then the profile's.
+            ``T3_LICENSE``, then the profile's, except in the sandbox, where
+            only this argument counts.
         interactive: ``False`` never prompts; ``True`` always may. By default
             it prompts only in a terminal or Jupyter.
         validate: Check the credential with ``GET /v2/auth/whoami``.
-        sandbox: Exchange the credential for a Metrc sandbox JWT.
+        sandbox: Exchange the credential for a Metrc sandbox JWT. Defaults to
+            ``T3_SANDBOX`` (``1``, ``true``, ``yes`` or ``on``). In the sandbox,
+            ``T3_LICENSE`` and the profile's license are ignored, since a
+            production license there returns no rows rather than an error.
         spec: ``"bundled"`` pins the spec that ships with the package.
             Defaults to ``T3_SPEC``, then ``"auto"``.
         rate_limit: Requests per second across all threads. ``None`` disables it.
@@ -137,7 +144,14 @@ def connect(
         )
         auth, use_profile = result.auth, result.profile
 
-    default_license = license or _env("T3_LICENSE") or (use_profile.license if use_profile else None)
+    use_sandbox = env_flag("T3_SANDBOX") if sandbox is None else sandbox
+    saved_license = _env("T3_LICENSE") or (use_profile.license if use_profile else None)
+    default_license = license if use_sandbox else (license or saved_license)
+    if use_sandbox and not license and saved_license:
+        logger.info(
+            "Not using default license %s in the sandbox. Pass license= with a sandbox license.",
+            saved_license,
+        )
     spec_mode = spec or ("bundled" if (_env("T3_SPEC") or "").lower() == "bundled" else "auto")
     client = T3Client(
         auth=auth,
@@ -152,9 +166,11 @@ def connect(
         **http_options,
     )
     try:
-        if sandbox:
+        if use_sandbox:
+            # Clears the default license and calls whoami, which validates.
             client.enter_sandbox()
-        if validate:
+            client.license = license
+        elif validate:
             client.whoami()
     except BaseException:
         client.close()

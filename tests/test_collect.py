@@ -460,3 +460,47 @@ def test_iter_rows_failure_propagates(client: T3Client, router: Router) -> None:
     assert first_page == ROWS[:4]
     with pytest.raises(NotFound):
         next(rows)
+
+
+# --------------------------------------------------------------------------- include=
+
+
+def test_include_is_sent_repeated(client: T3Client, router: Router) -> None:
+    router.add("GET", "/v2/packages/active/super", handler=paginated(ROWS, page_size=4))
+    rows = client.collect(
+        "METRC_ACTIVE_SUPERPACKAGES", license="LIC-1", include=["labResults", "sourceHarvests"], progress=False
+    )
+    assert rows == ROWS
+    for request in router.calls:
+        assert request.url.params.get_list("include") == ["labResults", "sourceHarvests"]
+
+
+def test_include_string_is_split_on_commas(client: T3Client, router: Router) -> None:
+    router.add("GET", "/v2/packages/active/super", handler=paginated(ROWS[:1]))
+    list(client.iter_rows("METRC_ACTIVE_SUPERPACKAGES", license="LIC-1", include="labResults, history,"))
+    assert router.calls[0].url.params.get_list("include") == ["labResults", "history"]
+
+
+def test_unknown_include_values_warn_and_are_sent(
+    client: T3Client, router: Router, caplog: pytest.LogCaptureFixture
+) -> None:
+    router.add("GET", "/v2/packages/active/super", handler=paginated(ROWS[:1]))
+    client.collect("METRC_ACTIVE_SUPERPACKAGES", license="LIC-1", include=["history", "bogus"], progress=False)
+    assert router.calls[0].url.params.get_list("include") == ["history", "bogus"]
+    assert "doesn't list include value(s) bogus in the spec (it lists labResults," in caplog.text
+
+
+def test_include_on_an_endpoint_without_it_warns_as_unknown(
+    client: T3Client, router: Router, caplog: pytest.LogCaptureFixture
+) -> None:
+    router.add("GET", "/v2/items", handler=paginated(ROWS[:1]))
+    client.collect("METRC_ACTIVE_ITEMS", license="LIC-1", include=["history"], progress=False)
+    assert router.calls[0].url.params.get_list("include") == ["history"]
+    assert "doesn't list query parameter(s) include" in caplog.text
+    assert "include value" not in caplog.text
+
+
+def test_empty_include_sends_nothing(client: T3Client, router: Router) -> None:
+    router.add("GET", "/v2/packages/active/super", handler=paginated(ROWS[:1]))
+    client.collect("METRC_ACTIVE_SUPERPACKAGES", license="LIC-1", include=[], progress=False)
+    assert "include" not in router.calls[0].url.params

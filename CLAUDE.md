@@ -64,18 +64,20 @@ A release isn't finished until the docs site at <https://classvsoftware.github.i
 ```
 t3api_utils/
   __init__.py          public API: connect, T3Client, inspect, filter_rows, to_csv, to_json, read_rows,
-                       pick_file, errors, WriteResult/BulkResult/RowResult, TagList, Endpoint, auth classes
-  client.py            T3Client: request(), get/post/put/patch/delete(), collect(), iter_rows(), bulk(),
-                       report(), report_url(), whoami(), licenses(), pickers, namespaces
+                       pick_file, confirm, ask, choose, errors, WriteResult/BulkResult/RowResult, TagList,
+                       Endpoint, auth classes
+  client.py            T3Client: request(), get/post/put/patch/delete(), download(), collect(), iter_rows(),
+                       bulk(), report(), report_url(), whoami(), licenses(), sandbox state, pickers, namespaces
   errors.py            exception hierarchy; error_from_response() maps status codes to classes
   writes.py            WriteResult, BulkResult, RowResult, bulk()
   reports.py           report(), report_url()
   tag_lists.py         TagLists (client.tag_lists) and TagList
   local.py             filter_rows(), to_csv(), to_json(), read_rows(), flatten()
   pickers.py           choose(), pick_license(), pick_endpoint(), pick_file() as Rich tables
+  prompts.py           public confirm() (default no) and ask(parse=...)
   _http.py             httpx2 client builder, RetryTransport, HTTP log redaction
   _ratelimit.py        thread-safe token bucket
-  _api.py              send/parse helpers that raise APIError subclasses
+  _api.py              send/parse helpers that raise APIError subclasses; atomic streaming download()
   _console.py          Rich consoles, purple theme, message/prompt/progress helpers (internal)
   _paths.py            platformdirs config and cache folders (tests patch these)
   spec/
@@ -110,11 +112,13 @@ docs/                  mkdocs-material site; reference pages are mkdocstrings
 ### Key behaviours to preserve
 
 - **Endpoint kinds** come from spec structure alone (`registry.classify`): collection, report, metrc_write, immediate_write, file, object, other. Tests check named endpoints' kinds, not counts.
-- **Writes**: `metrc_write` routes are a dry run unless `submit=True`; `immediate_write` routes reject `submit=` entirely. `bulk()` validates every row before submitting; row statuses are valid/invalid/submitted/failed/not_sent.
+- **Writes**: `metrc_write` routes are a dry run unless `submit=True`; `immediate_write` routes reject `submit=` entirely. A dry run is static validation only (format, required fields, types), never call it more than that. `bulk()` validates every row before submitting; row statuses are valid/invalid/submitted/failed/not_sent. `submit="ask"` raises `NotInteractive` without a terminal before sending anything.
+- **Body shape**: `Endpoint.body_type` comes from the spec. Most Metrc write routes take a JSON list; `bulk()` wraps each row in a list for them, and single writes warn when the `json=` shape doesn't match.
 - **Retries** (`_http.RetryTransport`): GET/HEAD/OPTIONS retry on connection errors and 429/502/503/504; writes retry only on 429 and pre-send connection failures. Never retry a write on 5xx or a post-send timeout. Max 3 attempts.
 - **Credentials**: secret keys go in the `X-T3-API-Key` header, never the query string, except `report_url()`. The Metrc password is never stored.
 - **Redaction**: HTTP debug logs mask auth headers, `/v2/auth/secretkey/{key}` paths, `secretKey=` queries, and `password`/`otp`/`otpSeed`/`secretKey`/`accessToken`/`refreshToken` body fields.
 - **Default license** (`client.license`) is applied only to endpoints whose `licenseNumber` is required. An explicit `license=` always wins.
+- **Sandbox**: `connect(sandbox=True)` / `T3_SANDBOX` ignores `T3_LICENSE` and the profile's license, `enter_sandbox()` clears `client.license`, and explicit licenses are checked against the session's (the sandbox returns an empty 200 for other licenses). The CLI's `--sandbox` applies to data commands only, never to `login`, `logout`, `keys` or `license`.
 
 ### Docs
 
@@ -220,7 +224,7 @@ def pick_something(items: Sequence[SomeType]) -> SomeType:
         items,
         ["Name", "Details"],                      # columns after the "#" column
         lambda item: [item.name, item.details],   # one string per column
-        filterable=len(items) > 10,               # typing text narrows the list
+        filterable=None,                          # default: typing text narrows lists of more than 10
     )
 ```
 
@@ -237,5 +241,6 @@ def pick_something(items: Sequence[SomeType]) -> SomeType:
 
 **Examples in Codebase:**
 - `choose()`, `pick_license()`, `pick_endpoint()` and `pick_file()` in `t3api_utils/pickers.py`
+- The public `t3.confirm()` and `t3.ask()` in `t3api_utils/prompts.py`
 - `T3Client.pick_license()` and `T3Client.pick_endpoint()` in `t3api_utils/client.py`
 - The failed-rows table in `writes._show_invalid()` and the CLI tables in `t3api_utils/cli/main.py`

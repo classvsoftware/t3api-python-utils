@@ -1,6 +1,6 @@
 [project]
 name = "t3api-utils"
-version = "2.0.0"
+version = "2.0.1"
 description = "Secret-key auth, collection loading, reports and tag lists for the T3 API"
 authors = [{ name = "Matt Frisbie", email = "matt@classvsoftware.com" }]
 readme = "README.md"

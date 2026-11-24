@@ -56,6 +56,9 @@ OutputOpt = Annotated[
     Path | None, typer.Option("--output", "-o", help="File to write (.csv, .json or .jsonl).")
 ]
 
+# Global options from the root callback, set again on every run.
+_global = {"sandbox": False}
+
 
 def handle_errors(fn: Callable[P, R]) -> Callable[P, R]:
     """Turn library errors into a red message and exit code 1."""
@@ -87,10 +90,18 @@ def _version(value: bool) -> None:
 @app.callback()
 def main(
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Show progress logs.")] = False,
+    sandbox: Annotated[
+        bool,
+        typer.Option(
+            "--sandbox",
+            help="Use the Metrc sandbox (also T3_SANDBOX=1). Put it before the command.",
+        ),
+    ] = False,
     version: Annotated[
         bool, typer.Option("--version", callback=_version, is_eager=True, help="Show the version.")
     ] = False,
 ) -> None:
+    _global["sandbox"] = sandbox
     logger = logging.getLogger("t3api_utils")
     if not any(isinstance(h, RichHandler) for h in logger.handlers):
         handler = RichHandler(console=console, show_time=False, show_path=False, markup=False)
@@ -115,8 +126,15 @@ def _api_host(store: Store, profile: str | None) -> str:
     return os.environ.get("T3_API_HOST") or (saved.api_host if saved else None) or DEFAULT_HOST
 
 
-def _connect(profile: str | None, license: str | None = None) -> t3.T3Client:
-    return t3.connect(profile, license=license, validate=False)
+def _connect(profile: str | None, license: str | None = None, *, data: bool = True) -> t3.T3Client:
+    """A client for a command.
+
+    ``--sandbox`` (or ``T3_SANDBOX``) applies to data commands. ``data=False``
+    is for commands that manage the credential or the profile (logout, keys,
+    license pick).
+    """
+    sandbox = (True if _global["sandbox"] else None) if data else False
+    return t3.connect(profile, license=license, validate=False, sandbox=sandbox)
 
 
 def _registry(profile: str | None) -> Registry:
@@ -196,7 +214,7 @@ def logout(
     store = _store()
     saved = _require_profile(store, profile)
     if everywhere:
-        with _connect(saved.name) as client:
+        with _connect(saved.name, data=False) as client:
             client._call("POST", "/v2/auth/logout")
         _console.success("Logged out of all Metrc sessions.")
     was_key = saved.credential == "secret_key"
@@ -221,6 +239,8 @@ def whoami(profile: ProfileOpt = None) -> None:
         if client.profile:
             table.add_row("profile", client.profile.name)
         table.add_row("credential", client.credential_kind or "none")
+        if client.sandbox:
+            table.add_row("sandbox", "yes")
         table.add_row("api host", client.base_url)
         table.add_row("default license", client.license or "")
         for key in ("username", "hostname", "authMode", "hasT3plus", "t3plusSubscriptionTier", "subscriptionStatus"):
@@ -301,7 +321,8 @@ def license_pick(ctx: typer.Context, profile: ProfileOpt = None) -> None:
     profile = profile or _group_profile(ctx)
     store = _store()
     saved = _require_profile(store, profile)
-    with _connect(saved.name) as client:
+    # The profile's default license is a production setting, so never the sandbox.
+    with _connect(saved.name, data=False) as client:
         saved.license = client.pick_license()
     store.save_profile(saved, make_default=False)
     _console.success(f"Default license for {saved.name}: {saved.license}")
@@ -326,7 +347,7 @@ def license_set(ctx: typer.Context, license: str, profile: ProfileOpt = None) ->
 @handle_errors
 def keys_list(profile: ProfileOpt = None) -> None:
     """List the account's secret keys (masked)."""
-    with _connect(profile) as client:
+    with _connect(profile, data=False) as client:
         keys = client.secret_keys.list()
         current = client.secret_key
     table = _console.table("Secret keys")
@@ -428,7 +449,7 @@ def keys_revoke(
     ):
         raise typer.Exit(1)
     store = _store()
-    with _connect(profile) as client:
+    with _connect(profile, data=False) as client:
         client.secret_keys.delete(key)
     _console.success(f"Deleted {_console.mask_secret(key)}.")
     for p in store.profiles():
