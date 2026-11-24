@@ -16,7 +16,7 @@
         <link rel="prev" href="../reports-and-tag-lists/">
       
       
-        <link rel="next" href="../cli/">
+        <link rel="next" href="../prompts/">
       
       
         
@@ -653,6 +653,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../prompts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prompts and pickers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../cli/" class="md-nav__link">
         
   
@@ -963,6 +991,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../reference/prompts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prompts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/errors/" class="md-nav__link">
         
   
@@ -1227,16 +1283,21 @@ first with <a href="#picking-a-file"><code>t3.pick_file()</code></a> and pass th
 <p><strong>Default file names.</strong> Leave <code>path</code> out and the file goes in the current
 folder, named from the first row's data model and license plus the time, for
 example <code>MetrcPackage__LIC-00001__2026-11-23T14-05-09.csv</code>.</p>
+<p><strong>A folder as the path.</strong> Pass a folder that exists, or a path ending in <code>/</code>,
+and the file gets the default name inside it. The folder is created if needed:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">t3</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="s2">"output/"</span><span class="p">)</span>      <span class="c1"># output/MetrcPackage__LIC-00001__2026-11-23T14-05-09.csv</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">t3</span><span class="o">.</span><span class="n">to_json</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="s2">"output/"</span><span class="p">,</span> <span class="n">lines</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
 <h2 id="reading-files-back">Reading files back<a class="headerlink" href="#reading-files-back" title="Permanent link">&para;</a></h2>
 <p><code>t3.read_rows()</code> reads JSON, JSON Lines, CSV or TSV into a list of dicts:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">rows</span> <span class="o">=</span> <span class="n">t3</span><span class="o">.</span><span class="n">read_rows</span><span class="p">(</span><span class="s2">"packages.json"</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">rows</span> <span class="o">=</span> <span class="n">t3</span><span class="o">.</span><span class="n">read_rows</span><span class="p">(</span><span class="s2">"packages.json"</span><span class="p">)</span>
 </code></pre></div>
 <p>A JSON file holding a T3 response envelope (<code>{"data": [...], ...}</code>) gives you
 its <code>data</code>. Values read from CSV are strings.</p>
 <h2 id="the-inspector">The inspector<a class="headerlink" href="#the-inspector" title="Permanent link">&para;</a></h2>
 <p><code>t3.inspect()</code> opens a full-screen terminal viewer that shows one row at a time
 as formatted JSON:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">t3</span><span class="o">.</span><span class="n">inspect</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Active packages"</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">t3</span><span class="o">.</span><span class="n">inspect</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Active packages"</span><span class="p">)</span>
 </code></pre></div>
 <table>
 <thead>
@@ -1273,8 +1334,8 @@ as formatted JSON:</p>
 </tbody>
 </table>
 <p>It needs the <code>tui</code> extra, which installs Textual:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"t3api-utils[tui]"</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">"t3api-utils[tui]"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"t3api-utils[tui]"</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">"t3api-utils[tui]"</span>
 </code></pre></div>
 <p>Without it, <code>t3.inspect()</code> raises an <code>ImportError</code> that names the install
 command. Textual is imported only when you call <code>inspect()</code>, so scripts that
@@ -1285,8 +1346,8 @@ API.</p>
 <h2 id="picking-a-file">Picking a file<a class="headerlink" href="#picking-a-file" title="Permanent link">&para;</a></h2>
 <p><code>t3.pick_file()</code> lists the CSV, TSV, JSON and JSON Lines files in a folder,
 newest first, as a numbered table, and returns the chosen <code>Path</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">path</span> <span class="o">=</span> <span class="n">t3</span><span class="o">.</span><span class="n">pick_file</span><span class="p">()</span>                                <span class="c1"># current folder</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">path</span> <span class="o">=</span> <span class="n">t3</span><span class="o">.</span><span class="n">pick_file</span><span class="p">(</span><span class="s2">"exports"</span><span class="p">,</span> <span class="n">patterns</span><span class="o">=</span><span class="p">[</span><span class="s2">"*.csv"</span><span class="p">])</span>   <span class="c1"># one folder, CSVs only</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">path</span> <span class="o">=</span> <span class="n">t3</span><span class="o">.</span><span class="n">pick_file</span><span class="p">()</span>                                <span class="c1"># current folder</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">path</span> <span class="o">=</span> <span class="n">t3</span><span class="o">.</span><span class="n">pick_file</span><span class="p">(</span><span class="s2">"exports"</span><span class="p">,</span> <span class="n">patterns</span><span class="o">=</span><span class="p">[</span><span class="s2">"*.csv"</span><span class="p">])</span>   <span class="c1"># one folder, CSVs only</span>
 </code></pre></div>
 <p>Type a number to choose, or some text to narrow the list. If the folder has no
 matching files, it asks for a path instead. Like every picker, it raises
@@ -1295,34 +1356,34 @@ matching files, it asks for a path instead. Like every picker, it raises
 <p>This is <code>scripts/example.py</code> from the repository: pick a license and a
 collection, load all of it, browse it, then keep and save the rows that match
 <code>input.csv</code>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="ch">#!/usr/bin/env python3</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="c1"># /// script</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="c1"># requires-python = "&gt;=3.12"</span>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># dependencies = ["t3api-utils[tui]&gt;=2.0"]</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="c1"># ///</span>
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="sd">"""Pick a collection, load all of it, and browse the rows that match input.csv."""</span>
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>
-<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="kn">import</span><span class="w"> </span><span class="nn">t3api_utils</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t3</span>
-<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>
-<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="n">INPUT</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="s2">"input.csv"</span><span class="p">)</span>
-<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>
-<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>
-<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a>    <span class="k">with</span> <span class="n">t3</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
-<a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a>        <span class="n">license</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">license</span> <span class="ow">or</span> <span class="n">client</span><span class="o">.</span><span class="n">pick_license</span><span class="p">()</span>
-<a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a>        <span class="n">endpoint</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">pick_endpoint</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">"collection"</span><span class="p">)</span>
-<a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a>        <span class="n">rows</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">collect</span><span class="p">(</span><span class="n">endpoint</span><span class="o">.</span><span class="n">id</span> <span class="ow">or</span> <span class="n">endpoint</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">license</span><span class="p">)</span>
-<a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a>        <span class="n">t3</span><span class="o">.</span><span class="n">inspect</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="n">endpoint</span><span class="o">.</span><span class="n">id</span> <span class="ow">or</span> <span class="n">endpoint</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
-<a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a>
-<a id="__codelineno-9-22" name="__codelineno-9-22" href="#__codelineno-9-22"></a>        <span class="n">matches</span> <span class="o">=</span> <span class="n">t3</span><span class="o">.</span><span class="n">filter_rows</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">INPUT</span><span class="p">,</span> <span class="n">on_unmatched</span><span class="o">=</span><span class="s2">"warn"</span><span class="p">)</span>
-<a id="__codelineno-9-23" name="__codelineno-9-23" href="#__codelineno-9-23"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Saved </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">matches</span><span class="p">)</span><span class="si">}</span><span class="s2"> matching rows to </span><span class="si">{</span><span class="n">t3</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">matches</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<a id="__codelineno-9-24" name="__codelineno-9-24" href="#__codelineno-9-24"></a>        <span class="n">t3</span><span class="o">.</span><span class="n">inspect</span><span class="p">(</span><span class="n">matches</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"matches"</span><span class="p">)</span>
-<a id="__codelineno-9-25" name="__codelineno-9-25" href="#__codelineno-9-25"></a>
-<a id="__codelineno-9-26" name="__codelineno-9-26" href="#__codelineno-9-26"></a>
-<a id="__codelineno-9-27" name="__codelineno-9-27" href="#__codelineno-9-27"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
-<a id="__codelineno-9-28" name="__codelineno-9-28" href="#__codelineno-9-28"></a>    <span class="n">main</span><span class="p">()</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="ch">#!/usr/bin/env python3</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="c1"># /// script</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="c1"># requires-python = "&gt;=3.12"</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># dependencies = ["t3api-utils[tui]&gt;=2.0"]</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="c1"># ///</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="sd">"""Pick a collection, load all of it, and browse the rows that match input.csv."""</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="kn">import</span><span class="w"> </span><span class="nn">t3api_utils</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t3</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="n">INPUT</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="s2">"input.csv"</span><span class="p">)</span>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a>    <span class="k">with</span> <span class="n">t3</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a>        <span class="n">license</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">license</span> <span class="ow">or</span> <span class="n">client</span><span class="o">.</span><span class="n">pick_license</span><span class="p">()</span>
+<a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>        <span class="n">endpoint</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">pick_endpoint</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">"collection"</span><span class="p">)</span>
+<a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a>        <span class="n">rows</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">collect</span><span class="p">(</span><span class="n">endpoint</span><span class="o">.</span><span class="n">id</span> <span class="ow">or</span> <span class="n">endpoint</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">license</span><span class="p">)</span>
+<a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a>        <span class="n">t3</span><span class="o">.</span><span class="n">inspect</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="n">endpoint</span><span class="o">.</span><span class="n">id</span> <span class="ow">or</span> <span class="n">endpoint</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+<a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a>
+<a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a>        <span class="n">matches</span> <span class="o">=</span> <span class="n">t3</span><span class="o">.</span><span class="n">filter_rows</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">INPUT</span><span class="p">,</span> <span class="n">on_unmatched</span><span class="o">=</span><span class="s2">"warn"</span><span class="p">)</span>
+<a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Saved </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">matches</span><span class="p">)</span><span class="si">}</span><span class="s2"> matching rows to </span><span class="si">{</span><span class="n">t3</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">matches</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-10-24" name="__codelineno-10-24" href="#__codelineno-10-24"></a>        <span class="n">t3</span><span class="o">.</span><span class="n">inspect</span><span class="p">(</span><span class="n">matches</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"matches"</span><span class="p">)</span>
+<a id="__codelineno-10-25" name="__codelineno-10-25" href="#__codelineno-10-25"></a>
+<a id="__codelineno-10-26" name="__codelineno-10-26" href="#__codelineno-10-26"></a>
+<a id="__codelineno-10-27" name="__codelineno-10-27" href="#__codelineno-10-27"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
+<a id="__codelineno-10-28" name="__codelineno-10-28" href="#__codelineno-10-28"></a>    <span class="n">main</span><span class="p">()</span>
 </code></pre></div>
 
 
@@ -1378,13 +1439,13 @@ collection, load all of it, browse it, then keep and save the rows that match
         
         
           
-          <a href="../cli/" class="md-footer__link md-footer__link--next" aria-label="Next: The t3api command">
+          <a href="../prompts/" class="md-footer__link md-footer__link--next" aria-label="Next: Prompts and pickers">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                The t3api command
+                Prompts and pickers
               </div>
             </div>
             <div class="md-footer__button md-icon">

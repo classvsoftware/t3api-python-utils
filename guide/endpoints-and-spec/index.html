@@ -664,6 +664,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../prompts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prompts and pickers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../cli/" class="md-nav__link">
         
   
@@ -974,6 +1002,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../reference/prompts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prompts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/errors/" class="md-nav__link">
         
   
@@ -1227,10 +1283,16 @@ endpoint IDs, so name them by path: <code>client.post("/v2/items/discontinue", .
 <td><code>params</code></td>
 <td>the operation's parameters, each with <code>name</code>, <code>location</code>, <code>required</code>, <code>description</code> and <code>schema</code></td>
 </tr>
+<tr>
+<td><code>body_type</code></td>
+<td><code>"array"</code> or <code>"object"</code> for routes with a JSON body, else <code>None</code>. <code>body_is_array</code> is <code>True</code> for the <a href="../writes/#array-bodies">list routes</a>.</td>
+</tr>
 </tbody>
 </table>
 <p><code>ep.param("licenseNumber")</code> returns one parameter, and <code>ep.label()</code> gives a
-readable <code>GET /v2/items (METRC_ACTIVE_ITEMS)</code>.</p>
+readable <code>GET /v2/items (METRC_ACTIVE_ITEMS)</code>. A parameter's <code>choices</code> are the
+values the spec allows, such as a super collection's <code>include</code> values, or <code>()</code>
+when it doesn't list any.</p>
 <p>In a terminal, <code>client.pick_endpoint()</code> shows a numbered table of collections
 that you can narrow by typing. <code>client.pick_endpoint(kind=None)</code> shows every
 endpoint, and <code>kind="report"</code> shows reports.</p>
@@ -1279,7 +1341,7 @@ structure. The rules are checked top to bottom:</p>
 <td><code>file</code></td>
 <td>GET returning a PDF or an image</td>
 <td>5</td>
-<td><code>get()</code>, which returns <code>bytes</code></td>
+<td><code>download()</code> to a file, or <code>get()</code>, which returns <code>bytes</code></td>
 </tr>
 <tr>
 <td><code>object</code></td>
@@ -1340,6 +1402,10 @@ the spec:</p>
 <tr>
 <td><code>mask</code> (string or list)</td>
 <td><code>collectionMask</code>, comma-joined</td>
+</tr>
+<tr>
+<td><code>include</code> (string or list)</td>
+<td>one <code>include=</code> per item</td>
 </tr>
 <tr>
 <td><code>page_size</code></td>

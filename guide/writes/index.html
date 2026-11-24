@@ -527,6 +527,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#what-a-dry-run-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a dry run checks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#array-bodies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Array bodies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#one-write" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -534,6 +556,34 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="One write">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#uploads" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Uploads
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#downloads" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Downloads
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -548,6 +598,28 @@
   
     <nav class="md-nav" aria-label="Many writes: bulk()">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#asking-before-submitting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Asking before submitting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#batches" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batches
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#validate-first-submit-later" class="md-nav__link">
@@ -661,6 +733,34 @@
     
   
     Local data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../prompts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prompts and pickers
   
 
     
@@ -991,6 +1091,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../reference/prompts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prompts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/errors/" class="md-nav__link">
         
   
@@ -1085,6 +1213,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#what-a-dry-run-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a dry run checks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#array-bodies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Array bodies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#one-write" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1092,6 +1242,34 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="One write">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#uploads" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Uploads
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#downloads" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Downloads
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1106,6 +1284,28 @@
   
     <nav class="md-nav" aria-label="Many writes: bulk()">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#asking-before-submitting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Asking before submitting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#batches" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batches
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#validate-first-submit-later" class="md-nav__link">
@@ -1202,7 +1402,7 @@ in the spec:</p>
 <tbody>
 <tr>
 <td><code>metrc_write</code> (85 routes today: creating packages, discontinuing items, adjusting, finishing, ...)</td>
-<td><strong>Dry run.</strong> T3 validates the request and nothing reaches Metrc.</td>
+<td><strong>Dry run.</strong> T3 checks the request (see <a href="#what-a-dry-run-checks">What a dry run checks</a>) and nothing reaches Metrc.</td>
 <td>Sent to Metrc.</td>
 </tr>
 <tr>
@@ -1217,19 +1417,51 @@ change in Metrc. Passing <code>submit=</code> at all, <code>True</code> or <code
 route raises <code>ValueError</code>, so you can't mistake one kind for the other.</p>
 <p>Check a route's kind with <code>t3api endpoints discontinue</code> or
 <code>client.spec.endpoint("/v2/items/discontinue").kind</code>.</p>
+<h2 id="what-a-dry-run-checks">What a dry run checks<a class="headerlink" href="#what-a-dry-run-checks" title="Permanent link">&para;</a></h2>
+<p>A dry run is <strong>static validation</strong>: the request's format, required fields and
+types. It doesn't check whether the records a request names exist. A dry run
+that moves package <code>id: 0</code> to location <code>locationId: 0</code> passes.</p>
+<p>So a dry run catches a missing field, a wrong type or a malformed body. It
+won't tell you that a package ID is wrong, or that Metrc will refuse the
+change. Check that the records exist yourself first, for example by loading
+them with <code>collect()</code> and matching on them. This is what <code>bulk()</code> means when it
+calls a row <code>valid</code>: it passed validation, not that Metrc will accept it.</p>
+<p><code>dynamic=True</code> on any write method or <code>bulk()</code> also asks T3 for the route's
+dynamic checks (<code>applyDynamicValidation=true</code>). What those cover varies by
+route, and some routes have none yet, so treat them as an extra and not as a
+guarantee. A route whose spec doesn't offer them raises <code>ValueError</code>.</p>
+<h2 id="array-bodies">Array bodies<a class="headerlink" href="#array-bodies" title="Permanent link">&para;</a></h2>
+<p>Most Metrc write routes (68 of 85 today) take a <strong>list</strong> of objects as the
+body, even when you send one. They include the common bulk jobs: adjusting,
+moving, finishing and noting packages; creating items and strains; and every
+plant, plant batch and harvest write. The others, such as
+<code>/v2/items/discontinue</code>, <code>/v2/packages/discontinue</code> and the void routes, take
+one object.</p>
+<p>Send a list to a list route, even for one object:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">client</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="s2">"/v2/packages/change-locations"</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">json</span><span class="o">=</span><span class="p">[{</span><span class="s2">"id"</span><span class="p">:</span> <span class="mi">123456</span><span class="p">,</span> <span class="s2">"locationId"</span><span class="p">:</span> <span class="mi">42</span><span class="p">,</span> <span class="s2">"actualDate"</span><span class="p">:</span> <span class="s2">"2026-11-23"</span><span class="p">}],</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="p">)</span>
+</code></pre></div>
+<p>The server answers a bare object on a list route with an unexplained HTTP 500,
+so the library logs a warning first when a <code>json=</code> body's shape doesn't match
+the spec. Check a route with <code>client.spec.endpoint(path).body_is_array</code>.
+<code>bulk()</code> handles this for you: you give it one dict per object, and it wraps
+them in a list for routes that take one.</p>
 <h2 id="one-write">One write<a class="headerlink" href="#one-write" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">t3api_utils</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t3</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">with</span> <span class="n">t3</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">lic</span> <span class="o">=</span> <span class="s2">"LIC-00001"</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="c1"># Dry run: validated by T3, not sent to Metrc</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">"/v2/items/discontinue"</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">"id"</span><span class="p">:</span> <span class="mi">12345</span><span class="p">})</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">dry_run</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>      <span class="c1"># True Dry run</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="c1"># The real thing</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">"/v2/items/discontinue"</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">"id"</span><span class="p">:</span> <span class="mi">12345</span><span class="p">},</span> <span class="n">submit</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">dry_run</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>      <span class="c1"># False Success</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">t3api_utils</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t3</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="k">with</span> <span class="n">t3</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">lic</span> <span class="o">=</span> <span class="s2">"LIC-00001"</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="c1"># Dry run: validated by T3, not sent to Metrc</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">"/v2/items/discontinue"</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">"id"</span><span class="p">:</span> <span class="mi">12345</span><span class="p">})</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">dry_run</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>      <span class="c1"># True Dry run</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="c1"># The real thing</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">"/v2/items/discontinue"</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">"id"</span><span class="p">:</span> <span class="mi">12345</span><span class="p">},</span> <span class="n">submit</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">dry_run</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>      <span class="c1"># False Success</span>
 </code></pre></div>
 <p><code>post()</code>, <code>put()</code>, <code>patch()</code> and <code>delete()</code> take:</p>
 <table>
@@ -1250,7 +1482,7 @@ route raises <code>ValueError</code>, so you can't mistake one kind for the othe
 </tr>
 <tr>
 <td><code>json</code></td>
-<td>The request body.</td>
+<td>The request body. A list for <a href="#array-bodies">array routes</a>.</td>
 </tr>
 <tr>
 <td><code>params</code></td>
@@ -1258,11 +1490,15 @@ route raises <code>ValueError</code>, so you can't mistake one kind for the othe
 </tr>
 <tr>
 <td><code>files</code>, <code>data</code></td>
-<td>Multipart or form bodies, as in httpx2 (not on <code>delete()</code>).</td>
+<td>Multipart or form bodies, as in httpx2 (not on <code>delete()</code>). See <a href="#uploads">Uploads</a>.</td>
 </tr>
 <tr>
 <td><code>submit</code></td>
 <td><code>True</code> sends a Metrc write for real.</td>
+</tr>
+<tr>
+<td><code>dynamic</code></td>
+<td><code>True</code> also asks for the route's dynamic checks. See <a href="#what-a-dry-run-checks">What a dry run checks</a>.</td>
 </tr>
 <tr>
 <td><code>timeout</code></td>
@@ -1285,7 +1521,7 @@ route raises <code>ValueError</code>, so you can't mistake one kind for the othe
 <tbody>
 <tr>
 <td><code>dry_run</code></td>
-<td><code>True</code> if T3 only validated the request.</td>
+<td><code>True</code> if T3 only checked the request (statically) and nothing reached Metrc.</td>
 </tr>
 <tr>
 <td><code>message</code></td>
@@ -1307,64 +1543,155 @@ when logging is on.</p>
 <p><strong>Errors.</strong> A rejected write raises an <code>APIError</code> subclass, usually
 <code>ValidationError</code> (400 or 422), with the server's explanation in <code>.detail</code> and
 any per-field problems in <code>.errors</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">try</span><span class="p">:</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="n">client</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">"/v2/items/discontinue"</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">"id"</span><span class="p">:</span> <span class="mi">12345</span><span class="p">},</span> <span class="n">submit</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="k">except</span> <span class="n">t3</span><span class="o">.</span><span class="n">ValidationError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">exc</span><span class="o">.</span><span class="n">detail</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="n">client</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">"/v2/items/discontinue"</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">"id"</span><span class="p">:</span> <span class="mi">12345</span><span class="p">},</span> <span class="n">submit</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="k">except</span> <span class="n">t3</span><span class="o">.</span><span class="n">ValidationError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">exc</span><span class="o">.</span><span class="n">detail</span><span class="p">)</span>
 </code></pre></div>
 <p><strong>Never repeated.</strong> A write is retried only when T3 answered 429 (rate
 limited, so it was rejected) or the connection failed before the request was
 sent. A 5xx or a timeout after sending might mean the write reached Metrc, so
 it's raised to you instead of being sent again. See
 <a href="../errors-and-logging/#retries">Retries</a>.</p>
-<p>Many create routes accept an array of objects in one request. Send the array
-as <code>json=</code> yourself when you want one request for many rows; use <code>bulk()</code>
-below when you want each row validated and reported separately.</p>
+<h3 id="uploads">Uploads<a class="headerlink" href="#uploads" title="Permanent link">&para;</a></h3>
+<p>Two routes take a file as <code>multipart/form-data</code>: <code>POST /v2/items/images/file</code>
+(an immediate write that uploads an item photo) and
+<code>POST /v2/packages/labresults/document/file</code> (a Metrc write, so a dry run
+unless <code>submit=True</code>). Pass the file with <code>files=</code>, in httpx's
+<code>(name, content, content type)</code> form, and any other form fields with <code>data=</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">photo</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"blue-dream.png"</span><span class="p">)</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">client</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="s2">"/v2/items/images/file"</span><span class="p">,</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="n">files</span><span class="o">=</span><span class="p">{</span><span class="s2">"file"</span><span class="p">:</span> <span class="p">(</span><span class="n">photo</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">photo</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">(),</span> <span class="s2">"image/png"</span><span class="p">)},</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="p">)</span>
+</code></pre></div>
+<p>Each route's entry in the <a href="https://api.trackandtrace.tools/v2/docs">T3 API docs</a>
+names its form fields.</p>
+<h3 id="downloads">Downloads<a class="headerlink" href="#downloads" title="Permanent link">&para;</a></h3>
+<p>Routes of kind <code>file</code> (manifest and COA PDFs, item photos) return <code>bytes</code> from
+<code>get()</code>. <code>client.download()</code> streams one straight to disk instead, through a
+temporary file that's renamed only when the download completes, so a failure
+never leaves half a PDF behind:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">client</span><span class="o">.</span><span class="n">download</span><span class="p">(</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="s2">"/v2/transfers/manifest"</span><span class="p">,</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="sa">f</span><span class="s2">"manifests/</span><span class="si">{</span><span class="n">number</span><span class="si">}</span><span class="s2">.pdf"</span><span class="p">,</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">"manifestNumber"</span><span class="p">:</span> <span class="n">number</span><span class="p">},</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="p">)</span>
+</code></pre></div>
+<p>It creates missing folders and returns the path.</p>
 <h2 id="many-writes-bulk">Many writes: bulk()<a class="headerlink" href="#many-writes-bulk" title="Permanent link">&para;</a></h2>
-<p><code>bulk()</code> sends one request per row, safely:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">items</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">collect</span><span class="p">(</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="s2">"METRC_ACTIVE_ITEMS"</span><span class="p">,</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="nb">filter</span><span class="o">=</span><span class="p">[</span><span class="s2">"name__startswith:TEST"</span><span class="p">],</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">mask</span><span class="o">=</span><span class="p">[</span><span class="s2">"id"</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">],</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="p">)</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">bulk</span><span class="p">(</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="s2">"/v2/items/discontinue"</span><span class="p">,</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">rows</span><span class="o">=</span><span class="p">[{</span><span class="s2">"id"</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]}</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">],</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    <span class="n">submit</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    <span class="n">log_to</span><span class="o">=</span><span class="s2">"discontinue-results.csv"</span><span class="p">,</span>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="p">)</span>
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">summary</span><span class="p">())</span>     <span class="c1"># POST /v2/items/discontinue: 42 submitted</span>
+<p><code>bulk()</code> validates every row, then submits them. Give it one dict per object,
+whatever the route's body shape:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">items</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">collect</span><span class="p">(</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="s2">"METRC_ACTIVE_ITEMS"</span><span class="p">,</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="nb">filter</span><span class="o">=</span><span class="p">[</span><span class="s2">"name__startswith:TEST"</span><span class="p">],</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="n">mask</span><span class="o">=</span><span class="p">[</span><span class="s2">"id"</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">],</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="p">)</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">bulk</span><span class="p">(</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="s2">"/v2/items/discontinue"</span><span class="p">,</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>    <span class="n">rows</span><span class="o">=</span><span class="p">[{</span><span class="s2">"id"</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]}</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">],</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>    <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>    <span class="n">submit</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>    <span class="n">log_to</span><span class="o">=</span><span class="s2">"discontinue-results.csv"</span><span class="p">,</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="p">)</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">summary</span><span class="p">())</span>     <span class="c1"># POST /v2/items/discontinue: 42 submitted</span>
 </code></pre></div>
 <p>For a <code>metrc_write</code> route:</p>
 <ol>
-<li><strong>Validate.</strong> Every row is sent as a dry run, and each result recorded.</li>
-<li><strong>If any row failed validation</strong>, nothing is submitted yet:<ul>
-<li>With <code>submit=False</code> (the default), <code>bulk()</code> stops here and returns.</li>
-<li>In a terminal, it shows the failures and asks whether to submit only the
-  valid rows (default no).</li>
-<li>Without a terminal it returns without submitting, unless you passed
-  <code>on_error="skip"</code>, which submits the valid rows without asking.</li>
-</ul>
+<li><strong>Validate.</strong> Every row is sent as a dry run, and each result recorded.
+   Remember that a dry run <a href="#what-a-dry-run-checks">only checks format</a>.</li>
+<li>
+<p><strong>Decide</strong>, according to <code>submit</code>:</p>
+<table>
+<thead>
+<tr>
+<th><code>submit=</code></th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>False</code> (the default)</td>
+<td>Stops here and returns. Nothing is submitted.</td>
+</tr>
+<tr>
+<td><code>"ask"</code></td>
+<td>Shows the route, the license, the counts (and "sandbox" in the <a href="../authentication/#sandbox">sandbox</a>), lists any rows that failed, and asks whether to submit the rest. The default answer is no.</td>
+</tr>
+<tr>
+<td><code>True</code></td>
+<td>Submits without asking when every row passed. If some failed: in a terminal it shows them and asks whether to submit only the valid rows (default no); without a terminal it returns without submitting, unless <code>on_error="skip"</code>, which submits the valid rows without asking.</td>
+</tr>
+</tbody>
+</table>
 </li>
-<li><strong>Submit</strong>, only with <code>submit=True</code>: each valid row is sent with
-   <code>submit=true</code>, one at a time, in order. With <code>on_error="stop"</code> (the
-   default), the first row that fails stops the rest; <code>on_error="skip"</code> carries
-   on.</li>
+<li>
+<p><strong>Submit</strong>: each valid row is sent with <code>submit=true</code>, in order. With
+   <code>on_error="stop"</code> (the default), the first row that fails stops the rest;
+   <code>on_error="skip"</code> carries on.</p>
+</li>
 <li><strong>Return</strong> a <code>BulkResult</code>. <code>log_to=</code> also writes it to a CSV file.</li>
 </ol>
 <p>An <code>AuthError</code> stops <code>bulk()</code> immediately whatever <code>on_error</code> says, since every
 later row would fail the same way.</p>
+<h3 id="asking-before-submitting">Asking before submitting<a class="headerlink" href="#asking-before-submitting" title="Permanent link">&para;</a></h3>
+<p><code>submit="ask"</code> is the validate, show, confirm, submit pattern in one call. Each
+row is validated once:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">"--yes"</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">"store_true"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"submit without asking"</span><span class="p">)</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">bulk</span><span class="p">(</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="s2">"/v2/packages/change-locations"</span><span class="p">,</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>    <span class="n">rows</span><span class="o">=</span><span class="n">moves</span><span class="p">,</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>    <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>    <span class="n">submit</span><span class="o">=</span><span class="kc">True</span> <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">yes</span> <span class="k">else</span> <span class="s2">"ask"</span><span class="p">,</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="p">)</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>── POST /v2/packages/change-locations ──
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>License: LIC-00001
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>Rows: 12 passed validation
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>ℹ A dry run checks format, required fields and types, not whether the records it names exist.
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>Submit 12 row(s) to Metrc for LIC-00001? [y/n] (n):
+</code></pre></div>
+<p>Without a terminal, <code>submit="ask"</code> raises <code>NotInteractive</code> before sending
+anything: "submit="ask" needs a terminal to ask in. Pass submit=True to submit
+without asking." A scheduled job that forgot <code>--yes</code> fails loudly instead of
+quietly submitting nothing.</p>
+<div class="admonition note">
+<p class="admonition-title"><code>confirm=</code> is a different thing</p>
+<p><code>confirm=True</code> doesn't ask anything. It means "I know this
+<a href="#immediate-routes">immediate route</a> has no dry run; send the rows
+anyway". To be asked, use <code>submit="ask"</code>.</p>
+</div>
+<h3 id="batches">Batches<a class="headerlink" href="#batches" title="Permanent link">&para;</a></h3>
+<p>Array routes take many objects in one request. <code>batch_size=N</code> sends up to N
+rows per request, in both the validation and submit passes:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">client</span><span class="o">.</span><span class="n">bulk</span><span class="p">(</span><span class="s2">"/v2/packages/adjust"</span><span class="p">,</span> <span class="n">rows</span><span class="o">=</span><span class="n">adjustments</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span> <span class="n">submit</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+</code></pre></div>
+<p>That's far fewer requests, but a request that fails marks <strong>every row in it</strong>
+with the same error, because the server answers for the whole request. The
+default, <code>batch_size=1</code>, keeps each row's error separate. <code>batch_size</code> above 1
+on a route that takes one object raises <code>ValueError</code>.</p>
 <h3 id="validate-first-submit-later">Validate first, submit later<a class="headerlink" href="#validate-first-submit-later" title="Permanent link">&para;</a></h3>
 <p>Leave out <code>submit=True</code> to check every row without touching Metrc:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">check</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">bulk</span><span class="p">(</span><span class="s2">"/v2/items/discontinue"</span><span class="p">,</span> <span class="n">rows</span><span class="o">=</span><span class="n">rows</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">)</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="k">if</span> <span class="n">check</span><span class="o">.</span><span class="n">ok</span><span class="p">:</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="n">client</span><span class="o">.</span><span class="n">bulk</span><span class="p">(</span><span class="s2">"/v2/items/discontinue"</span><span class="p">,</span> <span class="n">rows</span><span class="o">=</span><span class="n">rows</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span> <span class="n">submit</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">check</span><span class="o">.</span><span class="n">invalid</span><span class="p">:</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>        <span class="nb">print</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">r</span><span class="o">.</span><span class="n">row</span><span class="p">,</span> <span class="n">r</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">check</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">bulk</span><span class="p">(</span><span class="s2">"/v2/items/discontinue"</span><span class="p">,</span> <span class="n">rows</span><span class="o">=</span><span class="n">rows</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">)</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="k">if</span> <span class="n">check</span><span class="o">.</span><span class="n">ok</span><span class="p">:</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    <span class="n">client</span><span class="o">.</span><span class="n">bulk</span><span class="p">(</span><span class="s2">"/v2/items/discontinue"</span><span class="p">,</span> <span class="n">rows</span><span class="o">=</span><span class="n">rows</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span> <span class="n">submit</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">check</span><span class="o">.</span><span class="n">invalid</span><span class="p">:</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>        <span class="nb">print</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">r</span><span class="o">.</span><span class="n">row</span><span class="p">,</span> <span class="n">r</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
 </code></pre></div>
+<p>The second call validates every row again before submitting. To show the
+results and decide in between without that, use
+<a href="#asking-before-submitting"><code>submit="ask"</code></a>.</p>
 <h3 id="row-statuses">Row statuses<a class="headerlink" href="#row-statuses" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -1376,11 +1703,11 @@ later row would fail the same way.</p>
 <tbody>
 <tr>
 <td><code>valid</code></td>
-<td>Passed the dry run and wasn't submitted (yet).</td>
+<td>Passed validation (the dry run's static checks) and wasn't submitted (yet). It doesn't mean Metrc will accept it.</td>
 </tr>
 <tr>
 <td><code>invalid</code></td>
-<td>Failed the dry run. <code>message</code> says why.</td>
+<td>Failed validation. <code>message</code> says why.</td>
 </tr>
 <tr>
 <td><code>submitted</code></td>
@@ -1431,7 +1758,7 @@ later row would fail the same way.</p>
 </tr>
 <tr>
 <td><code>summary()</code></td>
-<td>One line, e.g. <code>POST /v2/items/discontinue: 2 failed, 40 submitted</code>.</td>
+<td>One line, e.g. <code>POST /v2/items/discontinue: 40 submitted, 2 failed</code>, or <code>12 passed validation, 1 failed validation</code> before submitting.</td>
 </tr>
 <tr>
 <td><code>to_csv(path)</code></td>
@@ -1441,54 +1768,55 @@ later row would fail the same way.</p>
 </table>
 <h3 id="immediate-routes">Immediate routes<a class="headerlink" href="#immediate-routes" title="Permanent link">&para;</a></h3>
 <p>Immediate routes have no dry run, so <code>bulk()</code> can't validate first. It refuses
-to run unless you pass <code>confirm=True</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">tl</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">tag_lists</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="s2">"Room A"</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">)</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"1A4000000000000000000001"</span><span class="p">,</span> <span class="s2">"1A4000000000000000000002"</span><span class="p">]</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">client</span><span class="o">.</span><span class="n">bulk</span><span class="p">(</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="s2">"/v2/tag-lists/</span><span class="si">{tag_list_id}</span><span class="s2">/entries"</span><span class="p">,</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="n">rows</span><span class="o">=</span><span class="p">[{</span><span class="s2">"entries"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"handle"</span><span class="p">:</span> <span class="n">label</span><span class="p">}]}</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">],</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">method</span><span class="o">=</span><span class="s2">"POST"</span><span class="p">,</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="n">tag_list_id</span><span class="o">=</span><span class="n">tl</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="n">confirm</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="p">)</span>
+to run unless you pass <code>confirm=True</code>, or <code>submit="ask"</code> to have a person
+confirm in the terminal:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">tl</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">tag_lists</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="s2">"Room A"</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">)</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"1A4000000000000000000001"</span><span class="p">,</span> <span class="s2">"1A4000000000000000000002"</span><span class="p">]</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="n">client</span><span class="o">.</span><span class="n">bulk</span><span class="p">(</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    <span class="s2">"/v2/tag-lists/</span><span class="si">{tag_list_id}</span><span class="s2">/entries"</span><span class="p">,</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    <span class="n">rows</span><span class="o">=</span><span class="p">[{</span><span class="s2">"entries"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"handle"</span><span class="p">:</span> <span class="n">label</span><span class="p">}]}</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">],</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>    <span class="n">method</span><span class="o">=</span><span class="s2">"POST"</span><span class="p">,</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>    <span class="n">tag_list_id</span><span class="o">=</span><span class="n">tl</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>    <span class="n">confirm</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="p">)</span>
 </code></pre></div>
 <p>(For tag lists, <code>client.tag_lists</code> is simpler; this only shows the shape.)
 <code>method=</code> picks the operation when a path has several write methods.</p>
 <h2 id="a-complete-script">A complete script<a class="headerlink" href="#a-complete-script" title="Permanent link">&para;</a></h2>
 <p>This is <code>scripts/discontinue-items.py</code> from the repository. It discontinues
 every item named in <code>input.csv</code>, which has a <code>name</code> column:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="ch">#!/usr/bin/env python3</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># /// script</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># requires-python = "&gt;=3.12"</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># dependencies = ["t3api-utils&gt;=2.0"]</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="c1"># ///</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="sd">"""Discontinue every item named in input.csv."""</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="kn">import</span><span class="w"> </span><span class="nn">t3api_utils</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t3</span>
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="n">INPUT</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="s2">"input.csv"</span><span class="p">)</span>
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>
-<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>    <span class="k">with</span> <span class="n">t3</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
-<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>        <span class="n">license</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">license</span> <span class="ow">or</span> <span class="n">client</span><span class="o">.</span><span class="n">pick_license</span><span class="p">()</span>
-<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>        <span class="n">items</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">collect</span><span class="p">(</span><span class="s2">"METRC_ACTIVE_ITEMS"</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">license</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="p">[</span><span class="s2">"id"</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">])</span>
-<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>        <span class="n">matches</span> <span class="o">=</span> <span class="n">t3</span><span class="o">.</span><span class="n">filter_rows</span><span class="p">(</span><span class="n">items</span><span class="p">,</span> <span class="n">INPUT</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"name"</span><span class="p">],</span> <span class="n">on_unmatched</span><span class="o">=</span><span class="s2">"error"</span><span class="p">)</span>
-<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>        <span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">bulk</span><span class="p">(</span>
-<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>            <span class="s2">"/v2/items/discontinue"</span><span class="p">,</span>
-<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a>            <span class="n">rows</span><span class="o">=</span><span class="p">[{</span><span class="s2">"id"</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]}</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">matches</span><span class="p">],</span>
-<a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a>            <span class="n">license</span><span class="o">=</span><span class="n">license</span><span class="p">,</span>
-<a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a>            <span class="n">submit</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a>            <span class="n">log_to</span><span class="o">=</span><span class="s2">"discontinue-results.csv"</span><span class="p">,</span>
-<a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a>        <span class="p">)</span>
-<a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a>        <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">summary</span><span class="p">())</span>
-<a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a>
-<a id="__codelineno-5-29" name="__codelineno-5-29" href="#__codelineno-5-29"></a>
-<a id="__codelineno-5-30" name="__codelineno-5-30" href="#__codelineno-5-30"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
-<a id="__codelineno-5-31" name="__codelineno-5-31" href="#__codelineno-5-31"></a>    <span class="n">main</span><span class="p">()</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="ch">#!/usr/bin/env python3</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="c1"># /// script</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="c1"># requires-python = "&gt;=3.12"</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># dependencies = ["t3api-utils&gt;=2.0"]</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="c1"># ///</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="sd">"""Discontinue every item named in input.csv."""</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="kn">import</span><span class="w"> </span><span class="nn">t3api_utils</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t3</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="n">INPUT</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="s2">"input.csv"</span><span class="p">)</span>
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a>
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a>
+<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a>    <span class="k">with</span> <span class="n">t3</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+<a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a>        <span class="n">license</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">license</span> <span class="ow">or</span> <span class="n">client</span><span class="o">.</span><span class="n">pick_license</span><span class="p">()</span>
+<a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a>        <span class="n">items</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">collect</span><span class="p">(</span><span class="s2">"METRC_ACTIVE_ITEMS"</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">license</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="p">[</span><span class="s2">"id"</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">])</span>
+<a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a>        <span class="n">matches</span> <span class="o">=</span> <span class="n">t3</span><span class="o">.</span><span class="n">filter_rows</span><span class="p">(</span><span class="n">items</span><span class="p">,</span> <span class="n">INPUT</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"name"</span><span class="p">],</span> <span class="n">on_unmatched</span><span class="o">=</span><span class="s2">"error"</span><span class="p">)</span>
+<a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a>        <span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">bulk</span><span class="p">(</span>
+<a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a>            <span class="s2">"/v2/items/discontinue"</span><span class="p">,</span>
+<a id="__codelineno-11-22" name="__codelineno-11-22" href="#__codelineno-11-22"></a>            <span class="n">rows</span><span class="o">=</span><span class="p">[{</span><span class="s2">"id"</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]}</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">matches</span><span class="p">],</span>
+<a id="__codelineno-11-23" name="__codelineno-11-23" href="#__codelineno-11-23"></a>            <span class="n">license</span><span class="o">=</span><span class="n">license</span><span class="p">,</span>
+<a id="__codelineno-11-24" name="__codelineno-11-24" href="#__codelineno-11-24"></a>            <span class="n">submit</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-11-25" name="__codelineno-11-25" href="#__codelineno-11-25"></a>            <span class="n">log_to</span><span class="o">=</span><span class="s2">"discontinue-results.csv"</span><span class="p">,</span>
+<a id="__codelineno-11-26" name="__codelineno-11-26" href="#__codelineno-11-26"></a>        <span class="p">)</span>
+<a id="__codelineno-11-27" name="__codelineno-11-27" href="#__codelineno-11-27"></a>        <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">summary</span><span class="p">())</span>
+<a id="__codelineno-11-28" name="__codelineno-11-28" href="#__codelineno-11-28"></a>
+<a id="__codelineno-11-29" name="__codelineno-11-29" href="#__codelineno-11-29"></a>
+<a id="__codelineno-11-30" name="__codelineno-11-30" href="#__codelineno-11-30"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
+<a id="__codelineno-11-31" name="__codelineno-11-31" href="#__codelineno-11-31"></a>    <span class="n">main</span><span class="p">()</span>
 </code></pre></div>
 <p><code>on_unmatched="error"</code> stops the script before any write if a name in the CSV
 doesn't match an active item.</p>

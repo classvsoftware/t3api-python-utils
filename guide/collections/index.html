@@ -560,6 +560,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#super-collections-and-include" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Super collections and include=
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#licenses-and-the-default-license" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -672,6 +683,34 @@
     
   
     Local data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../prompts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prompts and pickers
   
 
     
@@ -1002,6 +1041,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../reference/prompts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prompts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/errors/" class="md-nav__link">
         
   
@@ -1150,6 +1217,17 @@
     <span class="md-ellipsis">
       
         One object
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#super-collections-and-include" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Super collections and include=
       
     </span>
   </a>
@@ -1361,28 +1439,51 @@ yields rows as each page arrives, one page at a time, so memory stays flat:</p>
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">package</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"METRC_ACTIVE_PACKAGES"</span><span class="p">,</span> <span class="n">object_id</span><span class="o">=</span><span class="mi">67890</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="s2">"LIC-00001"</span><span class="p">)</span>
 </code></pre></div>
 <p><code>object_id</code> is the record's Metrc <code>id</code>.</p>
+<h2 id="super-collections-and-include">Super collections and include=<a class="headerlink" href="#super-collections-and-include" title="Permanent link">&para;</a></h2>
+<p>Super collections (<code>/v2/packages/active/super</code>, <code>/v2/items/super</code>,
+<code>/v2/processingjobs/active/super</code> and others, with IDs like
+<code>METRC_ACTIVE_SUPERPACKAGES</code>) attach related data to each row. Pick what to
+attach with <code>include=</code>, a list:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">packages</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">collect</span><span class="p">(</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="s2">"METRC_ACTIVE_SUPERPACKAGES"</span><span class="p">,</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="n">license</span><span class="o">=</span><span class="s2">"LIC-00001"</span><span class="p">,</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="n">include</span><span class="o">=</span><span class="p">[</span><span class="s2">"labResults"</span><span class="p">,</span> <span class="s2">"sourceHarvests"</span><span class="p">],</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="p">)</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="n">item</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"METRC_ACTIVE_SUPERITEMS"</span><span class="p">,</span> <span class="n">object_id</span><span class="o">=</span><span class="mi">12345</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="s2">"LIC-00001"</span><span class="p">,</span> <span class="n">include</span><span class="o">=</span><span class="p">[</span><span class="s2">"history"</span><span class="p">])</span>
+</code></pre></div>
+<p><code>collect()</code>, <code>iter_rows()</code> and <code>get()</code> take it. Each value is sent as its own
+<code>include</code> parameter, which is what the server needs: a comma-joined
+<code>include=labResults,sourceHarvests</code> gets a 400. A comma-separated string is
+split for you.</p>
+<p>Each collection allows its own values. For packages they're <code>labResults</code>,
+<code>labResultBatches</code>, <code>sourceHarvests</code>, <code>history</code> and <code>coaResults</code>; for items,
+<code>notes</code>, <code>history</code>, <code>ingredients</code> and <code>images</code>. To see them for any endpoint:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">client</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">endpoint</span><span class="p">(</span><span class="s2">"METRC_ACTIVE_SUPERPACKAGES"</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"collection"</span><span class="p">)</span><span class="o">.</span><span class="n">param</span><span class="p">(</span><span class="s2">"include"</span><span class="p">)</span><span class="o">.</span><span class="n">choices</span>
+</code></pre></div>
+<p>A value the spec doesn't list logs a warning and is sent anyway, in case your
+copy of the spec is behind the server.</p>
 <h2 id="licenses-and-the-default-license">Licenses and the default license<a class="headerlink" href="#licenses-and-the-default-license" title="Permanent link">&para;</a></h2>
 <p><code>license=</code> can be left out when the client has a default license
 (<code>connect(license=...)</code>, <code>T3_LICENSE</code>, or the profile's). It's filled in only
 for endpoints that require a <code>licenseNumber</code>. A license passed in the call
 always wins.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">client</span> <span class="o">=</span> <span class="n">t3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">license</span><span class="o">=</span><span class="s2">"LIC-00001"</span><span class="p">)</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">items</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">collect</span><span class="p">(</span><span class="s2">"METRC_ACTIVE_ITEMS"</span><span class="p">)</span>   <span class="c1"># uses LIC-00001</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">client</span> <span class="o">=</span> <span class="n">t3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">license</span><span class="o">=</span><span class="s2">"LIC-00001"</span><span class="p">)</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">items</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">collect</span><span class="p">(</span><span class="s2">"METRC_ACTIVE_ITEMS"</span><span class="p">)</span>   <span class="c1"># uses LIC-00001</span>
 </code></pre></div>
 <h2 id="picking-interactively">Picking interactively<a class="headerlink" href="#picking-interactively" title="Permanent link">&para;</a></h2>
 <p>For scripts a person runs in a terminal:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">with</span> <span class="n">t3</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="n">lic</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">license</span> <span class="ow">or</span> <span class="n">client</span><span class="o">.</span><span class="n">pick_license</span><span class="p">()</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="n">endpoint</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">pick_endpoint</span><span class="p">()</span>            <span class="c1"># collections, searchable</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="n">rows</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">collect</span><span class="p">(</span><span class="n">endpoint</span><span class="o">.</span><span class="n">id</span> <span class="ow">or</span> <span class="n">endpoint</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">with</span> <span class="n">t3</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="n">lic</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">license</span> <span class="ow">or</span> <span class="n">client</span><span class="o">.</span><span class="n">pick_license</span><span class="p">()</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    <span class="n">endpoint</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">pick_endpoint</span><span class="p">()</span>            <span class="c1"># collections, searchable</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>    <span class="n">rows</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">collect</span><span class="p">(</span><span class="n">endpoint</span><span class="o">.</span><span class="n">id</span> <span class="ow">or</span> <span class="n">endpoint</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">)</span>
 </code></pre></div>
 <p>Both pickers raise <code>NotInteractive</code> without a terminal, and Ctrl-C raises
 <code>KeyboardInterrupt</code> to your script. <code>pick_license()</code> returns at once, without
 asking, when the account has only one license.</p>
 <h2 id="from-the-command-line">From the command line<a class="headerlink" href="#from-the-command-line" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>t3api<span class="w"> </span>pull<span class="w"> </span>METRC_ACTIVE_PACKAGES<span class="w"> </span>-l<span class="w"> </span>LIC-00001<span class="w"> </span>-o<span class="w"> </span>packages.csv
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>t3api<span class="w"> </span>pull<span class="w"> </span>METRC_ACTIVE_ITEMS<span class="w"> </span>-l<span class="w"> </span>LIC-00001<span class="w"> </span>-l<span class="w"> </span>LIC-00002<span class="w"> </span>--filter<span class="w"> </span>name__contains:flower<span class="w"> </span>-o<span class="w"> </span>items.json
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>t3api<span class="w"> </span>pull<span class="w"> </span>--inspect<span class="w">          </span><span class="c1"># pick a collection, then browse it</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>t3api<span class="w"> </span>pull<span class="w"> </span>METRC_ACTIVE_PACKAGES<span class="w"> </span>-l<span class="w"> </span>LIC-00001<span class="w"> </span>-o<span class="w"> </span>packages.csv
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>t3api<span class="w"> </span>pull<span class="w"> </span>METRC_ACTIVE_ITEMS<span class="w"> </span>-l<span class="w"> </span>LIC-00001<span class="w"> </span>-l<span class="w"> </span>LIC-00002<span class="w"> </span>--filter<span class="w"> </span>name__contains:flower<span class="w"> </span>-o<span class="w"> </span>items.json
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>t3api<span class="w"> </span>pull<span class="w"> </span>--inspect<span class="w">          </span><span class="c1"># pick a collection, then browse it</span>
 </code></pre></div>
 <p>See <a href="../cli/#pull">The t3api command</a>.</p>
 

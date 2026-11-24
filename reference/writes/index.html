@@ -538,6 +538,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/prompts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prompts and pickers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/cli/" class="md-nav__link">
         
   
@@ -1179,6 +1207,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../prompts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prompts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../errors/" class="md-nav__link">
         
   
@@ -1613,7 +1669,9 @@
             </td>
             <td>
               <div class="doc-md-description">
-                <p>True if the server only validated the request.</p>
+                <p>True if T3 only checked the request: format, required fields
+and types, not whether the records it names exist. Nothing reached
+Metrc.</p>
               </div>
             </td>
           </tr>
@@ -1912,7 +1970,7 @@
 
     <div class="doc doc-contents ">
 
-        <p>Rows that failed the dry run.</p>
+        <p>Rows that failed validation (the dry run).</p>
 
     </div>
 
@@ -2022,7 +2080,7 @@
 
     <div class="doc doc-contents ">
 
-        <p>One line, e.g. <code>POST /v2/items/discontinue: 3 submitted, 1 invalid</code>.</p>
+        <p>One line, e.g. <code>POST /v2/items/discontinue: 1 failed validation, 3 submitted</code>.</p>
 
 
     </div>
@@ -2078,6 +2136,8 @@
 
 
         <p>One row of a bulk write.</p>
+<p><code>status</code> is <code>valid</code> (passed the dry run's static checks, not
+submitted), <code>invalid</code>, <code>submitted</code>, <code>failed</code> or <code>not_sent</code>.</p>
 
 
 
@@ -2252,24 +2312,309 @@
 
 
 <a href="#t3api_utils.writes.bulk" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">bulk</span><span class="p">(</span><span class="n">client</span><span class="p">:</span> <span class="n">T3Client</span><span class="p">,</span> <span class="n">endpoint</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">rows</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span> <span class="o">*</span><span class="p">,</span> <span class="n">license</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">submit</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">confirm</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">on_error</span><span class="p">:</span> <span class="n">OnError</span> <span class="o">=</span> <span class="s1">'stop'</span><span class="p">,</span> <span class="n">log_to</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">path_params</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BulkResult</span>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">bulk</span><span class="p">(</span><span class="n">client</span><span class="p">:</span> <span class="n">T3Client</span><span class="p">,</span> <span class="n">endpoint</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">rows</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span> <span class="o">*</span><span class="p">,</span> <span class="n">license</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">submit</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">'ask'</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">confirm</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">on_error</span><span class="p">:</span> <span class="n">OnError</span> <span class="o">=</span> <span class="s1">'stop'</span><span class="p">,</span> <span class="n">log_to</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">path_params</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">dynamic</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BulkResult</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
 
-        <p>Send many writes safely, one row per request.</p>
+        <p>Send many writes safely: validate every row, then submit.</p>
 <p>For Metrc write routes:</p>
 <ol>
-<li>Every row is sent as a dry run and its result recorded.</li>
-<li>If any row failed, stop and return the results. In a terminal, show the
-   failures and ask whether to submit only the valid rows.
-   <code>on_error="skip"</code> does that without asking.</li>
-<li>With <code>submit=True</code>, send each valid row with <code>submit=true</code>, in order.
-   With <code>on_error="stop"</code>, the first failed submit stops the rest.</li>
+<li>Every row is sent as a dry run and its result recorded. A dry run
+   checks format, required fields and types, not whether the records a
+   row names exist, so <code>valid</code> means "passed validation", not "Metrc
+   will accept it".</li>
+<li><code>submit=False</code> stops here. <code>submit="ask"</code> shows a summary (and any
+   failures) and asks whether to submit, default no. <code>submit=True</code>
+   carries on without asking unless some rows failed; then, in a
+   terminal, it shows the failures and asks whether to submit only the
+   valid rows. <code>on_error="skip"</code> submits them without asking.</li>
+<li>Each valid row is sent with <code>submit=true</code>, in order. With
+   <code>on_error="stop"</code>, the first failed submit stops the rest.</li>
 </ol>
-<p>Routes with no dry run (<code>immediate_write</code>) skip validation, so they need
-<code>confirm=True</code>.</p>
-<p><code>log_to</code> writes the results to a CSV file.</p>
+<p>Each row is one object. On routes whose body is a list (most Metrc
+writes), rows are wrapped in a list for you.</p>
+<p>Routes with no dry run (<code>immediate_write</code>) can't be validated first, so
+they need <code>confirm=True</code> ("I know this takes effect at once"), or
+<code>submit="ask"</code> to ask a person before sending.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>client</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="            T3Client (t3api_utils.client.T3Client)" href="../client/#t3api_utils.client.T3Client">T3Client</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The client to send with.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>endpoint</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The write route's path (or endpoint ID).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>rows</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Iterable">Iterable</span>[<span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>One mapping per object to write.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>license</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Fills <code>licenseNumber</code>. Defaults to the client's license
+when the route requires one.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>method</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Picks the operation when a path has several write methods.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>submit</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | <span title="typing.Literal">Literal</span>[&#39;ask&#39;]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>False</code> validates only, <code>True</code> submits the valid rows,
+<code>"ask"</code> asks first. <code>"ask"</code> raises
+<code>NotInteractive</code> without a terminal,
+before sending anything, so a scheduled job can't hang or quietly
+submit nothing.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>confirm</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Required for routes with no dry run, unless <code>submit="ask"</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>on_error</code>
+            </td>
+            <td>
+                  <code><span title="t3api_utils.writes.OnError">OnError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>"stop"</code> (the default) or <code>"skip"</code>, as described above.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;stop&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>log_to</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | <span title="pathlib.Path">Path</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Write the results to this CSV file.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>progress</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Show progress bars. Defaults to on when stderr is a terminal.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>path_params</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Values for the route's path parameters.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>dynamic</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Also ask T3 for the route's dynamic checks
+(<code>applyDynamicValidation</code>). What they cover depends on the route.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>batch_size</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Rows per request, on routes whose body is a list. A
+request that fails marks every row in it with the same error, so
+the default of 1 keeps each row's error separate.</p>
+              </div>
+            </td>
+            <td>
+                  <code>1</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>a bad <code>submit</code>, <code>on_error</code> or <code>batch_size</code>; an
+immediate route without <code>confirm=True</code>; <code>batch_size</code> above 1 on
+a route that takes one object; <code>dynamic=True</code> on a route without
+dynamic validation.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="            NotInteractive (t3api_utils.errors.NotInteractive)" href="../errors/#t3api_utils.errors.NotInteractive">NotInteractive</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>submit="ask"</code> without a terminal.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="            AuthError (t3api_utils.errors.AuthError)" href="../errors/#t3api_utils.errors.AuthError">AuthError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the credential was rejected. It stops the run whatever
+<code>on_error</code> says.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>

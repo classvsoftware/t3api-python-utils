@@ -540,6 +540,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../prompts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prompts and pickers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../cli/" class="md-nav__link">
         
   
@@ -1002,6 +1030,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../reference/prompts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prompts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/errors/" class="md-nav__link">
         
   
@@ -1320,7 +1376,7 @@ hint on the next line when there is one.</p>
 <tbody>
 <tr>
 <td><code>ValueError</code></td>
-<td>Misuse that the library can spot locally: <code>submit=</code> on a route with no dry run, more than 20 licenses on a report, an empty license list, a bad <code>on_error</code> or <code>on_unmatched</code> value, an unknown column in <code>filter_rows()</code>.</td>
+<td>Misuse that the library can spot locally: <code>submit=</code> on a route with no dry run, <code>dynamic=True</code> on a route without dynamic validation, more than 20 licenses on a report, an empty license list, a bad <code>submit</code>, <code>on_error</code>, <code>batch_size</code> or <code>on_unmatched</code> value, an unknown column in <code>filter_rows()</code>, an empty list given to <code>t3.choose()</code>.</td>
 </tr>
 <tr>
 <td><code>TypeError</code></td>
@@ -1329,6 +1385,10 @@ hint on the next line when there is one.</p>
 <tr>
 <td><code>ImportError</code></td>
 <td><code>t3.inspect()</code> without the <code>[tui]</code> extra. The message names the install command.</td>
+</tr>
+<tr>
+<td><code>NotInteractive</code></td>
+<td>A picker, prompt or <code>bulk(submit="ask")</code> with no terminal to ask in. See <a href="../prompts/#without-a-terminal">Prompts and pickers</a>.</td>
 </tr>
 <tr>
 <td><code>KeyboardInterrupt</code></td>
@@ -1426,11 +1486,11 @@ such as dry-run notices stay hidden. To see everything:</p>
 <tbody>
 <tr>
 <td>WARNING</td>
-<td>Retries; a query parameter the spec doesn't list; rows that failed validation in <code>bulk()</code>; a stale spec cache; no OS keyring; every <code>report_url()</code> call.</td>
+<td>Retries; a query parameter, or an <code>include</code> value, the spec doesn't list; a JSON body whose shape (list or object) doesn't match the route's; a license that isn't one of the sandbox session's; rows that failed validation in <code>bulk()</code>; a stale spec cache; no OS keyring; every <code>report_url()</code> call.</td>
 </tr>
 <tr>
 <td>INFO</td>
-<td>Dry-run notices (<code>dry run: pass submit=True to send ... to Metrc</code>); duplicate rows dropped by <code>collect()</code>; the <code>bulk()</code> summary; falling back to the bundled spec.</td>
+<td>Dry-run notices (<code>dry run: pass submit=True to send ... to Metrc</code>); entering the sandbox (<code>Using the Metrc sandbox (sandbox-me.metrc.com).</code>) and the default license it ignores; duplicate rows dropped by <code>collect()</code>; the <code>bulk()</code> summary; falling back to the bundled spec.</td>
 </tr>
 </tbody>
 </table>

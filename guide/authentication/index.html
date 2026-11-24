@@ -736,6 +736,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../prompts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prompts and pickers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../cli/" class="md-nav__link">
         
   
@@ -1026,6 +1054,34 @@
     
   
     Local data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/prompts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prompts
   
 
     
@@ -1431,6 +1487,8 @@ then <code>https://api.trackandtrace.tools</code>.</p>
 <p><code>connect(license=...)</code>, then <code>T3_LICENSE</code>, then the profile's <code>license</code>. It's
 available as <code>client.license</code>, and it's used only by calls whose endpoint
 requires a <code>licenseNumber</code>. A license passed to a call always wins.</p>
+<p>In the <a href="#sandbox">sandbox</a>, only <code>connect(license=...)</code> counts: <code>T3_LICENSE</code>
+and the profile's license are production licenses.</p>
 <h3 id="other-connect-options">Other connect() options<a class="headerlink" href="#other-connect-options" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -1448,7 +1506,7 @@ requires a <code>licenseNumber</code>. A license passed to a call always wins.</
 </tr>
 <tr>
 <td><code>sandbox</code></td>
-<td><code>False</code></td>
+<td><code>T3_SANDBOX</code>, then <code>False</code></td>
 <td>Swap the credential for a Metrc sandbox JWT. See <a href="#sandbox">Sandbox</a>.</td>
 </tr>
 <tr>
@@ -1539,8 +1597,8 @@ skip profiles and use <code>T3_SECRET_KEY</code>.</p>
 </code></pre></div>
 <p>The first profile you create becomes the default.</p>
 <h2 id="environment-variables">Environment variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h2>
-<p>These are the only environment variables 2.0 reads. There's no <code>.t3.env</code>
-file.</p>
+<p>These are the only environment variables the library reads. There's no
+<code>.t3.env</code> file.</p>
 <table>
 <thead>
 <tr>
@@ -1563,7 +1621,11 @@ file.</p>
 </tr>
 <tr>
 <td><code>T3_LICENSE</code></td>
-<td>Default license number.</td>
+<td>Default license number. Ignored in the sandbox.</td>
+</tr>
+<tr>
+<td><code>T3_SANDBOX</code></td>
+<td><code>1</code>, <code>true</code>, <code>yes</code> or <code>on</code> makes <code>connect()</code> and the <code>t3api</code> data commands use the <a href="#sandbox">Metrc sandbox</a>.</td>
 </tr>
 <tr>
 <td><code>T3_API_HOST</code></td>
@@ -1661,12 +1723,33 @@ through <code>POST /v2/auth/sandbox</code>. Everything the client does after tha
 including <code>submit=True</code> writes, goes to the Metrc sandbox instead of
 production:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">with</span> <span class="n">t3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">sandbox</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="n">lic</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">licenses</span><span class="p">()[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"licenseNumber"</span><span class="p">]</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="n">lic</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">pick_license</span><span class="p">()</span>        <span class="c1"># the sandbox's own licenses</span>
 <a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="n">client</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">"/v2/items/discontinue"</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">"id"</span><span class="p">:</span> <span class="mi">12345</span><span class="p">},</span> <span class="n">submit</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </code></pre></div>
+<p>To point an existing script or scheduled job at the sandbox without editing
+it, set <code>T3_SANDBOX=1</code>. The <code>t3api</code> command takes <code>--sandbox</code> before the
+command name (<code>t3api --sandbox pull ...</code>); see <a href="../cli/#conventions">the CLI guide</a>.</p>
+<p><strong>Licenses.</strong> The sandbox has its own licenses (such as <code>SF-SBX-1-101</code>), and it
+answers a request for any other license with an empty result, not an error. A
+production license would quietly return nothing. So in the sandbox:</p>
+<ul>
+<li><code>T3_LICENSE</code> and the profile's default license are ignored, and
+  <code>client.license</code> is <code>None</code> unless you passed <code>connect(license=...)</code>. The
+  common <code>license or client.license or client.pick_license()</code> pattern then
+  asks you to pick a sandbox license.</li>
+<li>The first time a call names a license, the client lists the session's
+  licenses (one request, cached) and logs a warning for any license that isn't
+  one of them.</li>
+</ul>
+<p><strong>Telling where you are.</strong> <code>client.sandbox</code> is <code>True</code> in the sandbox, and
+<code>client.hostname</code> is the Metrc hostname behind the credential, such as
+<code>sandbox-me.metrc.com</code> (from <code>whoami</code>). Entering the sandbox logs
+<code>Using the Metrc sandbox (sandbox-me.metrc.com).</code> at INFO, and
+<code>bulk(submit="ask")</code> says "sandbox" when it asks.</p>
 <p>The client's credential is a JWT from then on (<code>client.credential_kind ==
 "jwt"</code>), so <code>report_url()</code>, which needs a secret key, isn't available. An
-existing client can switch with <code>client.enter_sandbox()</code>.</p>
+existing client can switch with <code>client.enter_sandbox()</code>, which also clears
+<code>client.license</code>.</p>
 <h2 id="using-a-credential-directly">Using a credential directly<a class="headerlink" href="#using-a-credential-directly" title="Permanent link">&para;</a></h2>
 <p><code>connect()</code> is the usual way in, but <code>T3Client</code> can be built by hand with one
 of the two <code>httpx2.Auth</code> classes:</p>

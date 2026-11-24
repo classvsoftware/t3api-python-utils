@@ -761,6 +761,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../guide/prompts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prompts and pickers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../guide/cli/" class="md-nav__link">
         
   
@@ -1051,6 +1079,34 @@
     
   
     Local data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/prompts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prompts
   
 
     
@@ -1540,7 +1596,8 @@ written as JSON text. Leave the path out and the file is named after the data
 model, license and time. More in <a href="../guide/local-data/">Local data</a>.</p>
 <h2 id="9-write-to-metrc">9. Write to Metrc<a class="headerlink" href="#9-write-to-metrc" title="Permanent link">&para;</a></h2>
 <p>Writes that reach Metrc are a <strong>dry run unless you pass <code>submit=True</code></strong>. A dry
-run sends the request to T3, which validates it and stops before Metrc:</p>
+run sends the request to T3, which checks its format, required fields and types
+and stops before Metrc. It doesn't check that the records you name exist:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">"/v2/items/discontinue"</span><span class="p">,</span> <span class="n">license</span><span class="o">=</span><span class="n">lic</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">"id"</span><span class="p">:</span> <span class="mi">12345</span><span class="p">})</span>
 <a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">dry_run</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>   <span class="c1"># True Dry run</span>
 </code></pre></div>
@@ -1550,6 +1607,9 @@ run sends the request to T3, which validates it and stops before Metrc:</p>
 </code></pre></div>
 <p>A validation failure raises <code>t3.ValidationError</code> with the server's explanation
 in <code>.detail</code>.</p>
+<p>Most Metrc write routes take a list of objects, even for one, so their <code>json=</code>
+is <code>[{...}]</code>. <code>/v2/items/discontinue</code> is one of the few that take a single
+object.</p>
 <p>A few T3 routes, such as tag lists and secret keys, act immediately and have
 no dry run. Passing <code>submit=</code> to one of them raises <code>ValueError</code>, so you can't
 mistake one for the other. More in <a href="../guide/writes/">Writes</a>.</p>
@@ -1568,7 +1628,9 @@ mistake one for the other. More in <a href="../guide/writes/">Writes</a>.</p>
 <p>If any row fails validation, nothing is submitted. In a terminal you're shown
 the failures and asked whether to send just the valid rows; in a script,
 <code>on_error="skip"</code> does that without asking. Leave out <code>submit=True</code> to only
-validate. <code>log_to</code> writes one line per row with its status and message.</p>
+validate, or pass <code>submit="ask"</code> to see the results and be asked before
+anything is submitted. <code>log_to</code> writes one line per row with its status and
+message.</p>
 <h2 id="11-download-a-report">11. Download a report<a class="headerlink" href="#11-download-a-report" title="Permanent link">&para;</a></h2>
 <p>T3 builds reports on the server. They're faster than loading a collection when
 all you want is a spreadsheet:</p>
