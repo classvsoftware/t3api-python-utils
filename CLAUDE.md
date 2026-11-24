@@ -33,7 +33,7 @@ uv run python scripts/update_spec.py      # refresh t3api_utils/spec/openapi.jso
 T3_SMOKE_SECRET_KEY=... uv run pytest -m sandbox
 ```
 
-`update_spec.py` prints how the endpoint-kind counts changed; mention notable changes in `CHANGELOG.md`. CI (`.github/workflows/ci.yml`) runs mypy and pytest on Linux, macOS and Windows with Python 3.12 and 3.13, plus a strict docs build. `.github/workflows/release.yml` publishes to PyPI on a published GitHub release.
+`update_spec.py` prints how the endpoint-kind counts changed; mention notable changes in `CHANGELOG.md`. CI (`.github/workflows/ci.yml`) runs mypy and pytest on Linux, macOS and Windows with Python 3.12 and 3.13, plus a strict docs build. `.github/workflows/release.yml` runs when a `vX.Y.Z` tag is pushed: it uploads to PyPI through trusted publishing, then creates the GitHub release from that version's `CHANGELOG.md` section.
 
 ### Releasing
 
@@ -48,12 +48,14 @@ If any of these fail, stop and report instead of releasing.
 
 Steps:
 
-1. Bump `version` in `pyproject.toml` and add a `CHANGELOG.md` entry.
+1. Bump `version` in `pyproject.toml` and add a `## X.Y.Z` section to `CHANGELOG.md`.
 2. Run the checklist above.
 3. Push the branch and wait for CI.
 4. Fast-forward `master` to the release commit and push it.
-5. `gh release create vX.Y.Z --target master`, with that version's `CHANGELOG.md` section as the notes. This runs `release.yml`, which uploads to PyPI through trusted publishing.
-6. Deploy the docs with `uv run mkdocs gh-deploy`.
+5. `git tag -a vX.Y.Z -m "t3api-utils X.Y.Z"` on that commit, then `git push origin vX.Y.Z`.
+6. Check that every `release.yml` job succeeds. The jobs publish to PyPI, create the GitHub release and deploy the docs site. If only the docs job fails, deploy from the tagged commit with `uv run mkdocs gh-deploy --strict`.
+
+A release isn't finished until the docs site at <https://classvsoftware.github.io/t3api-python-utils/> shows the released version.
 
 ## Architecture
 
@@ -117,7 +119,13 @@ docs/                  mkdocs-material site; reference pages are mkdocstrings
 ### Docs
 
 - Docstrings are Google style. They're rendered by mkdocstrings on the `docs/reference/` pages; `docs/_ext/griffe_roles.py` turns Sphinx roles like `:func:` into inline code at build time.
-- When behaviour changes, update the matching guide page in `docs/guide/`, and `CHANGELOG.md`.
+- The documentation pages must stay up to date. Any change to public behaviour, the CLI, configuration or install steps updates, in the same commit:
+  - the matching `docs/guide/` page;
+  - the docstrings that feed `docs/reference/`;
+  - `README.md` and `CHANGELOG.md` where they cover it.
+
+  `uv run mkdocs build --strict` must pass.
+- The published site is redeployed by `release.yml` on every release (see Releasing). A docs-only fix between releases is deployed with `uv run mkdocs gh-deploy --strict`, but only if the docs still describe the released version.
 
 ## Testing
 
