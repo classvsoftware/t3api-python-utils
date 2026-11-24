@@ -35,6 +35,26 @@ T3_SMOKE_SECRET_KEY=... uv run pytest -m sandbox
 
 `update_spec.py` prints how the endpoint-kind counts changed; mention notable changes in `CHANGELOG.md`. CI (`.github/workflows/ci.yml`) runs mypy and pytest on Linux, macOS and Windows with Python 3.12 and 3.13, plus a strict docs build. `.github/workflows/release.yml` publishes to PyPI on a published GitHub release.
 
+### Releasing
+
+For this repository (t3api-python-utils) only, Claude may merge to `master`, push, tag and publish a release without asking first, as long as the tests fully pass:
+
+- `uv run pytest --cov` passes at 100% coverage;
+- `uv run mypy` is clean;
+- `uv run mkdocs build --strict` passes;
+- CI is green on every OS for the commit being released.
+
+If any of these fail, stop and report instead of releasing.
+
+Steps:
+
+1. Bump `version` in `pyproject.toml` and add a `CHANGELOG.md` entry.
+2. Run the checklist above.
+3. Push the branch and wait for CI.
+4. Fast-forward `master` to the release commit and push it.
+5. `gh release create vX.Y.Z --target master`, with that version's `CHANGELOG.md` section as the notes. This runs `release.yml`, which uploads to PyPI through trusted publishing.
+6. Deploy the docs with `uv run mkdocs gh-deploy`.
+
 ## Architecture
 
 ### Package layout
